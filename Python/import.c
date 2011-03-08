@@ -14,6 +14,7 @@
 #include "eval.h"
 #include "osdefs.h"
 #include "importdl.h"
+#include "parallel_stdio.h"
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>

@@ -2487,98 +2487,6 @@ int PyObject_AsFileDescriptor(PyObject *o)
 #undef fread
 
 /*
-** Py_UniversalNewlineFgets is an fgets variation that understands
-** all of \r, \n and \r\n conventions.
-** The stream should be opened in binary mode.
-** If fobj is NULL the routine always does newline conversion, and
-** it may peek one char ahead to gobble the second char in \r\n.
-** If fobj is non-NULL it must be a PyFileObject. In this case there
-** is no readahead but in stead a flag is used to skip a following
-** \n on the next read. Also, if the file is open in binary mode
-** the whole conversion is skipped. Finally, the routine keeps track of
-** the different types of newlines seen.
-** Note that we need no error handling: fgets() treats error and eof
-** identically.
-*/
-char *
-Py_UniversalNewlineFgets(char *buf, int n, FILE *stream, PyObject *fobj)
-{
-	char *p = buf;
-	int c;
-	int newlinetypes = 0;
-	int skipnextlf = 0;
-	int univ_newline = 1;
-
-	if (fobj) {
-		if (!PyFile_Check(fobj)) {
-			errno = ENXIO;	/* What can you do... */
-			return NULL;
-		}
-		univ_newline = ((PyFileObject *)fobj)->f_univ_newline;
-		if ( !univ_newline )
-			return fgets(buf, n, stream);
-		newlinetypes = ((PyFileObject *)fobj)->f_newlinetypes;
-		skipnextlf = ((PyFileObject *)fobj)->f_skipnextlf;
-	}
-	FLOCKFILE(stream);
-	c = 'x'; /* Shut up gcc warning */
-	while (--n > 0 && (c = GETC(stream)) != EOF ) {
-		if (skipnextlf ) {
-			skipnextlf = 0;
-			if (c == '\n') {
-				/* Seeing a \n here with skipnextlf true
-				** means we saw a \r before.
-				*/
-				newlinetypes |= NEWLINE_CRLF;
-				c = GETC(stream);
-				if (c == EOF) break;
-			} else {
-				/*
-				** Note that c == EOF also brings us here,
-				** so we're okay if the last char in the file
-				** is a CR.
-				*/
-				newlinetypes |= NEWLINE_CR;
-			}
-		}
-		if (c == '\r') {
-			/* A \r is translated into a \n, and we skip
-			** an adjacent \n, if any. We don't set the
-			** newlinetypes flag until we've seen the next char.
-			*/
-			skipnextlf = 1;
-			c = '\n';
-		} else if ( c == '\n') {
-			newlinetypes |= NEWLINE_LF;
-		}
-		*p++ = c;
-		if (c == '\n') break;
-	}
-	if ( c == EOF && skipnextlf )
-		newlinetypes |= NEWLINE_CR;
-	FUNLOCKFILE(stream);
-	*p = '\0';
-	if (fobj) {
-		((PyFileObject *)fobj)->f_newlinetypes = newlinetypes;
-		((PyFileObject *)fobj)->f_skipnextlf = skipnextlf;
-	} else if ( skipnextlf ) {
-		/* If we have no file object we cannot save the
-		** skipnextlf flag. We have to readahead, which
-		** will cause a pause if we're reading from an
-		** interactive stream, but that is very unlikely
-		** unless we're doing something silly like
-		** execfile("/dev/tty").
-		*/
-		c = GETC(stream);
-		if ( c != '\n' )
-			ungetc(c, stream);
-	}
-	if (p == buf)
-		return NULL;
-	return buf;
-}
-
-/*
 ** Py_UniversalNewlineFread is an fread variation that understands
 ** all of \r, \n and \r\n conventions.
 ** The stream should be opened in binary mode.
@@ -2658,6 +2566,101 @@ Py_UniversalNewlineFread(char *buf, size_t n,
 	f->f_newlinetypes = newlinetypes;
 	f->f_skipnextlf = skipnextlf;
 	return dst - buf;
+}
+
+/*
+** Py_UniversalNewlineFgets is an fgets variation that understands
+** all of \r, \n and \r\n conventions.
+** The stream should be opened in binary mode.
+** If fobj is NULL the routine always does newline conversion, and
+** it may peek one char ahead to gobble the second char in \r\n.
+** If fobj is non-NULL it must be a PyFileObject. In this case there
+** is no readahead but in stead a flag is used to skip a following
+** \n on the next read. Also, if the file is open in binary mode
+** the whole conversion is skipped. Finally, the routine keeps track of
+** the different types of newlines seen.
+** Note that we need no error handling: fgets() treats error and eof
+** identically.
+*/
+
+#include "parallel_stdio.h"
+
+char *
+Py_UniversalNewlineFgets(char *buf, int n, FILE *stream, PyObject *fobj)
+{
+	char *p = buf;
+	int c;
+	int newlinetypes = 0;
+	int skipnextlf = 0;
+	int univ_newline = 1;
+
+	if (fobj) {
+		if (!PyFile_Check(fobj)) {
+			errno = ENXIO;	/* What can you do... */
+			return NULL;
+		}
+		univ_newline = ((PyFileObject *)fobj)->f_univ_newline;
+		if ( !univ_newline )
+			return fgets(buf, n, stream);
+		newlinetypes = ((PyFileObject *)fobj)->f_newlinetypes;
+		skipnextlf = ((PyFileObject *)fobj)->f_skipnextlf;
+	}
+	FLOCKFILE(stream);
+	c = 'x'; /* Shut up gcc warning */
+	while (--n > 0 && (c = GETC(stream)) != EOF ) {
+		if (skipnextlf ) {
+			skipnextlf = 0;
+			if (c == '\n') {
+				/* Seeing a \n here with skipnextlf true
+				** means we saw a \r before.
+				*/
+				newlinetypes |= NEWLINE_CRLF;
+				c = GETC(stream);
+				if (c == EOF) break;
+			} else {
+				/*
+				** Note that c == EOF also brings us here,
+				** so we're okay if the last char in the file
+				** is a CR.
+				*/
+				newlinetypes |= NEWLINE_CR;
+			}
+		}
+		if (c == '\r') {
+			/* A \r is translated into a \n, and we skip
+			** an adjacent \n, if any. We don't set the
+			** newlinetypes flag until we've seen the next char.
+			*/
+			skipnextlf = 1;
+			c = '\n';
+		} else if ( c == '\n') {
+			newlinetypes |= NEWLINE_LF;
+		}
+		*p++ = c;
+		if (c == '\n') break;
+	}
+	if ( c == EOF && skipnextlf )
+		newlinetypes |= NEWLINE_CR;
+	FUNLOCKFILE(stream);
+	*p = '\0';
+	if (fobj) {
+		((PyFileObject *)fobj)->f_newlinetypes = newlinetypes;
+		((PyFileObject *)fobj)->f_skipnextlf = skipnextlf;
+	} else if ( skipnextlf ) {
+		/* If we have no file object we cannot save the
+		** skipnextlf flag. We have to readahead, which
+		** will cause a pause if we're reading from an
+		** interactive stream, but that is very unlikely
+		** unless we're doing something silly like
+		** execfile("/dev/tty").
+		*/
+		c = GETC(stream);
+		if ( c != '\n' )
+			ungetc(c, stream);
+	}
+	if (p == buf)
+		return NULL;
+	return buf;
 }
 
 #ifdef __cplusplus

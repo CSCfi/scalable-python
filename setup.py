@@ -310,8 +310,8 @@ class PyBuildExt(build_ext):
 
     def detect_modules(self):
         # Ensure that /usr/local is always used
-        add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')
-        add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
+        add_dir_to_list(self.compiler.library_dirs, '/usr/lib')
+        add_dir_to_list(self.compiler.include_dirs, '/usr/include')
 
         # Add paths specified in the environment variables LDFLAGS and
         # CPPFLAGS for header and library files.
@@ -362,7 +362,6 @@ class PyBuildExt(build_ext):
         # if a file is found in one of those directories, it can
         # be assumed that no additional -I,-L directives are needed.
         lib_dirs = self.compiler.library_dirs + [
-            '/lib64', '/usr/lib64',
             '/lib', '/usr/lib',
             ]
         inc_dirs = self.compiler.include_dirs + ['/usr/include']
@@ -555,15 +554,15 @@ class PyBuildExt(build_ext):
             missing.extend(['imageop'])
 
         # readline
-        do_readline = self.compiler.find_library_file(lib_dirs, 'readline')
-        if platform == 'darwin': # and os.uname()[2] < '9.':
+#        do_readline = self.compiler.find_library_file(lib_dirs, 'readline')
+#        if platform == 'darwin': # and os.uname()[2] < '9.':
             # MacOSX 10.4 has a broken readline. Don't try to build
             # the readline module unless the user has installed a fixed
             # readline package
             # FIXME: The readline emulation on 10.5 is better, but the
             # readline module doesn't compile out of the box.
-            if find_file('readline/rlconf.h', inc_dirs, []) is None:
-                do_readline = False
+#            if find_file('readline/rlconf.h', inc_dirs, []) is None:
+        do_readline = False
         if do_readline:
             if sys.platform == 'darwin':
                 # In every directory on the search path search for a dynamic
@@ -929,9 +928,7 @@ class PyBuildExt(build_ext):
 
         if sqlite_incdir:
             sqlite_dirs_to_check = [
-                os.path.join(sqlite_incdir, '..', 'lib64'),
                 os.path.join(sqlite_incdir, '..', 'lib'),
-                os.path.join(sqlite_incdir, '..', '..', 'lib64'),
                 os.path.join(sqlite_incdir, '..', '..', 'lib'),
             ]
             sqlite_libfile = self.compiler.find_library_file(
@@ -1594,7 +1591,6 @@ class PyBuildExt(build_ext):
             added_lib_dirs.append('/usr/openwin/lib')
         elif os.path.exists('/usr/X11R6/include'):
             include_dirs.append('/usr/X11R6/include')
-            added_lib_dirs.append('/usr/X11R6/lib64')
             added_lib_dirs.append('/usr/X11R6/lib')
         elif os.path.exists('/usr/X11R5/include'):
             include_dirs.append('/usr/X11R5/include')

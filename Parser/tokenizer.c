@@ -17,6 +17,7 @@
 #include "codecs.h"
 #include "abstract.h"
 #include "pydebug.h"
+#include "parallel_stdio.h"
 #endif /* PGEN */
 
 extern char *PyOS_Readline(FILE *, FILE *, char *);
@@ -439,7 +440,7 @@ fp_setreadl(struct tok_state *tok, const char* enc)
 /* Fetch the next byte from TOK. */
 
 static int fp_getc(struct tok_state *tok) {
-	return getc(tok->fp);
+	return fgetc(tok->fp);
 }
 
 /* Unfetch the last byte back into TOK.  */

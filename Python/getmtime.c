@@ -5,6 +5,7 @@
 
 #include "Python.h"
 #include "pyconfig.h"
+#include "parallel_stdio.h"
 
 #ifdef __cplusplus
 extern "C" {

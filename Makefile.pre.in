@@ -29,9 +29,12 @@ srcdir=		@srcdir@
 VPATH=		@srcdir@
 
 CC=		@CC@
+MPICC=          cc
+PCC=            cc
 CXX=		@CXX@
 MAINCC=		@MAINCC@
 LINKCC=		@LINKCC@
+LINKMPICC=	mpicc
 AR=		@AR@
 RANLIB=		@RANLIB@
 SVNVERSION=	@SVNVERSION@
@@ -289,6 +292,7 @@ PYTHON_OBJS=	\
 		Python/pystrtod.o \
 		Python/formatter_unicode.o \
 		Python/formatter_string.o \
+                Python/parallel_stdio.o \
 		Python/$(DYNLOADFILE) \
 		$(LIBOBJS) \
 		$(MACHDEP_OBJS) \
@@ -383,7 +387,7 @@ coverage:
 
 # Build the interpreter
 $(BUILDPYTHON):	Modules/python.o $(LIBRARY) $(LDLIBRARY)
-		$(LINKCC) $(LDFLAGS) $(LINKFORSHARED) -o $@ \
+		$(LINKMPICC) $(LDFLAGS) $(LINKFORSHARED) -o $@ \
 			Modules/python.o \
 			$(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST)
 
@@ -514,13 +518,16 @@ Modules/getpath.o: $(srcdir)/Modules/getpath.c Makefile
 Modules/python.o: $(srcdir)/Modules/python.c
 	$(MAINCC) -c $(PY_CFLAGS) -o $@ $(srcdir)/Modules/python.c
 
+Python/parallel_stdio.o: $(srcdir)/Python/parallel_stdio.c
+	$(MPICC) -c $(PY_CFLAGS) -o $@ $(srcdir)/Python/parallel_stdio.c
+
 
 $(GRAMMAR_H) $(GRAMMAR_C): $(PGEN) $(GRAMMAR_INPUT)
 		-@$(INSTALL) -d Include
 		-$(PGEN) $(GRAMMAR_INPUT) $(GRAMMAR_H) $(GRAMMAR_C)
 
 $(PGEN):	$(PGENOBJS)
-		$(CC) $(OPT) $(LDFLAGS) $(PGENOBJS) $(LIBS) -o $(PGEN)
+		$(PCC) $(OPT) $(LDFLAGS) $(PGENOBJS) $(LIBS) -o $(PGEN)
 
 Parser/grammar.o:	$(srcdir)/Parser/grammar.c \
 				$(srcdir)/Include/token.h \

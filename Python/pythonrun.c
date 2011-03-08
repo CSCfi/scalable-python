@@ -17,6 +17,7 @@
 #include "ast.h"
 #include "eval.h"
 #include "marshal.h"
+/*#include "parallel_stdio.h" */
 
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>

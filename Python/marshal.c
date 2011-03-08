@@ -10,6 +10,7 @@
 #include "longintrepr.h"
 #include "code.h"
 #include "marshal.h"
+#include "parallel_stdio.h"
 
 /* High water mark to determine when the marshalled object is dangerously deep
  * and risks coring the interpreter.  When the object stack gets this deep,
@@ -425,7 +426,7 @@ typedef WFILE RFILE; /* Same struct with different invariants */
 
 #define rs_byte(p) (((p)->ptr < (p)->end) ? (unsigned char)*(p)->ptr++ : EOF)
 
-#define r_byte(p) ((p)->fp ? getc((p)->fp) : rs_byte(p))
+#define r_byte(p) ((p)->fp ? fgetc((p)->fp) : rs_byte(p))
 
 static int
 r_string(char *s, int n, RFILE *p)
@@ -457,10 +458,10 @@ r_long(RFILE *p)
 	register long x;
 	register FILE *fp = p->fp;
 	if (fp) {
-		x = getc(fp);
-		x |= (long)getc(fp) << 8;
-		x |= (long)getc(fp) << 16;
-		x |= (long)getc(fp) << 24;
+		x = fgetc(fp);
+		x |= (long)fgetc(fp) << 8;
+		x |= (long)fgetc(fp) << 16;
+		x |= (long)fgetc(fp) << 24;
 	}
 	else {
 		x = rs_byte(p);
