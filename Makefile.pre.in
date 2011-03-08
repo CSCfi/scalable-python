@@ -29,12 +29,12 @@ srcdir=		@srcdir@
 VPATH=		@srcdir@
 
 CC=		@CC@
-MPICC=          cc
-PCC=            cc
+MPICC= 	@MPICC@
+PCC= 	@CC@
 CXX=		@CXX@
 MAINCC=		@MAINCC@
 LINKCC=		@LINKCC@
-LINKMPICC=	mpicc
+LINKMPICC= 	@MPICC@
 AR=		@AR@
 RANLIB=		@RANLIB@
 SVNVERSION=	@SVNVERSION@
