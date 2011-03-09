@@ -465,6 +465,7 @@ fi
 
 AC_PROG_CC
 
+AC_SUBST(MPICC)
 AC_SUBST(CXX)
 AC_SUBST(MAINCC)
 AC_MSG_CHECKING(for --with-cxx-main=<compiler>)
