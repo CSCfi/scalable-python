@@ -3418,6 +3418,19 @@ AC_ARG_ENABLE(mpi,
 			  AC_HELP_STRING(--enable-mpi, enable MPI support for parallel environments), 
 			  [],
 			  [enable_mpi=no])
+AC_MSG_RESULT($enable_mpi)
+AC_MSG_CHECKING([if --enable-debug-mpi is specified])
+AC_ARG_ENABLE(debug-mpi,
+			  AC_HELP_STRING(--enable-debug-mpi, turn on debugging for MPI), 
+			  [],
+			  [enable_debug_mpi=no])
+AC_MSG_RESULT($enable_debug_mpi)
+if test "x$enable_debug_mpi" != "xno"
+then
+	DEBUG_MPI_FLAG="-DIO_DEBUG"
+else
+	DEBUG_MPI_FLAG=
+fi
 
 AC_SUBST(PARALLEL_OBJS)
 if test "x$enable_mpi" != "xno"
@@ -3426,12 +3439,11 @@ then
 			  [Define if you want to compile with MPI support])
 	LIBS="-lmpi $LIBS"
 	PARALLEL_OBJS="Python/parallel_stdio.o"
-	AC_MSG_RESULT($enable_mpi)
+	OPT="$OPT -DENABLE_MPI $DEBUG_MPI_FLAG"
 	AC_CHECK_PROG(MPICC, mpicc, mpicc, cc)
 	AC_SUBST(MPICC)
 else
 	PARALLEL_OBJS=
-	AC_MSG_RESULT($enable_mpi)
 fi
 
 # check for endianness
