@@ -42,8 +42,13 @@ Py_FrozenMain(int argc, char **argv)
 #endif
 
 	if (Py_VerboseFlag)
+#ifdef ENABLE_MPI
+		fprintf(stderr, "Parallel Python %s\n%s\n",
+			Py_GetVersion(), Py_GetCopyright());
+#else
 		fprintf(stderr, "Python %s\n%s\n",
 			Py_GetVersion(), Py_GetCopyright());
+#endif
 
 	PySys_SetArgv(argc, argv);
 

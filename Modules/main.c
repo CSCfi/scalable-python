@@ -513,8 +513,13 @@ Py_Main(int argc, char **argv)
 
 	if (Py_VerboseFlag ||
 	    (command == NULL && filename == NULL && module == NULL && stdin_is_interactive)) {
+#ifdef ENABLE_MPI
+		fprintf(stderr, "Parallel Python %s on %s\n",
+			Py_GetVersion(), Py_GetPlatform());
+#else
 		fprintf(stderr, "Python %s on %s\n",
 			Py_GetVersion(), Py_GetPlatform());
+#endif
  		if (!Py_NoSiteFlag)
  			fprintf(stderr, "%s\n", COPYRIGHT);
 	}
