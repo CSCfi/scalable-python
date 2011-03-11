@@ -63,44 +63,44 @@ FILE* __wrap_fopen(const char *filename, const char *modes)
     init_io_wrappers();
   // Wrap only in read mode
   if ( modes[0] == 'r' && enabled )
+  {
+    if (rank == MASTER )
     {
 #ifdef IO_DEBUG
       printf("Opening: %d %s\n", rank, filename);
 #endif
-      if (rank == MASTER )
-	{
-	  fp = fopen(filename, modes);
-	  // NULL information is needed also in other ranks
-          fp_is_null = ((fp == NULL) ? 1 : 0);
-	  MPI_Bcast(&fp_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-	}
-      else
-	{
-	  //	{ 
-	  MPI_Bcast(&fp_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-          if ( fp_is_null)
-	    fp = NULL;
-	  else
-	    fp = fp_dev_null;
-	} 
-      // Store the "parallel" file pointer
-      if (fp != NULL)
-	{
-	  parallel_fps[current_fp] = fp;
-	  current_fp++;
-	  if (current_fp == MAX_FILES)
-	    {
-	      printf("Too many open files\n");
-	      MPI_Abort(MPI_COMM_WORLD, -1);
-	    }
-	}
-      MPI_Barrier(MPI_COMM_WORLD);
+      fp = fopen(filename, modes);
+      // NULL information is needed also in other ranks
+      fp_is_null = ((fp == NULL) ? 1 : 0);
+      MPI_Bcast(&fp_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
     }
-  else
-    // Write mode, all processes can participate
-    fp = fopen(filename, modes);
-  return fp;
-}
+    else
+    {
+      //	{ 
+      MPI_Bcast(&fp_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+      if ( fp_is_null)
+        fp = NULL;
+      else
+        fp = fp_dev_null;
+    } 
+    // Store the "parallel" file pointer
+    if (fp != NULL)
+    {
+      parallel_fps[current_fp] = fp;
+      current_fp++;
+      if (current_fp == MAX_FILES)
+      {
+        printf("Too many open files\n");
+        MPI_Abort(MPI_COMM_WORLD, -1);
+      }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    }
+    else
+      // Write mode, all processes can participate
+      fp = fopen(filename, modes);
+    return fp;
+  }
 
 int  __wrap_fclose(FILE *fp)
 {
@@ -533,3 +533,5 @@ size_t __wrap_fwrite ( const void * ptr, size_t size, size_t count, FILE * fp )
     return x;
   }
 */
+
+/* vim: set et tw=80 ts=2 sw=2: */
