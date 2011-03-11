@@ -2583,7 +2583,9 @@ Py_UniversalNewlineFread(char *buf, size_t n,
 ** identically.
 */
 
+#ifdef ENABLE_MPI
 #include "parallel_stdio.h"
+#endif
 
 char *
 Py_UniversalNewlineFgets(char *buf, int n, FILE *stream, PyObject *fobj)

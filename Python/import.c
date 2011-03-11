@@ -14,7 +14,9 @@
 #include "eval.h"
 #include "osdefs.h"
 #include "importdl.h"
+#ifdef ENABLE_MPI
 #include "parallel_stdio.h"
+#endif
 
 #ifdef HAVE_FCNTL_H
 #include <fcntl.h>

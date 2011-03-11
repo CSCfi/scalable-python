@@ -5,7 +5,9 @@
 
 #include "Python.h"
 #include "pyconfig.h"
+#ifdef ENABLE_MPI
 #include "parallel_stdio.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {

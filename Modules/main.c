@@ -4,7 +4,6 @@
 #include "osdefs.h"
 #include "code.h" /* For CO_FUTURE_DIVISION */
 #include "import.h"
-/*#include "parallel_stdio.h" */
 
 #ifdef __VMS
 #include <unixlib.h>
@@ -577,7 +576,11 @@ Py_Main(int argc, char **argv)
 				int ch;
 				/* Push back first newline so line numbers
 				   remain the same */
+#ifdef ENABLE_MPI
 				while ((ch = fgetc(fp)) != EOF) {
+#else
+				while ((ch = getc(fp)) != EOF) {
+#endif
 					if (ch == '\n') {
 						(void)ungetc(ch, fp);
 						break;

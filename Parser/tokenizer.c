@@ -17,8 +17,11 @@
 #include "codecs.h"
 #include "abstract.h"
 #include "pydebug.h"
-#include "parallel_stdio.h"
 #endif /* PGEN */
+
+#ifdef ENABLE_MPI
+#include "parallel_stdio.h"
+#endif
 
 extern char *PyOS_Readline(FILE *, FILE *, char *);
 /* Return malloc'ed string including trailing \n;
@@ -440,7 +443,11 @@ fp_setreadl(struct tok_state *tok, const char* enc)
 /* Fetch the next byte from TOK. */
 
 static int fp_getc(struct tok_state *tok) {
+#ifdef ENABLE_MPI
 	return fgetc(tok->fp);
+#else
+	return getc(tok->fp);
+#endif
 }
 
 /* Unfetch the last byte back into TOK.  */

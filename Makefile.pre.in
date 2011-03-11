@@ -387,9 +387,11 @@ coverage:
 
 # Build the interpreter
 $(BUILDPYTHON):	Modules/python.o $(LIBRARY) $(LDLIBRARY)
+	if test $($LINKMPICC); then \
 		$(LINKMPICC) $(LDFLAGS) $(LINKFORSHARED) -o $@ \
 			Modules/python.o \
-			$(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST)
+			$(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST); \
+	fi
 
 platform: $(BUILDPYTHON)
 	$(RUNSHARED) ./$(BUILDPYTHON) -E -c 'import sys ; from distutils.util import get_platform ; print get_platform()+"-"+sys.version[0:3]' >platform
@@ -519,8 +521,9 @@ Modules/python.o: $(srcdir)/Modules/python.c
 	$(MAINCC) -c $(PY_CFLAGS) -o $@ $(srcdir)/Modules/python.c
 
 Python/parallel_stdio.o: $(srcdir)/Python/parallel_stdio.c
-	$(MPICC) -c $(PY_CFLAGS) -o $@ $(srcdir)/Python/parallel_stdio.c
-
+	if test $($MPICC); then \
+		$(MPICC) -c $(PY_CFLAGS) -o $@ $(srcdir)/Python/parallel_stdio.c; \
+	fi
 
 $(GRAMMAR_H) $(GRAMMAR_C): $(PGEN) $(GRAMMAR_INPUT)
 		-@$(INSTALL) -d Include

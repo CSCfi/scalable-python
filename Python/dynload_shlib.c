@@ -84,7 +84,7 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 	PyOS_snprintf(funcname, sizeof(funcname), 
 		      LEAD_UNDERSCORE "init%.200s", shortname);
 
-/*
+#ifndef ENABLE_MPI
 	if (fp != NULL) {
 		int i;
 		struct stat statb;
@@ -108,7 +108,8 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 #endif
 		}
 	}
-*/
+#endif
+
 #if !(defined(PYOS_OS2) && defined(PYCC_GCC))
         dlopenflags = PyThreadState_GET()->interp->dlopenflags;
 #endif
