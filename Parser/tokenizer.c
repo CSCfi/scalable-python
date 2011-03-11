@@ -17,11 +17,10 @@
 #include "codecs.h"
 #include "abstract.h"
 #include "pydebug.h"
-#endif /* PGEN */
-
 #ifdef ENABLE_MPI
 #include "parallel_stdio.h"
 #endif
+#endif /* PGEN */
 
 extern char *PyOS_Readline(FILE *, FILE *, char *);
 /* Return malloc'ed string including trailing \n;
