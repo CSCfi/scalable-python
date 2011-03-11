@@ -3419,15 +3419,18 @@ AC_ARG_ENABLE(mpi,
 			  [],
 			  [enable_mpi=no])
 
+AC_SUBST(PARALLEL_OBJS)
 if test "x$enable_mpi" != "xno"
 then
 	AC_DEFINE(ENABLE_MPI, 1, 
 			  [Define if you want to compile with MPI support])
 	LIBS="-lmpi $LIBS"
+	PARALLEL_OBJS="Python/parallel_stdio.o"
 	AC_MSG_RESULT($enable_mpi)
 	AC_CHECK_PROG(MPICC, mpicc, mpicc, cc)
 	AC_SUBST(MPICC)
 else
+	PARALLEL_OBJS=
 	AC_MSG_RESULT($enable_mpi)
 fi
 

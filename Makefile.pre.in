@@ -175,6 +175,7 @@ MACHDEP_OBJS=	@MACHDEP_OBJS@
 LIBOBJDIR=	Python/
 LIBOBJS=	@LIBOBJS@
 UNICODE_OBJS=   @UNICODE_OBJS@
+PARALLEL_OBJS= 	@PARALLEL_OBJS@
 
 PYTHON=		python$(EXE)
 BUILDPYTHON=	python$(BUILDEXE)
@@ -292,7 +293,7 @@ PYTHON_OBJS=	\
 		Python/pystrtod.o \
 		Python/formatter_unicode.o \
 		Python/formatter_string.o \
-                Python/parallel_stdio.o \
+		$(PARALLEL_OBJS) \
 		Python/$(DYNLOADFILE) \
 		$(LIBOBJS) \
 		$(MACHDEP_OBJS) \
@@ -387,8 +388,12 @@ coverage:
 
 # Build the interpreter
 $(BUILDPYTHON):	Modules/python.o $(LIBRARY) $(LDLIBRARY)
-	if test $($LINKMPICC); then \
+	if test "$(LINKMPICC)"; then \
 		$(LINKMPICC) $(LDFLAGS) $(LINKFORSHARED) -o $@ \
+			Modules/python.o \
+			$(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST); \
+	else \
+		$(LINKCC) $(LDFLAGS) $(LINKFORSHARED) -o $@ \
 			Modules/python.o \
 			$(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST); \
 	fi
@@ -521,7 +526,7 @@ Modules/python.o: $(srcdir)/Modules/python.c
 	$(MAINCC) -c $(PY_CFLAGS) -o $@ $(srcdir)/Modules/python.c
 
 Python/parallel_stdio.o: $(srcdir)/Python/parallel_stdio.c
-	if test $($MPICC); then \
+	if test "$(MPICC)"; then \
 		$(MPICC) -c $(PY_CFLAGS) -o $@ $(srcdir)/Python/parallel_stdio.c; \
 	fi
 
