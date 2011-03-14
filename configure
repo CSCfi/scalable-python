@@ -641,6 +641,8 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 SRCDIRS
 THREADHEADERS
+MPICC
+PARALLEL_OBJS
 UNICODE_OBJS
 LIBC
 LIBM
@@ -692,7 +694,6 @@ GREP
 CPP
 MAINCC
 CXX
-MPICC
 OBJEXT
 EXEEXT
 ac_ct_CC
@@ -788,6 +789,8 @@ with_fpectl
 with_libm
 with_libc
 enable_unicode
+enable_mpi
+enable_debug_mpi
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1430,6 +1433,8 @@ Optional Features:
   --disable-ipv6          Disable ipv6 support
   --enable-unicode[=ucs[24]]
                           Enable Unicode strings (default is yes)
+  --enable-mpi            enable MPI support for parallel environments
+  --enable-debug-mpi      turn on debugging for MPI
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -3379,7 +3384,6 @@ ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
 
 
 
@@ -23427,6 +23431,90 @@ _ACEOF
   fi
   { $as_echo "$as_me:$LINENO: result: $PY_UNICODE_TYPE" >&5
 $as_echo "$PY_UNICODE_TYPE" >&6; }
+fi
+
+# enable MPI?
+{ $as_echo "$as_me:$LINENO: checking if --enable-mpi is specified" >&5
+$as_echo_n "checking if --enable-mpi is specified... " >&6; }
+# Check whether --enable-mpi was given.
+if test "${enable_mpi+set}" = set; then
+  enableval=$enable_mpi;
+else
+  enable_mpi=no
+fi
+
+{ $as_echo "$as_me:$LINENO: result: $enable_mpi" >&5
+$as_echo "$enable_mpi" >&6; }
+{ $as_echo "$as_me:$LINENO: checking if --enable-debug-mpi is specified" >&5
+$as_echo_n "checking if --enable-debug-mpi is specified... " >&6; }
+# Check whether --enable-debug-mpi was given.
+if test "${enable_debug_mpi+set}" = set; then
+  enableval=$enable_debug_mpi;
+else
+  enable_debug_mpi=no
+fi
+
+{ $as_echo "$as_me:$LINENO: result: $enable_debug_mpi" >&5
+$as_echo "$enable_debug_mpi" >&6; }
+if test "x$enable_debug_mpi" != "xno"
+then
+	DEBUG_MPI_FLAG="-DDEBUG_MPI"
+else
+	DEBUG_MPI_FLAG=
+fi
+
+
+if test "x$enable_mpi" != "xno"
+then
+
+cat >>confdefs.h <<\_ACEOF
+#define ENABLE_MPI 1
+_ACEOF
+
+	LIBS="-lmpi $LIBS"
+	PARALLEL_OBJS="Python/parallel_stdio.o"
+	OPT="$OPT -DENABLE_MPI $DEBUG_MPI_FLAG"
+	# Extract the first word of "mpicc", so it can be a program name with args.
+set dummy mpicc; ac_word=$2
+{ $as_echo "$as_me:$LINENO: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_prog_MPICC+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$MPICC"; then
+  ac_cv_prog_MPICC="$MPICC" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_MPICC="mpicc"
+    $as_echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_MPICC" && ac_cv_prog_MPICC="cc"
+fi
+fi
+MPICC=$ac_cv_prog_MPICC
+if test -n "$MPICC"; then
+  { $as_echo "$as_me:$LINENO: result: $MPICC" >&5
+$as_echo "$MPICC" >&6; }
+else
+  { $as_echo "$as_me:$LINENO: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+
+else
+	PARALLEL_OBJS=
 fi
 
 # check for endianness

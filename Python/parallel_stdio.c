@@ -1,5 +1,5 @@
 /*  Copyright (C) 2010       CSC - IT Center for Science Ltd.
- */
+*/
 
 #include <mpi.h>
 #include <stdio.h>
@@ -59,24 +59,19 @@ FILE* __wrap_fopen(const char *filename, const char *modes)
 {
   FILE *fp;
   int fp_is_null;
-  if (! initialized )
+  if (! initialized)
     init_io_wrappers();
   // Wrap only in read mode
-  if ( modes[0] == 'r' && enabled )
-  {
-    if (rank == MASTER )
-    {
-#ifdef IO_DEBUG
-      printf("Opening: %d %s\n", rank, filename);
+  if (modes[0] == 'r' && enabled) {
+    if (rank == MASTER) {
+#ifdef DEBUG_MPI
+      fprintf(stderr, "[%d] opening file '%s'\n", rank, filename);
 #endif
       fp = fopen(filename, modes);
       // NULL information is needed also in other ranks
       fp_is_null = ((fp == NULL) ? 1 : 0);
       MPI_Bcast(&fp_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-    }
-    else
-    {
-      //	{ 
+    } else {
       MPI_Bcast(&fp_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
       if ( fp_is_null)
         fp = NULL;
@@ -84,23 +79,24 @@ FILE* __wrap_fopen(const char *filename, const char *modes)
         fp = fp_dev_null;
     } 
     // Store the "parallel" file pointer
-    if (fp != NULL)
-    {
+    if (fp != NULL) {
       parallel_fps[current_fp] = fp;
       current_fp++;
-      if (current_fp == MAX_FILES)
-      {
+      if (current_fp == MAX_FILES) {
         printf("Too many open files\n");
         MPI_Abort(MPI_COMM_WORLD, -1);
       }
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    }
-    else
-      // Write mode, all processes can participate
-      fp = fopen(filename, modes);
-    return fp;
+  } else {
+    // Write mode, all processes can participate
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] opening file '%s'\n", rank, filename);
+#endif
+    fp = fopen(filename, modes);
   }
+  return fp;
+}
 
 int  __wrap_fclose(FILE *fp)
 {
@@ -109,9 +105,12 @@ int  __wrap_fclose(FILE *fp)
   if ( i == current_fp && i > 0 )
     current_fp--;
   if ( ! i || (rank == MASTER) ) 
-    {
-      x = fclose(fp);
-    }
+  {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] closing file\n", rank);
+#endif
+    x = fclose(fp);
+  }
 
   // TODO: Should one return the true return value of fclose?
   return 0;
@@ -120,22 +119,22 @@ int  __wrap_fclose(FILE *fp)
 void  __wrap_setbuf(FILE *fp, char *buf)
 {
   if ( ! check_fp(fp) || (rank == MASTER) ) 
-      setbuf(fp, buf);
+    setbuf(fp, buf);
 }
 
 int  __wrap_setvbuf(FILE *fp, char *buf, int type, size_t size)
 {
   int x;
   if (check_fp(fp)) 
+  {
+    if (rank == MASTER) 
     {
-      if (rank == MASTER) 
-	{
- 	  x = setvbuf(fp, buf, type, size);
-	  MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	}
-      else
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+      x = setvbuf(fp, buf, type, size);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
     }
+    else
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+  }
   else
     x = setvbuf(fp, buf, type, size);
   return x;
@@ -144,14 +143,14 @@ int  __wrap_setvbuf(FILE *fp, char *buf, int type, size_t size)
 int  __wrap_flockfile(FILE *fp)
 {
   if ( ! check_fp(fp) || (rank == MASTER) ) 
-      flockfile(fp);
+    flockfile(fp);
   return 0;
 }
 
 int  __wrap_funlockfile(FILE *fp)
 {
   if ( ! check_fp(fp) || (rank == MASTER) ) 
-      funlockfile(fp);
+    funlockfile(fp);
   return 0;
 }
 
@@ -159,42 +158,42 @@ int __wrap_ferror(FILE* fp)
 {
   int x;
   if (check_fp(fp)) 
+  {
+    if (rank == MASTER) 
     {
-      if (rank == MASTER) 
-	{
-	  x = ferror(fp);
-	  MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	}
-      else
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+      x = ferror(fp);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
     }
+    else
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+  }
   else
     x = ferror(fp);
-   return x;
+  return x;
 }
 
 int __wrap_feof(FILE* fp)
 {
   int x;
   if (check_fp(fp)) 
+  {
+    if (rank == MASTER) 
     {
-      if (rank == MASTER) 
-	{
-	  x = feof(fp);
-	  MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	}
-      else
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+      x = feof(fp);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
     }
+    else
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+  }
   else
     x = feof(fp);
-   return x;
+  return x;
 }
 
 void  __wrap_clearerr(FILE *fp)
 {
   if ( ! check_fp(fp) || (rank == MASTER) ) 
-      clearerr(fp);
+    clearerr(fp);
 }
 
 // File positioning etc.
@@ -202,15 +201,15 @@ int __wrap_fseek(FILE *fp, long offset, int origin)
 {
   int x;
   if (check_fp(fp)) 
+  {
+    if (rank == MASTER) 
     {
-      if (rank == MASTER) 
-	{
-	  x = fseek(fp, offset, origin);
-	  MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	}
-      else
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+      x = fseek(fp, offset, origin);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
     }
+    else
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+  }
   else
     x = fseek(fp, offset, origin);
   return x;
@@ -219,42 +218,42 @@ int __wrap_fseek(FILE *fp, long offset, int origin)
 void __wrap_rewind(FILE *fp)
 {
   if (! check_fp(fp) || (rank == MASTER)) 
-      rewind(fp);
+    rewind(fp);
 }
 
 
 int __wrap_ungetc(int c, FILE* fp)
 {
-   int x;
-   if (enabled) 
-     if (rank == MASTER) 
-       {
-	 x =ungetc(c, fp);
-	 MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-       }
-     else
-       MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-   else
-     x =ungetc(c, fp);
-   return x;
+  int x;
+  if (enabled) 
+    if (rank == MASTER) 
+    {
+      x =ungetc(c, fp);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+    }
+    else
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+  else
+    x =ungetc(c, fp);
+  return x;
 }
 
 int __wrap_fflush(FILE *fp)
 {
   int x;
   if (check_fp(fp)) 
+  {
+    if (rank == MASTER) 
     {
-      if (rank == MASTER) 
-	{
-	  x = fflush(fp);
-	  MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	}
-      else
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+      x = fflush(fp);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
     }
+    else
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+  }
   else
     x = fflush(fp);
-   return x;
+  return x;
 }
 
 int __wrap_fgetpos ( FILE * fp, fpos_t * pos )
@@ -262,10 +261,10 @@ int __wrap_fgetpos ( FILE * fp, fpos_t * pos )
   int x;
   if (enabled) 
     if (rank == MASTER) 
-      {
-	x = fgetpos(fp, pos);
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-      }
+    {
+      x = fgetpos(fp, pos);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+    }
     else
       MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
   else
@@ -274,52 +273,51 @@ int __wrap_fgetpos ( FILE * fp, fpos_t * pos )
 }
 
 int __wrap_fsetpos ( FILE * fp, const fpos_t * pos )
-  {
-    int x;
-    if (enabled) 
-      if (rank == MASTER) 
-	{
-	  x = fsetpos(fp, pos);
-	  MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	}
-      else
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-    else
+{
+  int x;
+  if (enabled) 
+    if (rank == MASTER) 
+    {
       x = fsetpos(fp, pos);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+    }
+    else
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+  else
+    x = fsetpos(fp, pos);
   return x;
-  }
+}
 
 long int __wrap_ftell ( FILE * fp )
-  {
-    long x;
-    if (enabled) 
-      if (rank == MASTER) 
-	{
-	  x = ftell(fp);
-	  MPI_Bcast(&x, 1, MPI_LONG, MASTER, MPI_COMM_WORLD); 
-	}
-      else
-	MPI_Bcast(&x, 1, MPI_LONG, MASTER, MPI_COMM_WORLD); 
-    else
+{
+  long x;
+  if (enabled) 
+    if (rank == MASTER) 
+    {
       x = ftell(fp);
-    return x;
-  }
+      MPI_Bcast(&x, 1, MPI_LONG, MASTER, MPI_COMM_WORLD); 
+    }
+    else
+      MPI_Bcast(&x, 1, MPI_LONG, MASTER, MPI_COMM_WORLD); 
+  else
+    x = ftell(fp);
+  return x;
+}
 
 // Read functions
 int __wrap_getc(FILE *fp)
 {
-  // printf("getc %d\n", rank);
   int x;
   if (enabled) 
     if (rank == MASTER )
-      {
-	x = getc(fp);
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-      }
+    {
+      x = getc(fp);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+    }
     else
-      {
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-      }
+    {
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+    }
   else
     x = getc(fp);
   return x;
@@ -330,14 +328,14 @@ int __wrap_getc_unlocked(FILE *fp)
   int x;
   if (enabled) 
     if (rank == MASTER )
-      {
-	x = getc_unlocked(fp);
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-      }
+    {
+      x = getc_unlocked(fp);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+    }
     else
-      {
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-      }
+    {
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+    }
   else
     x = getc_unlocked(fp);
   return x;
@@ -345,67 +343,66 @@ int __wrap_getc_unlocked(FILE *fp)
 
 int __wrap_fread(void *ptr, size_t size, size_t n, FILE* fp)
 {
-   // printf("read %d\n", rank);
-   // Is it OK to use just int for the size of data read?
-   int x;
-   if (enabled) 
-     if (rank == MASTER) 
-       {
-	 x = fread(ptr, size, n, fp);
-	 MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-	 MPI_Bcast(ptr, x*size, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
-       }
-     else
-       {
-	 MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-	 MPI_Bcast(ptr, x*size, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
-       }
-   else
-     x = fread(ptr, size, n, fp);
-   return x;
+  // Is it OK to use just int for the size of data read?
+  int x;
+  if (enabled) 
+    if (rank == MASTER) 
+    {
+      x = fread(ptr, size, n, fp);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+      MPI_Bcast(ptr, x*size, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
+    }
+    else
+    {
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+      MPI_Bcast(ptr, x*size, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
+    }
+  else
+    x = fread(ptr, size, n, fp);
+  return x;
 }
-              
+
 char *__wrap_fgets(char *str, int num, FILE* fp)
 {
   char* s;
   int s_is_null=0;
-   if (enabled) 
-     if (rank == MASTER) 
-       {
-	 s = fgets(str, num, fp);
-	 if (s==NULL)
-	   {
-	     s_is_null = 1;
-	     MPI_Bcast(&s_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	   }
-	 else
-	   {
-	     MPI_Bcast(&s_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	     MPI_Bcast(s, num, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
-	   }
-       }
-     else
-       {
-         MPI_Bcast(&s_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-         if (s_is_null == 1)
-           s = NULL;
-         else
-           MPI_Bcast(s, num, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
-       }    
-   else   
-     s = fgets(str, num, fp);
-   return s;
+  if (enabled) 
+    if (rank == MASTER) 
+    {
+      s = fgets(str, num, fp);
+      if (s==NULL)
+      {
+        s_is_null = 1;
+        MPI_Bcast(&s_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+      }
+      else
+      {
+        MPI_Bcast(&s_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+        MPI_Bcast(s, num, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
+      }
+    }
+    else
+    {
+      MPI_Bcast(&s_is_null, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+      if (s_is_null == 1)
+        s = NULL;
+      else
+        MPI_Bcast(s, num, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
+    }    
+  else   
+    s = fgets(str, num, fp);
+  return s;
 }
 
 int __wrap_fgetc ( FILE * fp )
-  {
+{
   int x;
   if (enabled) 
     if (rank == MASTER )
-      {
-	x = fgetc(fp);
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-      }
+    {
+      x = fgetc(fp);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+    }
     else
       MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
   else
@@ -415,123 +412,121 @@ int __wrap_fgetc ( FILE * fp )
 
 int __wrap_fstat(int fildes, struct stat *buf)
 {
- // printf("fstat %d\n", rank);
- int size = sizeof(struct stat);
- if (enabled) 
-   if (rank == MASTER) 
-     {
-       fstat(fildes, buf);
-       MPI_Bcast(buf, size, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
-     }
-   else
-     MPI_Bcast(buf, size, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
- else
-   fstat(fildes, buf);
+  int size = sizeof(struct stat);
+  if (enabled) 
+    if (rank == MASTER) 
+    {
+      fstat(fildes, buf);
+      MPI_Bcast(buf, size, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
+    }
+    else
+      MPI_Bcast(buf, size, MPI_BYTE, MASTER, MPI_COMM_WORLD); 
+  else
+    fstat(fildes, buf);
 
- // TODO should one return the true return value?
- return 0;
+  // TODO should one return the true return value?
+  return 0;
 }
 
 int __wrap_stat(const char *path, struct stat *buf)
 {
- // printf("stat %d\n", rank);
- int size = sizeof(struct stat);
- int x;
- if (enabled)
-   if (rank == MASTER)
-     {
-       x = stat(path, buf);
-       MPI_Bcast(buf, size, MPI_BYTE, MASTER, MPI_COMM_WORLD);
-       MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-     }
-   else
-     {
-       MPI_Bcast(buf, size, MPI_BYTE, MASTER, MPI_COMM_WORLD);
-       MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-     }
- else
-   x = stat(path, buf);
+  int size = sizeof(struct stat);
+  int x;
+  if (enabled)
+    if (rank == MASTER)
+    {
+      x = stat(path, buf);
+      MPI_Bcast(buf, size, MPI_BYTE, MASTER, MPI_COMM_WORLD);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+    }
+    else
+    {
+      MPI_Bcast(buf, size, MPI_BYTE, MASTER, MPI_COMM_WORLD);
+      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+    }
+  else
+    x = stat(path, buf);
 
- return x;
+  return x;
 }
 
 
 /* fileno is not actually needed
-int __wrap_fileno( FILE *fp )
-{
-  int x;
-  if (check_fp(fp)) 
-    {
-      if (rank == MASTER) 
-	{
-	  x = fileno(fp);
-	  MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-	}
-      else
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-    }
-  else
-    x = fileno(fp);
-  return x;
-  }
-*/
+   int __wrap_fileno( FILE *fp )
+   {
+   int x;
+   if (check_fp(fp)) 
+   {
+   if (rank == MASTER) 
+   {
+   x = fileno(fp);
+   MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+   }
+   else
+   MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+   }
+   else
+   x = fileno(fp);
+   return x;
+   }
+   */
 
 
 // Write functions
 /*
-int __wrap_fputc ( int character, FILE * fp )
-  {
-    int x;
-    if (rank == MASTER) 
-      {
-	x =  fputc(character, fp);
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-      }
-    else
-      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+   int __wrap_fputc ( int character, FILE * fp )
+   {
+   int x;
+   if (rank == MASTER) 
+   {
+   x =  fputc(character, fp);
+   MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+   }
+   else
+   MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
 
-    return x;
-  }
-      
-int __wrap_fputs ( const char * str, FILE * fp )
-  {
-    int x;
-    if (rank == MASTER) 
-      {
-	x = fputs(str, fp);
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-      }
-    else
-      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+   return x;
+   }
 
-    return x;
-  }
+   int __wrap_fputs ( const char * str, FILE * fp )
+   {
+   int x;
+   if (rank == MASTER) 
+   {
+   x = fputs(str, fp);
+   MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+   }
+   else
+   MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
 
-int __wrap__IO_putc ( int character, FILE * fp )
-  {
-    int x;
-    if (rank == MASTER) 
-      {
-	x = _IO_putc(character, fp);
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-      }
-    else
-      MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-    return x;
-  }
+   return x;
+   }
 
-size_t __wrap_fwrite ( const void * ptr, size_t size, size_t count, FILE * fp )
-{
-    int x;
-    if (rank == MASTER) 
-    {
-       x = fwrite(ptr, size, count, fp);
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-       }
-     else
-	MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
-    return x;
-  }
-*/
+   int __wrap__IO_putc ( int character, FILE * fp )
+   {
+   int x;
+   if (rank == MASTER) 
+   {
+   x = _IO_putc(character, fp);
+   MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+   }
+   else
+   MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+   return x;
+   }
+
+   size_t __wrap_fwrite ( const void * ptr, size_t size, size_t count, FILE * fp )
+   {
+   int x;
+   if (rank == MASTER) 
+   {
+   x = fwrite(ptr, size, count, fp);
+   MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+   }
+   else
+   MPI_Bcast(&x, 1, MPI_INT, MASTER, MPI_COMM_WORLD); 
+   return x;
+   }
+   */
 
 /* vim: set et tw=80 ts=2 sw=2: */

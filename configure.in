@@ -3427,7 +3427,7 @@ AC_ARG_ENABLE(debug-mpi,
 AC_MSG_RESULT($enable_debug_mpi)
 if test "x$enable_debug_mpi" != "xno"
 then
-	DEBUG_MPI_FLAG="-DIO_DEBUG"
+	DEBUG_MPI_FLAG="-DDEBUG_MPI"
 else
 	DEBUG_MPI_FLAG=
 fi
