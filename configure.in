@@ -3437,7 +3437,9 @@ if test "x$enable_mpi" != "xno"
 then
 	AC_DEFINE(ENABLE_MPI, 1, 
 			  [Define if you want to compile with MPI support])
-	LIBS="-lmpi $LIBS"
+#	AC_CHECK_LIB(mpi, MPI_Init)
+	AC_CHECK_HEADER(mpi.h, , [AC_CHECK_LIB(mpi, MPI_Init)])
+#	LIBS="-lmpi $LIBS"
 	PARALLEL_OBJS="Python/parallel_stdio.o"
 	OPT="$OPT -DENABLE_MPI $DEBUG_MPI_FLAG"
 	AC_CHECK_PROG(MPICC, mpicc, mpicc, cc)
