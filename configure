@@ -641,6 +641,7 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 SRCDIRS
 THREADHEADERS
+RUNPYTHON
 MPICC
 PARALLEL_OBJS
 UNICODE_OBJS
@@ -791,6 +792,7 @@ with_libc
 enable_unicode
 enable_mpi
 enable_debug_mpi
+with_external_python
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1467,6 +1469,8 @@ Optional Packages:
   --with-fpectl           enable SIGFPE catching
   --with-libm=STRING      math library
   --with-libc=STRING      C library
+  --with-external-python=/path/to/python
+                          use external python for installation
 
 Some influential environment variables:
   CC          C compiler command
@@ -23729,6 +23733,31 @@ fi
 
 else
 	PARALLEL_OBJS=
+fi
+
+# use external python for install?
+{ $as_echo "$as_me:$LINENO: checking for an external python" >&5
+$as_echo_n "checking for an external python... " >&6; }
+
+# Check whether --with-external-python was given.
+if test "${with_external_python+set}" = set; then
+  withval=$with_external_python; case $withval in
+			 	no)  external_python=no;;
+				yes) external_python=python;;
+				*)   external_python=$withval;;
+			esac
+else
+  external_python=no
+fi
+
+{ $as_echo "$as_me:$LINENO: result: $external_python" >&5
+$as_echo "$external_python" >&6; }
+
+if test "x$external_python" != "xno"
+then
+	RUNPYTHON="$external_python"
+else
+	RUNPYTHON="\$(BUILDPYTHON)"
 fi
 
 # check for endianness

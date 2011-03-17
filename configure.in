@@ -3448,6 +3448,25 @@ else
 	PARALLEL_OBJS=
 fi
 
+# use external python for install?
+AC_MSG_CHECKING([for an external python])
+AC_ARG_WITH(external-python,
+            AC_HELP_STRING(--with-external-python=/path/to/python, use external python for installation),
+			[case $withval in 
+			 	no)  external_python=no;;
+				yes) external_python=python;;
+				*)   external_python=$withval;;
+			esac], 
+			[external_python=no])
+AC_MSG_RESULT($external_python)
+AC_SUBST(RUNPYTHON)
+if test "x$external_python" != "xno"
+then
+	RUNPYTHON="$external_python"
+else
+	RUNPYTHON="\$(BUILDPYTHON)"
+fi
+
 # check for endianness
 AC_C_BIGENDIAN
 
