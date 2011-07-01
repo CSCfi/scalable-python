@@ -71,7 +71,8 @@ Here are the classes:
    also be added.
 
    Optional *boundary* is the multipart boundary string.  When ``None`` (the
-   default), the boundary is calculated when needed.
+   default), the boundary is calculated when needed (for example, when the
+   message is serialized).
 
    *_subparts* is a sequence of initial subparts for the payload.  It must be
    possible to convert this sequence to a list.  You can always attach new subparts
@@ -190,9 +191,11 @@ Here are the classes:
    minor type and defaults to :mimetype:`plain`.  *_charset* is the character
    set of the text and is passed as a parameter to the
    :class:`~email.mime.nonmultipart.MIMENonMultipart` constructor; it defaults
-   to ``us-ascii``.  No guessing or encoding is performed on the text data.
+   to ``us-ascii``.  If *_text* is unicode, it is encoded using the
+   *output_charset* of *_charset*, otherwise it is used as-is.
 
    .. versionchanged:: 2.4
-      The previously deprecated *_encoding* argument has been removed.  Encoding
-      happens implicitly based on the *_charset* argument.
+      The previously deprecated *_encoding* argument has been removed.  Content
+      Transfer Encoding now happens happens implicitly based on the *_charset*
+      argument.
 

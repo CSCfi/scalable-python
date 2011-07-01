@@ -6,7 +6,7 @@ being built/installed/distributed.
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: dist.py 68035 2008-12-29 22:36:22Z tarek.ziade $"
+__revision__ = "$Id: dist.py 77719 2010-01-24 00:57:20Z tarek.ziade $"
 
 import sys, os, string, re
 from types import *
@@ -1114,17 +1114,19 @@ class DistributionMetadata:
         self._write_list(file, 'Obsoletes', self.get_obsoletes())
 
     def _write_field(self, file, name, value):
-
-        if isinstance(value, unicode):
-            value = value.encode(PKG_INFO_ENCODING)
-        else:
-            value = str(value)
-        file.write('%s: %s\n' % (name, value))
+        file.write('%s: %s\n' % (name, self._encode_field(value)))
 
     def _write_list (self, file, name, values):
 
         for value in values:
             self._write_field(file, name, value)
+
+    def _encode_field(self, value):
+        if value is None:
+            return None
+        if isinstance(value, unicode):
+            return value.encode(PKG_INFO_ENCODING)
+        return str(value)
 
     # -- Metadata query methods ----------------------------------------
 
@@ -1138,21 +1140,20 @@ class DistributionMetadata:
         return "%s-%s" % (self.get_name(), self.get_version())
 
     def get_author(self):
-        return self.author or "UNKNOWN"
+        return self._encode_field(self.author) or "UNKNOWN"
 
     def get_author_email(self):
         return self.author_email or "UNKNOWN"
 
     def get_maintainer(self):
-        return self.maintainer or "UNKNOWN"
+        return self._encode_field(self.maintainer) or "UNKNOWN"
 
     def get_maintainer_email(self):
         return self.maintainer_email or "UNKNOWN"
 
     def get_contact(self):
-        return (self.maintainer or
-                self.author or
-                "UNKNOWN")
+        return (self._encode_field(self.maintainer) or
+                self._encode_field(self.author) or "UNKNOWN")
 
     def get_contact_email(self):
         return (self.maintainer_email or
@@ -1167,10 +1168,10 @@ class DistributionMetadata:
     get_licence = get_license
 
     def get_description(self):
-        return self.description or "UNKNOWN"
+        return self._encode_field(self.description) or "UNKNOWN"
 
     def get_long_description(self):
-        return self.long_description or "UNKNOWN"
+        return self._encode_field(self.long_description) or "UNKNOWN"
 
     def get_keywords(self):
         return self.keywords or []

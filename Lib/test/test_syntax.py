@@ -447,9 +447,13 @@ class SyntaxTestCase(unittest.TestCase):
                 self.fail("SyntaxError is not a %s" % subclass.__name__)
             mo = re.search(errtext, str(err))
             if mo is None:
-                self.fail("SyntaxError did not contain '%r'" % (errtext,))
+                self.fail("%s did not contain '%r'" % (err, errtext,))
         else:
             self.fail("compile() did not raise SyntaxError")
+
+    def test_paren_arg_with_default(self):
+        self._check_error("def f((x)=23): pass",
+                          "parenthesized arg with default")
 
     def test_assign_call(self):
         self._check_error("f() = 1", "assign")
@@ -502,7 +506,9 @@ class SyntaxTestCase(unittest.TestCase):
 def test_main():
     test_support.run_unittest(SyntaxTestCase)
     from test import test_syntax
-    test_support.run_doctest(test_syntax, verbosity=True)
+    with test_support._check_py3k_warnings(("backquote not supported",
+                                             SyntaxWarning)):
+        test_support.run_doctest(test_syntax, verbosity=True)
 
 if __name__ == "__main__":
     test_main()

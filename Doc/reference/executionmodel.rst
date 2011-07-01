@@ -112,14 +112,14 @@ determined by scanning the entire text of the block for name binding operations.
 If the global statement occurs within a block, all uses of the name specified in
 the statement refer to the binding of that name in the top-level namespace.
 Names are resolved in the top-level namespace by searching the global namespace,
-i.e. the namespace of the module containing the code block, and the builtin
+i.e. the namespace of the module containing the code block, and the builtins
 namespace, the namespace of the module :mod:`__builtin__`.  The global namespace
-is searched first.  If the name is not found there, the builtin namespace is
+is searched first.  If the name is not found there, the builtins namespace is
 searched.  The global statement must precede all uses of the name.
 
 .. index:: pair: restricted; execution
 
-The built-in namespace associated with the execution of a code block is actually
+The builtins namespace associated with the execution of a code block is actually
 found by looking up the name ``__builtins__`` in its global namespace; this
 should be a dictionary or a module (in the latter case the module's dictionary
 is used).  By default, when in the :mod:`__main__` module, ``__builtins__`` is
@@ -128,10 +128,10 @@ the built-in module :mod:`__builtin__` (note: no 's'); when in any other module,
 itself.  ``__builtins__`` can be set to a user-created dictionary to create a
 weak form of restricted execution.
 
-.. note::
+.. impl-detail::
 
    Users should not touch ``__builtins__``; it is strictly an implementation
-   detail.  Users wanting to override values in the built-in namespace should
+   detail.  Users wanting to override values in the builtins namespace should
    :keyword:`import` the :mod:`__builtin__` (no 's') module and modify its
    attributes appropriately.
 

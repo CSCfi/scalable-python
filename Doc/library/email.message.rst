@@ -40,7 +40,10 @@ Here are the methods of the :class:`Message` class:
 
       Return the entire message flattened as a string.  When optional *unixfrom*
       is ``True``, the envelope header is included in the returned string.
-      *unixfrom* defaults to ``False``.
+      *unixfrom* defaults to ``False``.  Flattening the message may trigger
+      changes to the :class:`Message` if defaults need to be filled in to
+      complete the transformation to a string (for example, MIME boundaries may
+      be generated or modified).
 
       Note that this method is provided as a convenience and may not always
       format the message the way you want.  For example, by default it mangles
@@ -133,9 +136,10 @@ Here are the methods of the :class:`Message` class:
       :mailheader:`Content-Type` header. Anything else will generate a
       :exc:`TypeError`.
 
-      The message will be assumed to be of type :mimetype:`text/\*` encoded with
-      *charset.input_charset*.  It will be converted to *charset.output_charset*
-      and encoded properly, if needed, when generating the plain text
+      The message will be assumed to be of type :mimetype:`text/\*`, with the
+      payload either in unicode or encoded with *charset.input_charset*.
+      It will be encoded or converted to *charset.output_charset*
+      and transfer encoded properly, if needed, when generating the plain text
       representation of the message.  MIME headers (:mailheader:`MIME-Version`,
       :mailheader:`Content-Type`, :mailheader:`Content-Transfer-Encoding`) will
       be added as needed.

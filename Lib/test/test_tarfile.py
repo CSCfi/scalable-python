@@ -27,11 +27,8 @@ except ImportError:
 def md5sum(data):
     return md5(data).hexdigest()
 
-def path(path):
-    return test_support.findfile(path)
-
-TEMPDIR = os.path.join(tempfile.gettempdir(), "test_tarfile_tmp")
-tarname = path("testtar.tar")
+TEMPDIR = os.path.abspath(test_support.TESTFN)
+tarname = test_support.findfile("testtar.tar")
 gzipname = os.path.join(TEMPDIR, "testtar.tar.gz")
 bz2name = os.path.join(TEMPDIR, "testtar.tar.bz2")
 tmpname = os.path.join(TEMPDIR, "tmp.tar")
@@ -266,6 +263,24 @@ class MiscReadTest(ReadTest):
                 self.assertEqual(tarinfo.mode & 0777, os.stat(path).st_mode & 0777)
             self.assertEqual(tarinfo.mtime, os.path.getmtime(path))
         tar.close()
+
+    def test_init_close_fobj(self):
+        # Issue #7341: Close the internal file object in the TarFile
+        # constructor in case of an error. For the test we rely on
+        # the fact that opening an invalid file raises a ReadError.
+        invalid = os.path.join(TEMPDIR, "invalid")
+        open(invalid, "wb").write("foo")
+
+        try:
+            tar = object.__new__(tarfile.TarFile)
+            try:
+                tar.__init__(invalid)
+            except tarfile.ReadError:
+                self.assertTrue(tar.fileobj.closed)
+            else:
+                self.fail("ReadError not raised")
+        finally:
+            os.remove(invalid)
 
 
 class StreamReadTest(ReadTest):
@@ -602,10 +617,14 @@ class WriteTest(WriteTestBase):
         if hasattr(os, "link"):
             link = os.path.join(TEMPDIR, "link")
             target = os.path.join(TEMPDIR, "link_target")
-            open(target, "wb").close()
+            fobj = open(target, "wb")
+            fobj.write("aaa")
+            fobj.close()
             os.link(target, link)
             try:
                 tar = tarfile.open(tmpname, self.mode)
+                # Record the link target in the inodes list.
+                tar.gettarinfo(target)
                 tarinfo = tar.gettarinfo(link)
                 self.assertEqual(tarinfo.size, 0)
             finally:
@@ -687,6 +706,24 @@ class StreamWriteTest(WriteTestBase):
 
         self.assert_(data.count("\0") == tarfile.RECORDSIZE,
                          "incorrect zero padding")
+
+    def test_file_mode(self):
+        # Test for issue #8464: Create files with correct
+        # permissions.
+        if sys.platform == "win32" or not hasattr(os, "umask"):
+            return
+
+        if os.path.exists(tmpname):
+            os.remove(tmpname)
+
+        original_umask = os.umask(0022)
+        try:
+            tar = tarfile.open(tmpname, self.mode)
+            tar.close()
+            mode = os.stat(tmpname).st_mode & 0777
+            self.assertEqual(mode, 0644, "wrong file permissions")
+        finally:
+            os.umask(original_umask)
 
 
 class GNUWriteTest(unittest.TestCase):
@@ -1165,8 +1202,7 @@ class Bz2PartialReadTest(unittest.TestCase):
 
 
 def test_main():
-    if not os.path.exists(TEMPDIR):
-        os.mkdir(TEMPDIR)
+    os.makedirs(TEMPDIR)
 
     tests = [
         UstarReadTest,

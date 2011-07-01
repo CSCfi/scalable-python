@@ -37,7 +37,7 @@ Reference Manual pages.
 __author__ = "Ka-Ping Yee <ping@lfw.org>"
 __date__ = "26 February 2001"
 
-__version__ = "$Revision: 73530 $"
+__version__ = "$Revision: 83492 $"
 __credits__ = """Guido van Rossum, for an excellent programming language.
 Tommy Burnette, the original creator of manpy.
 Paul Prescod, for all his work on onlinehelp.
@@ -124,9 +124,7 @@ _re_stripid = re.compile(r' at 0x[0-9a-f]{6,16}(>+)$', re.IGNORECASE)
 def stripid(text):
     """Remove the hexadecimal id from a Python object representation."""
     # The behaviour of %p is implementation-dependent in terms of case.
-    if _re_stripid.search(repr(Exception)):
-        return _re_stripid.sub(r'\1', text)
-    return text
+    return _re_stripid.sub(r'\1', text)
 
 def _is_some_method(obj):
     return inspect.ismethod(obj) or inspect.ismethoddescriptor(obj)
@@ -358,7 +356,8 @@ class Doc:
                                  'marshal', 'posix', 'signal', 'sys',
                                  'thread', 'zipimport') or
              (file.startswith(basedir) and
-              not file.startswith(os.path.join(basedir, 'site-packages'))))):
+              not file.startswith(os.path.join(basedir, 'site-packages')))) and
+            object.__name__ not in ('xml.etree', 'test.pydoc_mod')):
             if docloc.startswith("http://"):
                 docloc = "%s/%s" % (docloc.rstrip("/"), object.__name__)
             else:
@@ -1706,9 +1705,12 @@ class Helper:
         'CONTEXTMANAGERS': ('context-managers', 'with'),
     }
 
-    def __init__(self, input, output):
-        self.input = input
-        self.output = output
+    def __init__(self, input=None, output=None):
+        self._input = input
+        self._output = output
+
+    input  = property(lambda self: self._input or sys.stdin)
+    output = property(lambda self: self._output or sys.stdout)
 
     def __repr__(self):
         if inspect.stack()[1][3] == '?':
@@ -1885,7 +1887,7 @@ Enter any module name to get more help.  Or, type "modules spam" to search
 for modules whose descriptions contain the word "spam".
 ''')
 
-help = Helper(sys.stdin, sys.stdout)
+help = Helper()
 
 class Scanner:
     """A generic tree iterator."""
@@ -2254,11 +2256,13 @@ def cli():
     import getopt
     class BadUsage: pass
 
-    # Scripts don't get the current directory in their path by default.
-    scriptdir = os.path.dirname(sys.argv[0])
-    if scriptdir in sys.path:
-        sys.path.remove(scriptdir)
-    sys.path.insert(0, '.')
+    # Scripts don't get the current directory in their path by default
+    # unless they are run with the '-m' switch
+    if '' not in sys.path:
+        scriptdir = os.path.dirname(sys.argv[0])
+        if scriptdir in sys.path:
+            sys.path.remove(scriptdir)
+        sys.path.insert(0, '.')
 
     try:
         opts, args = getopt.getopt(sys.argv[1:], 'gk:p:w')

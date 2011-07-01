@@ -123,6 +123,21 @@ BaseException_unicode(PyBaseExceptionObject *self)
 {
     PyObject *out;
 
+    /* issue6108: if __str__ has been overridden in the subclass, unicode()
+       should return the message returned by __str__ as used to happen
+       before this method was implemented. */
+    if (Py_TYPE(self)->tp_str != (reprfunc)BaseException_str) {
+        PyObject *str;
+        /* Unlike PyObject_Str, tp_str can return unicode (i.e. return the
+           equivalent of unicode(e.__str__()) instead of unicode(str(e))). */
+        str = Py_TYPE(self)->tp_str((PyObject*)self);
+        if (str == NULL)
+            return NULL;
+        out = PyObject_Unicode(str);
+        Py_DECREF(str);
+        return out;
+    }
+
     switch (PyTuple_GET_SIZE(self->args)) {
     case 0:
         out = PyUnicode_FromString("");
@@ -203,7 +218,7 @@ BaseException_setstate(PyObject *self, PyObject *state)
 static PyMethodDef BaseException_methods[] = {
    {"__reduce__", (PyCFunction)BaseException_reduce, METH_NOARGS },
    {"__setstate__", (PyCFunction)BaseException_setstate, METH_O },
-#ifdef Py_USING_UNICODE   
+#ifdef Py_USING_UNICODE
    {"__unicode__", (PyCFunction)BaseException_unicode, METH_NOARGS },
 #endif
    {NULL, NULL, 0, NULL},
@@ -222,7 +237,7 @@ BaseException_getitem(PyBaseExceptionObject *self, Py_ssize_t index)
 
 static PyObject *
 BaseException_getslice(PyBaseExceptionObject *self,
-			Py_ssize_t start, Py_ssize_t stop)
+                        Py_ssize_t start, Py_ssize_t stop)
 {
     if (PyErr_WarnPy3k("__getslice__ not supported for exception "
                        "classes in 3.x; use args attribute", 1) < 0)
@@ -302,7 +317,7 @@ static PyObject *
 BaseException_get_message(PyBaseExceptionObject *self)
 {
     PyObject *msg;
-    
+
     /* if "message" is in self->dict, accessing a user-set message attribute */
     if (self->dict &&
         (msg = PyDict_GetItemString(self->dict, "message"))) {
@@ -338,7 +353,7 @@ BaseException_set_message(PyBaseExceptionObject *self, PyObject *val)
         self->message = NULL;
         return 0;
     }
-    
+
     /* else set it in __dict__, but may need to create the dict first */
     if (self->dict == NULL) {
         self->dict = PyDict_New();
@@ -352,7 +367,7 @@ static PyGetSetDef BaseException_getset[] = {
     {"__dict__", (getter)BaseException_get_dict, (setter)BaseException_set_dict},
     {"args", (getter)BaseException_get_args, (setter)BaseException_set_args},
     {"message", (getter)BaseException_get_message,
-	    (setter)BaseException_set_message},
+            (setter)BaseException_set_message},
     {NULL},
 };
 
@@ -379,7 +394,7 @@ static PyTypeObject _PyExc_BaseException = {
     PyObject_GenericSetAttr,    /*tp_setattro*/
     0,                          /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC |
-    	Py_TPFLAGS_BASE_EXC_SUBCLASS,  /*tp_flags*/
+        Py_TPFLAGS_BASE_EXC_SUBCLASS,  /*tp_flags*/
     PyDoc_STR("Common base class for all exceptions"), /* tp_doc */
     (traverseproc)BaseException_traverse, /* tp_traverse */
     (inquiry)BaseException_clear, /* tp_clear */
@@ -1626,8 +1641,20 @@ static PyObject *
 UnicodeEncodeError_str(PyObject *self)
 {
     PyUnicodeErrorObject *uself = (PyUnicodeErrorObject *)self;
+    PyObject *result = NULL;
+    PyObject *reason_str = NULL;
+    PyObject *encoding_str = NULL;
 
-    if (uself->end==uself->start+1) {
+    /* Get reason and encoding as strings, which they might not be if
+       they've been modified after we were contructed. */
+    reason_str = PyObject_Str(uself->reason);
+    if (reason_str == NULL)
+        goto done;
+    encoding_str = PyObject_Str(uself->encoding);
+    if (encoding_str == NULL)
+        goto done;
+
+    if (uself->start < PyUnicode_GET_SIZE(uself->object) && uself->end == uself->start+1) {
         int badchar = (int)PyUnicode_AS_UNICODE(uself->object)[uself->start];
         char badchar_str[20];
         if (badchar <= 0xff)
@@ -1636,21 +1663,25 @@ UnicodeEncodeError_str(PyObject *self)
             PyOS_snprintf(badchar_str, sizeof(badchar_str), "u%04x", badchar);
         else
             PyOS_snprintf(badchar_str, sizeof(badchar_str), "U%08x", badchar);
-        return PyString_FromFormat(
+        result = PyString_FromFormat(
             "'%.400s' codec can't encode character u'\\%s' in position %zd: %.400s",
-            PyString_AS_STRING(uself->encoding),
+            PyString_AS_STRING(encoding_str),
             badchar_str,
             uself->start,
-            PyString_AS_STRING(uself->reason)
-        );
+            PyString_AS_STRING(reason_str));
     }
-    return PyString_FromFormat(
-        "'%.400s' codec can't encode characters in position %zd-%zd: %.400s",
-        PyString_AS_STRING(uself->encoding),
-        uself->start,
-        uself->end-1,
-        PyString_AS_STRING(uself->reason)
-    );
+    else {
+        result = PyString_FromFormat(
+            "'%.400s' codec can't encode characters in position %zd-%zd: %.400s",
+            PyString_AS_STRING(encoding_str),
+            uself->start,
+            uself->end-1,
+            PyString_AS_STRING(reason_str));
+    }
+done:
+    Py_XDECREF(reason_str);
+    Py_XDECREF(encoding_str);
+    return result;
 }
 
 static PyTypeObject _PyExc_UnicodeEncodeError = {
@@ -1695,27 +1726,43 @@ static PyObject *
 UnicodeDecodeError_str(PyObject *self)
 {
     PyUnicodeErrorObject *uself = (PyUnicodeErrorObject *)self;
+    PyObject *result = NULL;
+    PyObject *reason_str = NULL;
+    PyObject *encoding_str = NULL;
 
-    if (uself->end==uself->start+1) {
+    /* Get reason and encoding as strings, which they might not be if
+       they've been modified after we were contructed. */
+    reason_str = PyObject_Str(uself->reason);
+    if (reason_str == NULL)
+        goto done;
+    encoding_str = PyObject_Str(uself->encoding);
+    if (encoding_str == NULL)
+        goto done;
+
+    if (uself->start < PyUnicode_GET_SIZE(uself->object) && uself->end == uself->start+1) {
         /* FromFormat does not support %02x, so format that separately */
         char byte[4];
         PyOS_snprintf(byte, sizeof(byte), "%02x",
                       ((int)PyString_AS_STRING(uself->object)[uself->start])&0xff);
-        return PyString_FromFormat(
+        result = PyString_FromFormat(
             "'%.400s' codec can't decode byte 0x%s in position %zd: %.400s",
-            PyString_AS_STRING(uself->encoding),
+            PyString_AS_STRING(encoding_str),
             byte,
             uself->start,
-            PyString_AS_STRING(uself->reason)
-        );
+            PyString_AS_STRING(reason_str));
     }
-    return PyString_FromFormat(
-        "'%.400s' codec can't decode bytes in position %zd-%zd: %.400s",
-        PyString_AS_STRING(uself->encoding),
-        uself->start,
-        uself->end-1,
-        PyString_AS_STRING(uself->reason)
-    );
+    else {
+        result = PyString_FromFormat(
+            "'%.400s' codec can't decode bytes in position %zd-%zd: %.400s",
+            PyString_AS_STRING(encoding_str),
+            uself->start,
+            uself->end-1,
+            PyString_AS_STRING(reason_str));
+    }
+done:
+    Py_XDECREF(reason_str);
+    Py_XDECREF(encoding_str);
+    return result;
 }
 
 static PyTypeObject _PyExc_UnicodeDecodeError = {
@@ -1738,9 +1785,6 @@ PyUnicodeDecodeError_Create(
     const char *encoding, const char *object, Py_ssize_t length,
     Py_ssize_t start, Py_ssize_t end, const char *reason)
 {
-    assert(length < INT_MAX);
-    assert(start < INT_MAX);
-    assert(end < INT_MAX);
     return PyObject_CallFunction(PyExc_UnicodeDecodeError, "ss#nns",
                                  encoding, object, length, start, end, reason);
 }
@@ -1780,8 +1824,16 @@ static PyObject *
 UnicodeTranslateError_str(PyObject *self)
 {
     PyUnicodeErrorObject *uself = (PyUnicodeErrorObject *)self;
+    PyObject *result = NULL;
+    PyObject *reason_str = NULL;
 
-    if (uself->end==uself->start+1) {
+    /* Get reason as a string, which it might not be if it's been
+       modified after we were contructed. */
+    reason_str = PyObject_Str(uself->reason);
+    if (reason_str == NULL)
+        goto done;
+
+    if (uself->start < PyUnicode_GET_SIZE(uself->object) && uself->end == uself->start+1) {
         int badchar = (int)PyUnicode_AS_UNICODE(uself->object)[uself->start];
         char badchar_str[20];
         if (badchar <= 0xff)
@@ -1790,19 +1842,21 @@ UnicodeTranslateError_str(PyObject *self)
             PyOS_snprintf(badchar_str, sizeof(badchar_str), "u%04x", badchar);
         else
             PyOS_snprintf(badchar_str, sizeof(badchar_str), "U%08x", badchar);
-        return PyString_FromFormat(
+        result = PyString_FromFormat(
             "can't translate character u'\\%s' in position %zd: %.400s",
             badchar_str,
             uself->start,
-            PyString_AS_STRING(uself->reason)
-        );
+            PyString_AS_STRING(reason_str));
+    } else {
+        result = PyString_FromFormat(
+            "can't translate characters in position %zd-%zd: %.400s",
+            uself->start,
+            uself->end-1,
+            PyString_AS_STRING(reason_str));
     }
-    return PyString_FromFormat(
-        "can't translate characters in position %zd-%zd: %.400s",
-        uself->start,
-        uself->end-1,
-        PyString_AS_STRING(uself->reason)
-    );
+done:
+    Py_XDECREF(reason_str);
+    return result;
 }
 
 static PyTypeObject _PyExc_UnicodeTranslateError = {
@@ -1997,8 +2051,8 @@ static PyMethodDef functions[] = {
 /* crt variable checking in VisualStudio .NET 2005 */
 #include <crtdbg.h>
 
-static int	prevCrtReportMode;
-static _invalid_parameter_handler	prevCrtHandler;
+static int      prevCrtReportMode;
+static _invalid_parameter_handler       prevCrtHandler;
 
 /* Invalid parameter handler.  Sets a ValueError exception */
 static void
@@ -2152,25 +2206,25 @@ _PyExc_Init(void)
 
     PyExc_RecursionErrorInst = BaseException_new(&_PyExc_RuntimeError, NULL, NULL);
     if (!PyExc_RecursionErrorInst)
-	Py_FatalError("Cannot pre-allocate RuntimeError instance for "
-			"recursion errors");
+        Py_FatalError("Cannot pre-allocate RuntimeError instance for "
+                        "recursion errors");
     else {
-	PyBaseExceptionObject *err_inst =
-	    (PyBaseExceptionObject *)PyExc_RecursionErrorInst;
-	PyObject *args_tuple;
-	PyObject *exc_message;
-	exc_message = PyString_FromString("maximum recursion depth exceeded");
-	if (!exc_message)
-	    Py_FatalError("cannot allocate argument for RuntimeError "
-			    "pre-allocation");
-	args_tuple = PyTuple_Pack(1, exc_message);
-	if (!args_tuple)
-	    Py_FatalError("cannot allocate tuple for RuntimeError "
-			    "pre-allocation");
-	Py_DECREF(exc_message);
-	if (BaseException_init(err_inst, args_tuple, NULL))
-	    Py_FatalError("init of pre-allocated RuntimeError failed");
-	Py_DECREF(args_tuple);
+        PyBaseExceptionObject *err_inst =
+            (PyBaseExceptionObject *)PyExc_RecursionErrorInst;
+        PyObject *args_tuple;
+        PyObject *exc_message;
+        exc_message = PyString_FromString("maximum recursion depth exceeded");
+        if (!exc_message)
+            Py_FatalError("cannot allocate argument for RuntimeError "
+                            "pre-allocation");
+        args_tuple = PyTuple_Pack(1, exc_message);
+        if (!args_tuple)
+            Py_FatalError("cannot allocate tuple for RuntimeError "
+                            "pre-allocation");
+        Py_DECREF(exc_message);
+        if (BaseException_init(err_inst, args_tuple, NULL))
+            Py_FatalError("init of pre-allocated RuntimeError failed");
+        Py_DECREF(args_tuple);
     }
 
     Py_DECREF(bltinmod);

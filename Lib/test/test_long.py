@@ -323,6 +323,23 @@ class LongTest(unittest.TestCase):
         self.assertRaises(ValueError, long, '53', 40)
         self.assertRaises(TypeError, long, 1, 12)
 
+        # tests with base 0
+        self.assertEqual(long(' 0123  ', 0), 83)
+        self.assertEqual(long(' 0123  ', 0), 83)
+        self.assertEqual(long('000', 0), 0)
+        self.assertEqual(long('0o123', 0), 83)
+        self.assertEqual(long('0x123', 0), 291)
+        self.assertEqual(long('0b100', 0), 4)
+        self.assertEqual(long(' 0O123   ', 0), 83)
+        self.assertEqual(long(' 0X123  ', 0), 291)
+        self.assertEqual(long(' 0B100 ', 0), 4)
+        self.assertEqual(long('0', 0), 0)
+        self.assertEqual(long('+0', 0), 0)
+        self.assertEqual(long('-0', 0), 0)
+        self.assertEqual(long('00', 0), 0)
+        self.assertRaises(ValueError, long, '08', 0)
+        self.assertRaises(ValueError, long, '-012395', 0)
+
         # SF patch #1638879: embedded NULs were not detected with
         # explicit base
         self.assertRaises(ValueError, long, '123\0', 10)
@@ -506,7 +523,7 @@ class LongTest(unittest.TestCase):
         except OverflowError:
             self.fail("int(long(sys.maxint)) overflowed!")
         if not isinstance(x, int):
-            raise TestFailed("int(long(sys.maxint)) should have returned int")
+            self.fail("int(long(sys.maxint)) should have returned int")
         x = int(hugeneg_aslong)
         try:
             self.assertEqual(x, hugeneg,
@@ -514,8 +531,7 @@ class LongTest(unittest.TestCase):
         except OverflowError:
             self.fail("int(long(-sys.maxint-1)) overflowed!")
         if not isinstance(x, int):
-            raise TestFailed("int(long(-sys.maxint-1)) should have "
-                             "returned int")
+            self.fail("int(long(-sys.maxint-1)) should have returned int")
         # but long -> int should overflow for hugepos+1 and hugeneg-1
         x = hugepos_aslong + 1
         try:
@@ -545,11 +561,12 @@ class LongTest(unittest.TestCase):
             def __getslice__(self, i, j):
                 return i, j
 
-        self.assertEqual(X()[-5L:7L], (-5, 7))
-        # use the clamping effect to test the smallest and largest longs
-        # that fit a Py_ssize_t
-        slicemin, slicemax = X()[-2L**100:2L**100]
-        self.assertEqual(X()[slicemin:slicemax], (slicemin, slicemax))
+        with test_support._check_py3k_warnings():
+            self.assertEqual(X()[-5L:7L], (-5, 7))
+            # use the clamping effect to test the smallest and largest longs
+            # that fit a Py_ssize_t
+            slicemin, slicemax = X()[-2L**100:2L**100]
+            self.assertEqual(X()[slicemin:slicemax], (slicemin, slicemax))
 
 # ----------------------------------- tests of auto int->long conversion
 
@@ -589,8 +606,9 @@ class LongTest(unittest.TestCase):
                 checkit(x, '*', y)
 
                 if y:
-                    expected = longx / longy
-                    got = x / y
+                    with test_support._check_py3k_warnings():
+                        expected = longx / longy
+                        got = x / y
                     checkit(x, '/', y)
 
                     expected = longx // longy
@@ -714,7 +732,7 @@ class LongTest(unittest.TestCase):
                     self.d = d
                     assert float(n) / float(d) == value
                 else:
-                    raise TypeError("can't deal with %r" % val)
+                    raise TypeError("can't deal with %r" % value)
 
             def __cmp__(self, other):
                 if not isinstance(other, Rat):

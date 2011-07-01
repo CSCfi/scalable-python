@@ -59,16 +59,11 @@ else:
         return cPickle.dumps(object, bin=protocol)
 
 
-if sys.version_info[0:2] <= (2, 5) :
-    try:
-        from UserDict import DictMixin
-    except ImportError:
-        # DictMixin is new in Python 2.3
-        class DictMixin: pass
-    MutableMapping = DictMixin
-else :
-    import collections
-    MutableMapping = collections.MutableMapping
+try:
+    from UserDict import DictMixin
+except ImportError:
+    # DictMixin is new in Python 2.3
+    class DictMixin: pass
 
 #------------------------------------------------------------------------
 
@@ -111,7 +106,7 @@ def open(filename, flags=db.DB_CREATE, mode=0660, filetype=db.DB_HASH,
 class DBShelveError(db.DBError): pass
 
 
-class DBShelf(MutableMapping):
+class DBShelf(DictMixin):
     """A shelf to hold pickled objects, built upon a bsddb DB object.  It
     automatically pickles/unpickles data objects going to/from the DB.
     """
@@ -157,14 +152,10 @@ class DBShelf(MutableMapping):
 
 
     def keys(self, txn=None):
-        if txn != None:
+        if txn is not None:
             return self.db.keys(txn)
         else:
             return self.db.keys()
-
-    if sys.version_info[0:2] >= (2, 6) :
-        def __iter__(self) :
-            return self.db.__iter__()
 
 
     def open(self, *args, **kwargs):
@@ -185,7 +176,7 @@ class DBShelf(MutableMapping):
 
 
     def items(self, txn=None):
-        if txn != None:
+        if txn is not None:
             items = self.db.items(txn)
         else:
             items = self.db.items()
@@ -196,7 +187,7 @@ class DBShelf(MutableMapping):
         return newitems
 
     def values(self, txn=None):
-        if txn != None:
+        if txn is not None:
             values = self.db.values(txn)
         else:
             values = self.db.values()
@@ -234,7 +225,7 @@ class DBShelf(MutableMapping):
         # given nothing is passed to the extension module.  That way
         # an exception can be raised if set_get_returns_none is turned
         # off.
-        data = apply(self.db.get, args, kw)
+        data = self.db.get(*args, **kw)
         try:
             return cPickle.loads(data)
         except (EOFError, TypeError, cPickle.UnpicklingError):
@@ -303,7 +294,7 @@ class DBShelfCursor:
     def get(self, *args):
         count = len(args)  # a method overloading hack
         method = getattr(self, 'get_%d' % count)
-        apply(method, args)
+        method(*args)
 
     def get_1(self, flags):
         rec = self.dbc.get(flags)

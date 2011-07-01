@@ -4,10 +4,11 @@ Implements the Distutils 'build_py' command."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: build_py.py 65742 2008-08-17 04:16:04Z brett.cannon $"
+__revision__ = "$Id: build_py.py 83648 2010-08-03 07:51:50Z ezio.melotti $"
 
 import string, os
 from types import *
+import sys
 from glob import glob
 
 from distutils.core import Command
@@ -156,7 +157,7 @@ class build_py (Command):
 
         if not self.package_dir:
             if path:
-                return apply(os.path.join, path)
+                return os.path.join(*path)
             else:
                 return ''
         else:
@@ -183,7 +184,7 @@ class build_py (Command):
                     tail.insert(0, pdir)
 
                 if tail:
-                    return apply(os.path.join, tail)
+                    return os.path.join(*tail)
                 else:
                     return ''
 
@@ -418,6 +419,10 @@ class build_py (Command):
 
 
     def byte_compile (self, files):
+        if sys.dont_write_bytecode:
+            self.warn('byte-compiling is disabled, skipping.')
+            return
+
         from distutils.util import byte_compile
         prefix = self.build_lib
         if prefix[-1] != os.sep:

@@ -4,6 +4,7 @@ import subprocess
 import sys
 import signal
 import os
+import errno
 import tempfile
 import time
 import re
@@ -448,8 +449,6 @@ class ProcessTestCase(unittest.TestCase):
                          '"a\\\\b\\ c" d e')
         self.assertEqual(subprocess.list2cmdline(['ab', '']),
                          'ab ""')
-        self.assertEqual(subprocess.list2cmdline(['echo', 'foo|bar']),
-                         'echo "foo|bar"')
 
 
     def test_poll(self):
@@ -522,6 +521,20 @@ class ProcessTestCase(unittest.TestCase):
             """Try to prevent core files from being created.
             Returns previous ulimit if successful, else None.
             """
+            if sys.platform == 'darwin':
+                # Check if the 'Crash Reporter' on OSX was configured
+                # in 'Developer' mode and warn that it will get triggered
+                # when it is.
+                #
+                # This assumes that this context manager is used in tests
+                # that might trigger the next manager.
+                value = subprocess.Popen(['/usr/bin/defaults', 'read',
+                    'com.apple.CrashReporter', 'DialogType'],
+                    stdout=subprocess.PIPE).communicate()[0]
+                if value.strip() == b'developer':
+                    print "this tests triggers the Crash Reporter, that is intentional"
+                    sys.stdout.flush()
+
             try:
                 import resource
                 old_limit = resource.getrlimit(resource.RLIMIT_CORE)
@@ -613,6 +626,25 @@ class ProcessTestCase(unittest.TestCase):
             rc = subprocess.call(fname)
             os.remove(fname)
             self.assertEqual(rc, 47)
+
+        def test_specific_shell(self):
+            # Issue #9265: Incorrect name passed as arg[0].
+            shells = []
+            for prefix in ['/bin', '/usr/bin/', '/usr/local/bin']:
+                for name in ['bash', 'ksh']:
+                    sh = os.path.join(prefix, name)
+                    if os.path.isfile(sh):
+                        shells.append(sh)
+            if not shells:  # Will probably work for any shell but csh.
+                return  # skip test
+            sh = '/bin/sh'
+            if os.path.isfile(sh) and not os.path.islink(sh):
+                # Test will fail if /bin/sh is a symlink to csh.
+                shells.append(sh)
+            for sh in shells:
+                p = subprocess.Popen("echo $0", executable=sh, shell=True,
+                                     stdout=subprocess.PIPE)
+                self.assertEqual(p.stdout.read().strip(), sh)
 
         def DISABLED_test_send_signal(self):
             p = subprocess.Popen([sys.executable,
@@ -732,8 +764,30 @@ class ProcessTestCase(unittest.TestCase):
             p.terminate()
             self.assertNotEqual(p.wait(), 0)
 
+class HelperFunctionTests(unittest.TestCase):
+    def _test_eintr_retry_call(self):
+        record_calls = []
+        def fake_os_func(*args):
+            record_calls.append(args)
+            if len(record_calls) == 2:
+                raise OSError(errno.EINTR, "fake interrupted system call")
+            return tuple(reversed(args))
+
+        self.assertEqual((999, 256),
+                         subprocess._eintr_retry_call(fake_os_func, 256, 999))
+        self.assertEqual([(256, 999)], record_calls)
+        # This time there will be an EINTR so it will loop once.
+        self.assertEqual((666,),
+                         subprocess._eintr_retry_call(fake_os_func, 666))
+        self.assertEqual([(256, 999), (666,), (666,)], record_calls)
+
+    if not mswindows:
+        test_eintr_retry_call = _test_eintr_retry_call
+
+
 def test_main():
-    test_support.run_unittest(ProcessTestCase)
+    test_support.run_unittest(ProcessTestCase,
+                              HelperFunctionTests)
     if hasattr(test_support, "reap_children"):
         test_support.reap_children()
 

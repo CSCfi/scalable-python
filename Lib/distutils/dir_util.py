@@ -4,7 +4,7 @@ Utility functions for manipulating directories and directory trees."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: dir_util.py 60923 2008-02-21 18:18:37Z guido.van.rossum $"
+__revision__ = "$Id: dir_util.py 83648 2010-08-03 07:51:50Z ezio.melotti $"
 
 import os, sys
 from types import *
@@ -204,7 +204,7 @@ def remove_tree (directory, verbose=0, dry_run=0):
     _build_cmdtuple(directory, cmdtuples)
     for cmd in cmdtuples:
         try:
-            apply(cmd[0], (cmd[1],))
+            cmd[0](cmd[1])
             # remove dir from cache if it's already there
             abspath = os.path.abspath(cmd[1])
             if abspath in _path_created:

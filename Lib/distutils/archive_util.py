@@ -5,7 +5,7 @@ that sort of thing)."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: archive_util.py 62904 2008-05-08 22:09:54Z benjamin.peterson $"
+__revision__ = "$Id: archive_util.py 83648 2010-08-03 07:51:50Z ezio.melotti $"
 
 import os
 from distutils.errors import DistutilsExecError
@@ -160,11 +160,14 @@ def make_archive (base_name, format,
     func = format_info[0]
     for (arg,val) in format_info[1]:
         kwargs[arg] = val
-    filename = apply(func, (base_name, base_dir), kwargs)
+    filename = func(base_name, base_dir, **kwargs)
 
-    if root_dir is not None:
-        log.debug("changing back to '%s'", save_cwd)
-        os.chdir(save_cwd)
+    try:
+        filename = func(base_name, base_dir, **kwargs)
+    finally:
+        if root_dir is not None:
+            log.debug("changing back to '%s'", save_cwd)
+            os.chdir(save_cwd)
 
     return filename
 

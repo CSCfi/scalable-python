@@ -26,10 +26,10 @@ class BinASCIITest(unittest.TestCase):
                 prefixes.extend(["crc_", "rlecode_", "rledecode_"])
             for prefix in prefixes:
                 name = prefix + suffix
-                self.assert_(callable(getattr(binascii, name)))
+                self.assertTrue(hasattr(getattr(binascii, name), '__call__'))
                 self.assertRaises(TypeError, getattr(binascii, name))
         for name in ("hexlify", "unhexlify"):
-            self.assert_(callable(getattr(binascii, name)))
+            self.assertTrue(hasattr(getattr(binascii, name), '__call__'))
             self.assertRaises(TypeError, getattr(binascii, name))
 
     def test_base64valid(self):
@@ -103,6 +103,9 @@ class BinASCIITest(unittest.TestCase):
         self.assertRaises(binascii.Error, binascii.a2b_uu, "!!!!")
 
         self.assertRaises(binascii.Error, binascii.b2a_uu, 46*"!")
+
+        # Issue #7701 (crash on a pydebug build)
+        self.assertEqual(binascii.b2a_uu('x'), '!>   \n')
 
     def test_crc32(self):
         crc = binascii.crc32("Test the CRC-32 of")

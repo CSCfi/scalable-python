@@ -6,7 +6,7 @@ extensions ASAP)."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: build_ext.py 75395 2009-10-13 21:17:34Z tarek.ziade $"
+__revision__ = "$Id: build_ext.py 83564 2010-08-02 20:26:41Z ezio.melotti $"
 
 import sys, os, string, re
 from types import *
@@ -676,7 +676,7 @@ class build_ext (Command):
         # extensions in debug_mode are named 'module_d.pyd' under windows
         so_ext = get_config_var('SO')
         if os.name == 'nt' and self.debug:
-            return apply(os.path.join, ext_path) + '_d' + so_ext
+            return os.path.join(*ext_path) + '_d' + so_ext
         return os.path.join(*ext_path) + so_ext
 
     def get_export_symbols (self, ext):

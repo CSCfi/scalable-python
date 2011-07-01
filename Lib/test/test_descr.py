@@ -1,7 +1,7 @@
 import __builtin__
+import sys
 import types
 import unittest
-import warnings
 
 from copy import deepcopy
 from test import test_support
@@ -57,15 +57,6 @@ class OperatorsTest(unittest.TestCase):
             else:
                 expr = '%s a' % expr
             self.unops[name] = expr
-
-    def setUp(self):
-        self.original_filters = warnings.filters[:]
-        warnings.filterwarnings("ignore",
-                 r'complex divmod\(\), // and % are deprecated$',
-                 DeprecationWarning, r'(<string>|%s)$' % __name__)
-
-    def tearDown(self):
-        warnings.filters = self.original_filters
 
     def unop_test(self, a, res, expr="len(a)", meth="__len__"):
         d = {'a': a}
@@ -1142,6 +1133,15 @@ order (MRO) for bases """
             del h
         self.assertEqual(s.getvalue(), '')
 
+        class X(object):
+            __slots__ = "a"
+        try:
+            del X().a
+        except AttributeError:
+            pass
+        else:
+            self.fail("didn't raise AttributeError")
+
     def test_slots_special(self):
         # Testing __dict__ and __weakref__ in __slots__...
         class D(object):
@@ -1197,6 +1197,15 @@ order (MRO) for bases """
 
         # This used to crash
         self.assertRaises(TypeError, MyABC.a.__set__, u, 3)
+
+    def test_metaclass_cmp(self):
+        # See bug 7491.
+        class M(type):
+            def __cmp__(self, other):
+                return -1
+        class X(object):
+            __metaclass__ = M
+        self.assertTrue(X < M)
 
     def test_dynamics(self):
         # Testing class attribute propagation...
@@ -1767,6 +1776,8 @@ order (MRO) for bases """
 
         # Safety test for __cmp__
         def unsafecmp(a, b):
+            if not hasattr(a.__class__, "__cmp__"):
+                return
             try:
                 a.__class__.__cmp__(a, b)
             except TypeError:
@@ -4413,9 +4424,17 @@ class PTypesLongInitTest(unittest.TestCase):
 
 
 def test_main():
-    # Run all local test cases, with PTypesLongInitTest first.
-    test_support.run_unittest(PTypesLongInitTest, OperatorsTest,
-                              ClassPropertiesAndMethods, DictProxyTests)
+    deprecations = [(r'complex divmod\(\), // and % are deprecated$',
+                     DeprecationWarning)]
+    if sys.py3kwarning:
+        deprecations += [
+            ("classic (int|long) division", DeprecationWarning),
+            ("coerce.. not supported", DeprecationWarning),
+            (".+__(get|set|del)slice__ has been removed", DeprecationWarning)]
+    with test_support.check_warnings(*deprecations):
+        # Run all local test cases, with PTypesLongInitTest first.
+        test_support.run_unittest(PTypesLongInitTest, OperatorsTest,
+                                  ClassPropertiesAndMethods, DictProxyTests)
 
 if __name__ == "__main__":
     test_main()

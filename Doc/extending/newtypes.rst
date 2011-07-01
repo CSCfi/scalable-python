@@ -252,7 +252,7 @@ This version of the module has a number of changes.
 
 We've added an extra include::
 
-   #include "structmember.h"
+   #include <structmember.h>
 
 This include provides declarations that we use to handle attributes, as
 described a bit later.
@@ -446,7 +446,7 @@ and put the definitions in the :attr:`tp_members` slot::
    Noddy_members,             /* tp_members */
 
 Each member definition has a member name, type, offset, access flags and
-documentation string. See the "Generic Attribute Management" section below for
+documentation string. See the :ref:`Generic-Attribute-Management` section below for
 details.
 
 A disadvantage of this approach is that it doesn't provide a way to restrict the
@@ -819,7 +819,7 @@ easily use the :class:`PyTypeObject` it needs. It can be difficult to share
 these :class:`PyTypeObject` structures between extension modules.
 
 In this example we will create a :class:`Shoddy` type that inherits from the
-builtin :class:`list` type. The new type will be completely compatible with
+built-in :class:`list` type. The new type will be completely compatible with
 regular lists, but will have an additional :meth:`increment` method that
 increases an internal counter. ::
 
@@ -1128,6 +1128,8 @@ The actual need for type-specific attribute handlers almost completely
 disappeared starting with Python 2.2, though there are many examples which have
 not been updated to use some of the new generic mechanism that is available.
 
+
+.. _generic-attribute-management:
 
 Generic Attribute Management
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

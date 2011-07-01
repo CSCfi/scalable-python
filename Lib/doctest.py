@@ -218,11 +218,18 @@ def _load_testfile(filename, package, module_relative):
                 return file_contents.replace(os.linesep, '\n'), filename
     return open(filename).read(), filename
 
+# Use sys.stdout encoding for ouput.
+_encoding = getattr(sys.__stdout__, 'encoding', None) or 'utf-8'
+
 def _indent(s, indent=4):
     """
-    Add the given number of space characters to the beginning every
-    non-blank line in `s`, and return the result.
+    Add the given number of space characters to the beginning of
+    every non-blank line in `s`, and return the result.
+    If the string `s` is Unicode, it is encoded using the stdout
+    encoding and the `backslashreplace` error handler.
     """
+    if isinstance(s, unicode):
+        s = s.encode(_encoding, 'backslashreplace')
     # This regexp matches the start of non-blank lines:
     return re.sub('(?m)^(?!$)', indent*' ', s)
 
@@ -256,6 +263,9 @@ class _SpoofOut(StringIO):
         StringIO.truncate(self, size)
         if hasattr(self, "softspace"):
             del self.softspace
+        if not self.buf:
+            # Reset it to an empty string, to make sure it's not unicode.
+            self.buf = ''
 
 # Worst-case linear-time ellipsis matching.
 def _ellipsis_match(want, got):
@@ -325,6 +335,8 @@ class _OutputRedirectingPdb(pdb.Pdb):
         self.__out = out
         self.__debugger_used = False
         pdb.Pdb.__init__(self, stdout=out)
+        # still use input() to get user input
+        self.use_rawinput = 1
 
     def set_trace(self, frame=None):
         self.__debugger_used = True
@@ -1321,7 +1333,8 @@ class DocTestRunner:
         m = self.__LINECACHE_FILENAME_RE.match(filename)
         if m and m.group('name') == self.test.name:
             example = self.test.examples[int(m.group('examplenum'))]
-            return example.source.splitlines(True)
+            source = example.source.encode('ascii', 'backslashreplace')
+            return source.splitlines(True)
         else:
             return self.save_linecache_getlines(filename, module_globals)
 
@@ -1370,12 +1383,17 @@ class DocTestRunner:
         self.save_linecache_getlines = linecache.getlines
         linecache.getlines = self.__patched_linecache_getlines
 
+        # Make sure sys.displayhook just prints the value to stdout
+        save_displayhook = sys.displayhook
+        sys.displayhook = sys.__displayhook__
+
         try:
             return self.__run(test, compileflags, out)
         finally:
             sys.stdout = save_stdout
             pdb.set_trace = save_set_trace
             linecache.getlines = self.save_linecache_getlines
+            sys.displayhook = save_displayhook
             if clear_globs:
                 test.globs.clear()
 

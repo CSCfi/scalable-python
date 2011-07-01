@@ -105,7 +105,9 @@ The constants defined in this module are:
 String Formatting
 -----------------
 
-Starting in Python 2.6, the built-in str and unicode classes provide the ability
+.. versionadded:: 2.6
+
+The built-in str and unicode classes provide the ability
 to do complex variable substitutions and value formatting via the
 :meth:`str.format` method described in :pep:`3101`.  The :class:`Formatter`
 class in the :mod:`string` module allows you to create and customize your own
@@ -199,7 +201,7 @@ string formatting behaviors using the same implementation as the built-in
    .. method:: convert_field(value, conversion)
 
       Converts the value (returned by :meth:`get_field`) given a conversion type
-      (as in the tuple returned by the :meth:`parse` method.)  The default
+      (as in the tuple returned by the :meth:`parse` method).  The default
       version understands 'r' (repr) and 's' (str) conversion types.
 
 
@@ -210,7 +212,7 @@ Format String Syntax
 
 The :meth:`str.format` method and the :class:`Formatter` class share the same
 syntax for format strings (although in the case of :class:`Formatter`,
-subclasses can define their own format string syntax.)
+subclasses can define their own format string syntax).
 
 Format strings contain "replacement fields" surrounded by curly braces ``{}``.
 Anything that is not contained in braces is considered literal text, which is
@@ -223,7 +225,8 @@ The grammar for a replacement field is as follows:
       replacement_field: "{" `field_name` ["!" `conversion`] [":" `format_spec`] "}"
       field_name: (`identifier` | `integer`) ("." `attribute_name` | "[" `element_index` "]")*
       attribute_name: `identifier`
-      element_index: `integer`
+      element_index: `integer` | `index_string`
+      index_string: <any source character except "]"> +
       conversion: "r" | "s"
       format_spec: <described in the next section>
 
@@ -232,6 +235,8 @@ can either be a number (for a positional argument), or an identifier (for
 keyword arguments).  Following this is an optional *conversion* field, which is
 preceded by an exclamation point ``'!'``, and a *format_spec*, which is preceded
 by a colon ``':'``.
+
+See also the :ref:`formatspec` section.
 
 The *field_name* itself begins with either a number or a keyword.  If it's a
 number, it refers to a positional argument, and if it's a keyword it refers to a
@@ -264,7 +269,7 @@ Some examples::
 
 The *format_spec* field contains a specification of how the value should be
 presented, including such details as field width, alignment, padding, decimal
-precision and so on.  Each value type can define it's own "formatting
+precision and so on.  Each value type can define its own "formatting
 mini-language" or interpretation of the *format_spec*.
 
 Most built-in types support a common formatting mini-language, which is
@@ -276,26 +281,7 @@ and format specifications are not allowed.  The replacement fields within the
 format_spec are substituted before the *format_spec* string is interpreted.
 This allows the formatting of a value to be dynamically specified.
 
-For example, suppose you wanted to have a replacement field whose field width is
-determined by another variable::
-
-   "A man with two {0:{1}}".format("noses", 10)
-
-This would first evaluate the inner replacement field, making the format string
-effectively::
-
-   "A man with two {0:10}"
-
-Then the outer replacement field would be evaluated, producing::
-
-   "noses     "
-
-Which is substituted into the string, yielding::
-
-   "A man with two noses     "
-
-(The extra space is because we specified a field width of 10, and because left
-alignment is the default for strings.)
+See the :ref:`formatexamples` section for some examples.
 
 
 .. _formatspec:
@@ -305,15 +291,16 @@ Format Specification Mini-Language
 
 "Format specifications" are used within replacement fields contained within a
 format string to define how individual values are presented (see
-:ref:`formatstrings`.)  They can also be passed directly to the builtin
+:ref:`formatstrings`).  They can also be passed directly to the built-in
 :func:`format` function.  Each formattable type may define how the format
 specification is to be interpreted.
 
 Most built-in types implement the following options for format specifications,
 although some of the formatting options are only supported by the numeric types.
 
-A general convention is that an empty format string (``""``) produces the same
-result as if you had called :func:`str` on the value.
+A general convention is that an empty format string (``""``) produces
+the same result as if you had called :func:`str` on the value. A
+non-empty format string typically modifies the result.
 
 The general form of a *standard format specifier* is:
 
@@ -324,7 +311,7 @@ The general form of a *standard format specifier* is:
    sign: "+" | "-" | " "
    width: `integer`
    precision: `integer`
-   type: "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o" | "x" | "X" | "%"
+   type: "b" | "c" | "d" | "e" | "E" | "f" | "F" | "g" | "G" | "n" | "o" | "s" | "x" | "X" | "%"
 
 The *fill* character can be any character other than '}' (which signifies the
 end of the field).  The presence of a fill character is signaled by the *next*
@@ -338,7 +325,7 @@ The meaning of the various alignment options is as follows:
    | Option  | Meaning                                                  |
    +=========+==========================================================+
    | ``'<'`` | Forces the field to be left-aligned within the available |
-   |         | space (This is the default.)                             |
+   |         | space (this is the default).                             |
    +---------+----------------------------------------------------------+
    | ``'>'`` | Forces the field to be right-aligned within the          |
    |         | available space.                                         |
@@ -392,6 +379,17 @@ used from the field content. The *precision* is not allowed for integer values.
 
 Finally, the *type* determines how the data should be presented.
 
+The available string presentation types are:
+
+   +---------+----------------------------------------------------------+
+   | Type    | Meaning                                                  |
+   +=========+==========================================================+
+   | ``'s'`` | String format. This is the default type for strings and  |
+   |         | may be omitted.                                          |
+   +---------+----------------------------------------------------------+
+   | None    | The same as ``'s'``.                                     |
+   +---------+----------------------------------------------------------+
+
 The available integer presentation types are:
 
    +---------+----------------------------------------------------------+
@@ -419,6 +417,11 @@ The available integer presentation types are:
    | None    | The same as ``'d'``.                                     |
    +---------+----------------------------------------------------------+
 
+In addition to the above presentation types, integers can be formatted
+with the floating point presentation types listed below (except
+``'n'`` and None). When doing so, :func:`float` is used to convert the
+integer to a floating point number before formatting.
+
 The available presentation types for floating point and decimal values are:
 
    +---------+----------------------------------------------------------+
@@ -435,15 +438,33 @@ The available presentation types for floating point and decimal values are:
    +---------+----------------------------------------------------------+
    | ``'F'`` | Fixed point. Same as ``'f'``.                            |
    +---------+----------------------------------------------------------+
-   | ``'g'`` | General format. This prints the number as a fixed-point  |
-   |         | number, unless the number is too large, in which case    |
-   |         | it switches to ``'e'`` exponent notation. Infinity and   |
-   |         | NaN values are formatted as ``inf``, ``-inf`` and        |
-   |         | ``nan``, respectively.                                   |
+   | ``'g'`` | General format.  For a given precision ``p >= 1``,       |
+   |         | this rounds the number to ``p`` significant digits and   |
+   |         | then formats the result in either fixed-point format     |
+   |         | or in scientific notation, depending on its magnitude.   |
+   |         |                                                          |
+   |         | The precise rules are as follows: suppose that the       |
+   |         | result formatted with presentation type ``'e'`` and      |
+   |         | precision ``p-1`` would have exponent ``exp``.  Then     |
+   |         | if ``-4 <= exp < p``, the number is formatted            |
+   |         | with presentation type ``'f'`` and precision             |
+   |         | ``p-1-exp``.  Otherwise, the number is formatted         |
+   |         | with presentation type ``'e'`` and precision ``p-1``.    |
+   |         | In both cases insignificant trailing zeros are removed   |
+   |         | from the significand, and the decimal point is also      |
+   |         | removed if there are no remaining digits following it.   |
+   |         |                                                          |
+   |         | Postive and negative infinity, positive and negative     |
+   |         | zero, and nans, are formatted as ``inf``, ``-inf``,      |
+   |         | ``0``, ``-0`` and ``nan`` respectively, regardless of    |
+   |         | the precision.                                           |
+   |         |                                                          |
+   |         | A precision of ``0`` is treated as equivalent to a       |
+   |         | precision of ``1``.                                      |
    +---------+----------------------------------------------------------+
    | ``'G'`` | General format. Same as ``'g'`` except switches to       |
-   |         | ``'E'`` if the number gets to large. The representations |
-   |         | of infinity and NaN are uppercased, too.                 |
+   |         | ``'E'`` if the number gets too large. The                |
+   |         | representations of infinity and NaN are uppercased, too. |
    +---------+----------------------------------------------------------+
    | ``'n'`` | Number. This is the same as ``'g'``, except that it uses |
    |         | the current locale setting to insert the appropriate     |
@@ -456,8 +477,146 @@ The available presentation types for floating point and decimal values are:
    +---------+----------------------------------------------------------+
 
 
+
+.. _formatexamples:
+
+Format examples
+^^^^^^^^^^^^^^^
+
+This section contains examples of the new format syntax and comparison with
+the old ``%``-formatting.
+
+In most of the cases the syntax is similar to the old ``%``-formatting, with the
+addition of the ``{}`` and with ``:`` used instead of ``%``.
+For example, ``'%03.2f'`` can be translated to ``'{0:03.2f}'``.
+
+The new format syntax also supports new and different options, shown in the
+follow examples.
+
+Accessing arguments by position::
+
+   >>> '{0}, {1}, {2}'.format('a', 'b', 'c')
+   'a, b, c'
+   >>> '{2}, {1}, {0}'.format('a', 'b', 'c')
+   'c, b, a'
+   >>> '{2}, {1}, {0}'.format(*'abc')      # unpacking argument sequence
+   'c, b, a'
+   >>> '{0}{1}{0}'.format('abra', 'cad')   # arguments' indices can be repeated
+   'abracadabra'
+
+Accessing arguments by name::
+
+   >>> 'Coordinates: {latitude}, {longitude}'.format(latitude='37.24N', longitude='-115.81W')
+   'Coordinates: 37.24N, -115.81W'
+   >>> coord = {'latitude': '37.24N', 'longitude': '-115.81W'}
+   >>> 'Coordinates: {latitude}, {longitude}'.format(**coord)
+   'Coordinates: 37.24N, -115.81W'
+
+Accessing arguments' attributes::
+
+   >>> c = 3-5j
+   >>> ('The complex number {0} is formed from the real part {0.real} '
+   ...  'and the imaginary part {0.imag}.').format(c)
+   'The complex number (3-5j) is formed from the real part 3.0 and the imaginary part -5.0.'
+   >>> class Point(object):
+   ...     def __init__(self, x, y):
+   ...         self.x, self.y = x, y
+   ...     def __str__(self):
+   ...         return 'Point({self.x}, {self.y})'.format(self=self)
+   ...
+   >>> str(Point(4, 2))
+   'Point(4, 2)'
+
+
+Accessing arguments' items::
+
+   >>> coord = (3, 5)
+   >>> 'X: {0[0]};  Y: {0[1]}'.format(coord)
+   'X: 3;  Y: 5'
+
+Replacing ``%s`` and ``%r``::
+
+   >>> "repr() shows quotes: {0!r}; str() doesn't: {1!s}".format('test1', 'test2')
+   "repr() shows quotes: 'test1'; str() doesn't: test2"
+
+Aligning the text and specifying a width::
+
+   >>> '{0:<30}'.format('left aligned')
+   'left aligned                  '
+   >>> '{0:>30}'.format('right aligned')
+   '                 right aligned'
+   >>> '{0:^30}'.format('centered')
+   '           centered           '
+   >>> '{0:*^30}'.format('centered')  # use '*' as a fill char
+   '***********centered***********'
+
+Replacing ``%+f``, ``%-f``, and ``% f`` and specifying a sign::
+
+   >>> '{0:+f}; {0:+f}'.format(3.14, -3.14)  # show it always
+   '+3.140000; -3.140000'
+   >>> '{0: f}; {0: f}'.format(3.14, -3.14)  # show a space for positive numbers
+   ' 3.140000; -3.140000'
+   >>> '{0:-f}; {0:-f}'.format(3.14, -3.14)  # show only the minus -- same as '{0:f}; {0:f}'
+   '3.140000; -3.140000'
+
+Replacing ``%x`` and ``%o`` and converting the value to different bases::
+
+   >>> # format also supports binary numbers
+   >>> "int: {0:d};  hex: {0:x};  oct: {0:o};  bin: {0:b}".format(42)
+   'int: 42;  hex: 2a;  oct: 52;  bin: 101010'
+   >>> # with 0x, 0o, or 0b as prefix:
+   >>> "int: {0:d};  hex: {0:#x};  oct: {0:#o};  bin: {0:#b}".format(42)
+   'int: 42;  hex: 0x2a;  oct: 0o52;  bin: 0b101010'
+
+Expressing a percentage::
+
+   >>> points = 19.5
+   >>> total = 22
+   >>> 'Correct answers: {0:.2%}.'.format(points/total)
+   'Correct answers: 88.64%'
+
+Using type-specific formatting::
+
+   >>> import datetime
+   >>> d = datetime.datetime(2010, 7, 4, 12, 15, 58)
+   >>> '{0:%Y-%m-%d %H:%M:%S}'.format(d)
+   '2010-07-04 12:15:58'
+
+Nesting arguments and more complex examples::
+
+   >>> for align, text in zip('<^>', ['left', 'center', 'right']):
+   ...     '{0:{align}{fill}16}'.format(text, fill=align, align=align)
+   ...
+   'left<<<<<<<<<<<<'
+   '^^^^^center^^^^^'
+   '>>>>>>>>>>>right'
+   >>>
+   >>> octets = [192, 168, 0, 1]
+   >>> '{0:02X}{1:02X}{2:02X}{3:02X}'.format(*octets)
+   'C0A80001'
+   >>> int(_, 16)
+   3232235521
+   >>>
+   >>> width = 5
+   >>> for num in range(5,12):
+   ...     for base in 'dXob':
+   ...         print '{0:{width}{base}}'.format(num, base=base, width=width),
+   ...     print
+   ...
+       5     5     5   101
+       6     6     6   110
+       7     7     7   111
+       8     8    10  1000
+       9     9    11  1001
+      10     A    12  1010
+      11     B    13  1011
+
+
+
 Template strings
 ----------------
+
+.. versionadded:: 2.4
 
 Templates provide simpler string substitutions as described in :pep:`292`.
 Instead of the normal ``%``\ -based substitutions, Templates support ``$``\
@@ -476,8 +635,6 @@ Instead of the normal ``%``\ -based substitutions, Templates support ``$``\
 
 Any other appearance of ``$`` in the string will result in a :exc:`ValueError`
 being raised.
-
-.. versionadded:: 2.4
 
 The :mod:`string` module provides a :class:`Template` class that implements
 these rules.  The methods of :class:`Template` are:
@@ -512,13 +669,12 @@ these rules.  The methods of :class:`Template` are:
       templates containing dangling delimiters, unmatched braces, or
       placeholders that are not valid Python identifiers.
 
-:class:`Template` instances also provide one public data attribute:
+   :class:`Template` instances also provide one public data attribute:
 
+   .. attribute:: template
 
-.. attribute:: string.template
-
-   This is the object passed to the constructor's *template* argument.  In general,
-   you shouldn't change it, but read-only access is not enforced.
+      This is the object passed to the constructor's *template* argument.  In
+      general, you shouldn't change it, but read-only access is not enforced.
 
 Here is an example of how to use a Template:
 
@@ -824,14 +980,15 @@ not be removed until Python 3.0.  The functions defined in this module are:
    Return a copy of *s*, but with lower case letters converted to upper case.
 
 
-.. function:: ljust(s, width)
-              rjust(s, width)
-              center(s, width)
+.. function:: ljust(s, width[, fillchar])
+              rjust(s, width[, fillchar])
+              center(s, width[, fillchar])
 
    These functions respectively left-justify, right-justify and center a string in
    a field of given width.  They return a string that is at least *width*
-   characters wide, created by padding the string *s* with spaces until the given
-   width on the right, left or both sides.  The string is never truncated.
+   characters wide, created by padding the string *s* with the character *fillchar*
+   (default is a space) until the given width on the right, left or both sides.
+   The string is never truncated.
 
 
 .. function:: zfill(s, width)
