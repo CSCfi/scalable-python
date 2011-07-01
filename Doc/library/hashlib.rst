@@ -78,11 +78,11 @@ The following values are provided as constant attributes of the hash objects
 returned by the constructors:
 
 
-.. data:: digest_size
+.. data:: hash.digest_size
 
    The size of the resulting hash in bytes.
 
-.. data:: block_size
+.. data:: hash.block_size
 
    The internal block size of the hash algorithm in bytes.
 
@@ -127,7 +127,7 @@ A hash object has the following methods:
    http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf
       The FIPS 180-2 publication on Secure Hash Algorithms.
 
-   http://www.cryptography.com/cnews/hash.html
-      Hash Collision FAQ with information on which algorithms have known issues and
+   http://en.wikipedia.org/wiki/Cryptographic_hash_function#Cryptographic_hash_algorithms
+      Wikipedia article with information on which algorithms have known issues and
       what that means regarding their use.
 

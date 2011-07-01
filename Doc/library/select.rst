@@ -44,16 +44,16 @@ The module defines the following:
 
 .. function:: kqueue()
 
-   (Only supported on BSD.)  Returns a kernel queue object object; see section
+   (Only supported on BSD.)  Returns a kernel queue object; see section
    :ref:`kqueue-objects` below for the methods supported by kqueue objects.
 
    .. versionadded:: 2.6
 
 
-.. function:: kevent(ident, filter=KQ_FILTER_READ, flags=KQ_ADD, fflags=0, data=0, udata=0)
+.. function:: kevent(ident, filter=KQ_FILTER_READ, flags=KQ_EV_ADD, fflags=0, data=0, udata=0)
 
-   (Only supported on BSD.)  Returns a kernel event object object; see section
-   :ref:`kevent-objects` below for the methods supported by kqueue objects.
+   (Only supported on BSD.)  Returns a kernel event object; see section
+   :ref:`kevent-objects` below for the methods supported by kevent objects.
 
    .. versionadded:: 2.6
 
@@ -307,7 +307,7 @@ http://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 
 .. attribute:: kevent.filter
 
-   Name of the kernel filter
+   Name of the kernel filter.
 
    +---------------------------+---------------------------------------------+
    | Constant                  | Meaning                                     |
@@ -316,7 +316,7 @@ http://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
    |                           | there is data available to read             |
    +---------------------------+---------------------------------------------+
    | :const:`KQ_FILTER_WRITE`  | Takes a descriptor and returns whenever     |
-   |                           | there is data available to read             |
+   |                           | there is data available to write            |
    +---------------------------+---------------------------------------------+
    | :const:`KQ_FILTER_AIO`    | AIO requests                                |
    +---------------------------+---------------------------------------------+
@@ -336,7 +336,7 @@ http://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 
 .. attribute:: kevent.flags
 
-   Filter action
+   Filter action.
 
    +---------------------------+---------------------------------------------+
    | Constant                  | Meaning                                     |
@@ -365,10 +365,9 @@ http://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 
 .. attribute:: kevent.fflags
 
-   Filter specific flags
+   Filter specific flags.
 
-
-   :const:`KQ_FILTER_READ` and  :const:`KQ_FILTER_WRITE` filter flags
+   :const:`KQ_FILTER_READ` and  :const:`KQ_FILTER_WRITE` filter flags:
 
    +----------------------------+--------------------------------------------+
    | Constant                   | Meaning                                    |
@@ -376,8 +375,7 @@ http://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
    | :const:`KQ_NOTE_LOWAT`     | low water mark of a socket buffer          |
    +----------------------------+--------------------------------------------+
 
-
-   :const:`KQ_FILTER_VNODE` filter flags
+   :const:`KQ_FILTER_VNODE` filter flags:
 
    +----------------------------+--------------------------------------------+
    | Constant                   | Meaning                                    |
@@ -397,8 +395,7 @@ http://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
    | :const:`KQ_NOTE_REVOKE`    | access to the file was revoked             |
    +----------------------------+--------------------------------------------+
 
-
-   :const:`KQ_FILTER_PROC` filter flags
+   :const:`KQ_FILTER_PROC` filter flags:
 
    +----------------------------+--------------------------------------------+
    | Constant                   | Meaning                                    |
@@ -421,7 +418,7 @@ http://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
    | :const:`KQ_NOTE_TRACKERR`  | unable to attach to a child                |
    +----------------------------+--------------------------------------------+
 
-   :const:`KQ_FILTER_NETDEV` filter flags [not available on Mac OS X]
+   :const:`KQ_FILTER_NETDEV` filter flags (not available on Mac OS X):
 
    +----------------------------+--------------------------------------------+
    | Constant                   | Meaning                                    |
@@ -436,9 +433,9 @@ http://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
 
 .. attribute:: kevent.data
 
-   Filter specific data
+   Filter specific data.
 
 
 .. attribute:: kevent.udata
 
-   User defined value
+   User defined value.

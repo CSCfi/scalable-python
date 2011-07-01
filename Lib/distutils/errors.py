@@ -10,7 +10,7 @@ symbols whose names start with "Distutils" and end with "Error"."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: errors.py 37828 2004-11-10 22:23:15Z loewis $"
+__revision__ = "$Id: errors.py 77376 2010-01-08 23:27:23Z tarek.ziade $"
 
 class DistutilsError (Exception):
     """The root of all Distutils evil."""
@@ -76,6 +76,8 @@ class DistutilsInternalError (DistutilsError):
 class DistutilsTemplateError (DistutilsError):
     """Syntax error in a file list template."""
 
+class DistutilsByteCompileError(DistutilsError):
+    """Byte compile error."""
 
 # Exception classes used by the CCompiler implementation classes
 class CCompilerError (Exception):

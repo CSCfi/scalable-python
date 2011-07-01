@@ -56,13 +56,16 @@ Objects are never explicitly destroyed; however, when they become unreachable
 they may be garbage-collected.  An implementation is allowed to postpone garbage
 collection or omit it altogether --- it is a matter of implementation quality
 how garbage collection is implemented, as long as no objects are collected that
-are still reachable.  (Implementation note: CPython currently uses a
-reference-counting scheme with (optional) delayed detection of cyclically linked
-garbage, which collects most objects as soon as they become unreachable, but is
-not guaranteed to collect garbage containing circular references.  See the
-documentation of the :mod:`gc` module for information on controlling the
-collection of cyclic garbage.  Other implementations act differently and CPython
-may change.)
+are still reachable.
+
+.. impl-detail::
+
+   CPython currently uses a reference-counting scheme with (optional) delayed
+   detection of cyclically linked garbage, which collects most objects as soon
+   as they become unreachable, but is not guaranteed to collect garbage
+   containing circular references.  See the documentation of the :mod:`gc`
+   module for information on controlling the collection of cyclic garbage.
+   Other implementations act differently and CPython may change.
 
 Note that the use of the implementation's tracing or debugging facilities may
 keep objects alive that would normally be collectable. Also note that catching
@@ -360,7 +363,7 @@ Sequences
       slicing notations can be used as the target of assignment and :keyword:`del`
       (delete) statements.
 
-      There is currently a single intrinsic mutable sequence type:
+      There are currently two intrinsic mutable sequence types:
 
       Lists
          .. index:: object: list
@@ -368,6 +371,14 @@ Sequences
          The items of a list are arbitrary Python objects.  Lists are formed by placing a
          comma-separated list of expressions in square brackets. (Note that there are no
          special cases needed to form lists of length 0 or 1.)
+
+      Byte Arrays
+         .. index:: bytearray
+
+         A bytearray object is a mutable array. They are created by the built-in
+         :func:`bytearray` constructor.  Aside from being mutable (and hence
+         unhashable), byte arrays otherwise provide the same interface and
+         functionality as immutable bytes objects.
 
       .. index:: module: array
 
@@ -951,6 +962,8 @@ Internal types
       If a code object represents a function, the first item in :attr:`co_consts` is
       the documentation string of the function, or ``None`` if undefined.
 
+   .. _frame-objects:
+
    Frame objects
       .. index:: object: frame
 
@@ -1339,6 +1352,9 @@ Basic customization
 
    Arguments to rich comparison methods are never coerced.
 
+   To automatically generate ordering operations from a single root operation,
+   see the `Total Ordering recipe in the ASPN cookbook
+   <http://code.activestate.com/recipes/576529/>`_\.
 
 .. method:: object.__cmp__(self, other)
 
@@ -1426,7 +1442,7 @@ Basic customization
 
    .. index:: builtin: unicode
 
-   Called to implement :func:`unicode` builtin; should return a Unicode object.
+   Called to implement :func:`unicode` built-in; should return a Unicode object.
    When this method is not defined, string conversion is attempted, and the result
    of string conversion is converted to Unicode using the system default encoding.
 
@@ -1505,7 +1521,7 @@ The following methods only apply to new-style classes.
    .. note::
 
       This method may still be bypassed when looking up special methods as the
-      result of implicit invocation via language syntax or builtin functions.
+      result of implicit invocation via language syntax or built-in functions.
       See :ref:`new-style-special-lookup`.
 
 
@@ -1587,11 +1603,17 @@ Super Binding
    ``A.__dict__['m'].__get__(obj, A)``.
 
 For instance bindings, the precedence of descriptor invocation depends on the
-which descriptor methods are defined.  Normally, data descriptors define both
-:meth:`__get__` and :meth:`__set__`, while non-data descriptors have just the
-:meth:`__get__` method.  Data descriptors always override a redefinition in an
+which descriptor methods are defined.  A descriptor can define any combination
+of :meth:`__get__`, :meth:`__set__` and :meth:`__delete__`.  If it does not
+define :meth:`__get__`, then accessing the attribute will return the descriptor
+object itself unless there is a value in the object's instance dictionary.  If
+the descriptor defines :meth:`__set__` and/or :meth:`__delete__`, it is a data
+descriptor; if it defines neither, it is a non-data descriptor.  Normally, data
+descriptors define both :meth:`__get__` and :meth:`__set__`, while non-data
+descriptors have just the :meth:`__get__` method.  Data descriptors with
+:meth:`__set__` and :meth:`__get__` defined always override a redefinition in an
 instance dictionary.  In contrast, non-data descriptors can be overridden by
-instances. [#]_
+instances.
 
 Python methods (including :func:`staticmethod` and :func:`classmethod`) are
 implemented as non-data descriptors.  Accordingly, instances can redefine and
@@ -1659,14 +1681,14 @@ Notes on using *__slots__*
   *__slots__*; otherwise, the class attribute would overwrite the descriptor
   assignment.
 
+* The action of a *__slots__* declaration is limited to the class where it is
+  defined.  As a result, subclasses will have a *__dict__* unless they also define
+  *__slots__* (which must only contain names of any *additional* slots).
+
 * If a class defines a slot also defined in a base class, the instance variable
   defined by the base class slot is inaccessible (except by retrieving its
   descriptor directly from the base class). This renders the meaning of the
   program undefined.  In the future, a check may be added to prevent this.
-
-* The action of a *__slots__* declaration is limited to the class where it is
-  defined.  As a result, subclasses will have a *__dict__* unless they also define
-  *__slots__*.
 
 * Nonempty *__slots__* does not work for classes derived from "variable-length"
   built-in types such as :class:`long`, :class:`str` and :class:`tuple`.
@@ -1739,6 +1761,48 @@ The potential uses for metaclasses are boundless. Some ideas that have been
 explored including logging, interface checking, automatic delegation, automatic
 property creation, proxies, frameworks, and automatic resource
 locking/synchronization.
+
+
+Customizing instance and subclass checks
+----------------------------------------
+
+.. versionadded:: 2.6
+
+The following methods are used to override the default behavior of the
+:func:`isinstance` and :func:`issubclass` built-in functions.
+
+In particular, the metaclass :class:`abc.ABCMeta` implements these methods in
+order to allow the addition of Abstract Base Classes (ABCs) as "virtual base
+classes" to any class or type (including built-in types), and including to other
+ABCs.
+
+.. method:: class.__instancecheck__(self, instance)
+
+   Return true if *instance* should be considered a (direct or indirect)
+   instance of *class*. If defined, called to implement ``isinstance(instance,
+   class)``.
+
+
+.. method:: class.__subclasscheck__(self, subclass)
+
+   Return true if *subclass* should be considered a (direct or indirect)
+   subclass of *class*.  If defined, called to implement ``issubclass(subclass,
+   class)``.
+
+
+Note that these methods are looked up on the type (metaclass) of a class.  They
+cannot be defined as class methods in the actual class.  This is consistent with
+the lookup of special methods that are called on instances, only that in this
+case the instance is itself a class.
+
+.. seealso::
+
+   :pep:`3119` - Introducing Abstract Base Classes
+      Includes the specification for customizing :func:`isinstance` and
+      :func:`issubclass` behavior through :meth:`__instancecheck__` and
+      :meth:`__subclasscheck__`, with motivation for this functionality in the
+      context of adding Abstract Base Classes (see the :mod:`abc` module) to the
+      language.
 
 
 .. _callable-types:
@@ -1854,12 +1918,12 @@ sequences, it should iterate through the values.
 
 .. method:: object.__reversed__(self)
 
-   Called (if present) by the :func:`reversed` builtin to implement
+   Called (if present) by the :func:`reversed` built-in to implement
    reverse iteration.  It should return a new iterator object that iterates
    over all the objects in the container in reverse order.
 
    If the :meth:`__reversed__` method is not provided, the :func:`reversed`
-   builtin will fall back to using the sequence protocol (:meth:`__len__` and
+   built-in will fall back to using the sequence protocol (:meth:`__len__` and
    :meth:`__getitem__`).  Objects that support the sequence protocol should
    only provide :meth:`__reversed__` if they can provide an implementation
    that is more efficient than the one provided by :func:`reversed`.
@@ -1872,12 +1936,16 @@ implemented as an iteration through a sequence.  However, container objects can
 supply the following special method with a more efficient implementation, which
 also does not require the object be a sequence.
 
-
 .. method:: object.__contains__(self, item)
 
-   Called to implement membership test operators.  Should return true if *item* is
-   in *self*, false otherwise.  For mapping objects, this should consider the keys
-   of the mapping rather than the values or the key-item pairs.
+   Called to implement membership test operators.  Should return true if *item*
+   is in *self*, false otherwise.  For mapping objects, this should consider the
+   keys of the mapping rather than the values or the key-item pairs.
+
+   For objects that don't define :meth:`__contains__`, the membership test first
+   tries iteration via :meth:`__iter__`, then the old sequence iteration
+   protocol via :meth:`__getitem__`, see :ref:`this section in the language
+   reference <membership-test-details>`.
 
 
 .. _sequence-methods:
@@ -2413,13 +2481,6 @@ object itself in order to be consistently invoked by the interpreter).
 .. [#] It *is* possible in some cases to change an object's type, under certain
    controlled conditions. It generally isn't a good idea though, since it can
    lead to some very strange behaviour if it is handled incorrectly.
-
-.. [#] A descriptor can define any combination of :meth:`__get__`,
-   :meth:`__set__` and :meth:`__delete__`.  If it does not define :meth:`__get__`,
-   then accessing the attribute even on an instance will return the descriptor
-   object itself.  If the descriptor defines :meth:`__set__` and/or
-   :meth:`__delete__`, it is a data descriptor; if it defines neither, it is a
-   non-data descriptor.
 
 .. [#] For operands of the same type, it is assumed that if the non-reflected method
    (such as :meth:`__add__`) fails the operation is not supported, which is why the

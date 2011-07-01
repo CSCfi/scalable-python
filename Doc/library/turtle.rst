@@ -36,7 +36,7 @@ the module from within IDLE run with the ``-n`` switch.
 
 The turtle module provides turtle graphics primitives, in both object-oriented
 and procedure-oriented ways.  Because it uses :mod:`Tkinter` for the underlying
-graphics, it needs a version of python installed with Tk support.
+graphics, it needs a version of Python installed with Tk support.
 
 The object-oriented interface uses essentially two+two classes:
 
@@ -1901,7 +1901,7 @@ The public classes of the module :mod:`turtle`
    Subclass of TurtleScreen, with :ref:`four methods added <screenspecific>`.
 
 
-.. class:: ScrolledCavas(master)
+.. class:: ScrolledCanvas(master)
 
    :param master: some Tkinter widget to contain the ScrolledCanvas, i.e.
       a Tkinter-canvas with scrollbars added

@@ -15,11 +15,8 @@ List Objects
 
 .. cvar:: PyTypeObject PyList_Type
 
-   .. index:: single: ListType (in module types)
-
-   This instance of :ctype:`PyTypeObject` represents the Python list type.
-   This is the same object as ``list`` and ``types.ListType`` in the Python
-   layer.
+   This instance of :ctype:`PyTypeObject` represents the Python list type.  This
+   is the same object as ``list`` in the Python layer.
 
 
 .. cfunction:: int PyList_Check(PyObject *p)
@@ -149,9 +146,10 @@ List Objects
 
 .. cfunction:: PyObject* PyList_GetSlice(PyObject *list, Py_ssize_t low, Py_ssize_t high)
 
-   Return a list of the objects in *list* containing the objects *between*
-   *low* and *high*.  Return *NULL* and set an exception if unsuccessful.
-   Analogous to ``list[low:high]``.
+   Return a list of the objects in *list* containing the objects *between* *low*
+   and *high*.  Return *NULL* and set an exception if unsuccessful.  Analogous
+   to ``list[low:high]``.  Negative indices, as when slicing from Python, are not
+   supported.
 
    .. versionchanged:: 2.5
       This function used an :ctype:`int` for *low* and *high*. This might
@@ -163,7 +161,8 @@ List Objects
    Set the slice of *list* between *low* and *high* to the contents of
    *itemlist*.  Analogous to ``list[low:high] = itemlist``. The *itemlist* may
    be *NULL*, indicating the assignment of an empty list (slice deletion).
-   Return ``0`` on success, ``-1`` on failure.
+   Return ``0`` on success, ``-1`` on failure.  Negative indices, as when
+   slicing from Python, are not supported.
 
    .. versionchanged:: 2.5
       This function used an :ctype:`int` for *low* and *high*. This might

@@ -28,7 +28,6 @@ import os
 import time
 import sys
 from urlparse import urljoin as basejoin
-import warnings
 
 __all__ = ["urlopen", "URLopener", "FancyURLopener", "urlretrieve",
            "urlcleanup", "quote", "quote_plus", "unquote", "unquote_plus",
@@ -72,8 +71,8 @@ _urlopener = None
 def urlopen(url, data=None, proxies=None):
     """Create a file-like object for the specified URL to read from."""
     from warnings import warnpy3k
-    warnings.warnpy3k("urllib.urlopen() has been removed in Python 3.0 in "
-                        "favor of urllib2.urlopen()", stacklevel=2)
+    warnpy3k("urllib.urlopen() has been removed in Python 3.0 in "
+             "favor of urllib2.urlopen()", stacklevel=2)
 
     global _urlopener
     if proxies is not None:
@@ -95,6 +94,8 @@ def urlretrieve(url, filename=None, reporthook=None, data=None):
 def urlcleanup():
     if _urlopener:
         _urlopener.cleanup()
+    _safemaps.clear()
+    ftpcache.clear()
 
 # check for SSL
 try:
@@ -178,7 +179,7 @@ class URLopener:
         fullurl = unwrap(toBytes(fullurl))
         # percent encode url. fixing lame server errors like space within url
         # parts
-        fullurl = quote(fullurl, safe="%/:=&?~#+!$,;'@()*[]")
+        fullurl = quote(fullurl, safe="%/:=&?~#+!$,;'@()*[]|")
         if self.tempcache and fullurl in self.tempcache:
             filename, headers = self.tempcache[fullurl]
             fp = open(filename, 'rb')
@@ -593,7 +594,7 @@ class URLopener:
         else:
             encoding = ''
         msg = []
-        msg.append('Date: %s'%time.strftime('%a, %d %b %Y %T GMT',
+        msg.append('Date: %s'%time.strftime('%a, %d %b %Y %H:%M:%S GMT',
                                             time.gmtime(time.time())))
         msg.append('Content-type: %s' % type)
         if encoding == 'base64':
@@ -651,6 +652,18 @@ class FancyURLopener(URLopener):
         fp.close()
         # In case the server sent a relative URL, join with original:
         newurl = basejoin(self.type + ":" + url, newurl)
+
+        # For security reasons we do not allow redirects to protocols
+        # other than HTTP, HTTPS or FTP.
+        newurl_lower = newurl.lower()
+        if not (newurl_lower.startswith('http://') or
+                newurl_lower.startswith('https://') or
+                newurl_lower.startswith('ftp://')):
+            raise IOError('redirect error', errcode,
+                          errmsg + " - Redirection to url '%s' is not allowed" %
+                          newurl,
+                          headers)
+
         return self.open(newurl)
 
     def http_error_301(self, url, fp, errcode, errmsg, headers, data=None):
@@ -1163,8 +1176,8 @@ def splitvalue(attr):
     if match: return match.group(1, 2)
     return attr, None
 
-_hextochr = dict(('%02x' % i, chr(i)) for i in range(256))
-_hextochr.update(('%02X' % i, chr(i)) for i in range(256))
+_hexdig = '0123456789ABCDEFabcdef'
+_hextochr = dict((a+b, chr(int(a+b,16))) for a in _hexdig for b in _hexdig)
 
 def unquote(s):
     """unquote('abc%20def') -> 'abc def'."""
@@ -1376,8 +1389,13 @@ if sys.platform == 'darwin':
                         continue
 
                 base = ip2num(m.group(1))
-                mask = int(m.group(2)[1:])
-                mask = 32 - mask
+                mask = m.group(2)
+                if mask is None:
+                    mask = 8 * (m.group(1).count('.') + 1)
+
+                else:
+                    mask = int(mask[1:])
+                    mask = 32 - mask
 
                 if (hostIP >> mask) == (base >> mask):
                     return True
@@ -1444,6 +1462,7 @@ elif os.name == 'nt':
                         proxies['http'] = proxyServer
                     else:
                         proxies['http'] = 'http://%s' % proxyServer
+                        proxies['https'] = 'https://%s' % proxyServer
                         proxies['ftp'] = 'ftp://%s' % proxyServer
             internetSettings.Close()
         except (WindowsError, ValueError, TypeError):

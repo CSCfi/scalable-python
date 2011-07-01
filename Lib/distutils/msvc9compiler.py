@@ -12,11 +12,12 @@ for older versions of VS in distutils.msvccompiler.
 #   finding DevStudio (through the registry)
 # ported to VS2005 and VS 2008 by Christian Heimes
 
-__revision__ = "$Id: msvc9compiler.py 68082 2008-12-30 23:06:46Z tarek.ziade $"
+__revision__ = "$Id: msvc9compiler.py 82132 2010-06-21 15:39:28Z benjamin.peterson $"
 
 import os
 import subprocess
 import sys
+import re
 from distutils.errors import (DistutilsExecError, DistutilsPlatformError,
     CompileError, LibError, LinkError)
 from distutils.ccompiler import (CCompiler, gen_preprocess_options,
@@ -36,9 +37,18 @@ HKEYS = (_winreg.HKEY_USERS,
          _winreg.HKEY_LOCAL_MACHINE,
          _winreg.HKEY_CLASSES_ROOT)
 
-VS_BASE = r"Software\Microsoft\VisualStudio\%0.1f"
-WINSDK_BASE = r"Software\Microsoft\Microsoft SDKs\Windows"
-NET_BASE = r"Software\Microsoft\.NETFramework"
+NATIVE_WIN64 = (sys.platform == 'win32' and sys.maxsize > 2**32)
+if NATIVE_WIN64:
+    # Visual C++ is a 32-bit application, so we need to look in
+    # the corresponding registry branch, if we're running a
+    # 64-bit Python on Win64
+    VS_BASE = r"Software\Wow6432Node\Microsoft\VisualStudio\%0.1f"
+    WINSDK_BASE = r"Software\Wow6432Node\Microsoft\Microsoft SDKs\Windows"
+    NET_BASE = r"Software\Wow6432Node\Microsoft\.NETFramework"
+else:
+    VS_BASE = r"Software\Microsoft\VisualStudio\%0.1f"
+    WINSDK_BASE = r"Software\Microsoft\Microsoft SDKs\Windows"
+    NET_BASE = r"Software\Microsoft\.NETFramework"
 
 # A map keyed by get_platform() return values to values accepted by
 # 'vcvarsall.bat'.  Note a cross-compile may combine these (eg, 'x86_amd64' is
@@ -641,7 +651,32 @@ class MSVCCompiler(CCompiler) :
             # will still consider the DLL up-to-date, but it will not have a
             # manifest.  Maybe we should link to a temp file?  OTOH, that
             # implies a build environment error that shouldn't go undetected.
-            mfid = 1 if target_desc == CCompiler.EXECUTABLE else 2
+            if target_desc == CCompiler.EXECUTABLE:
+                mfid = 1
+            else:
+                mfid = 2
+                try:
+                    # Remove references to the Visual C runtime, so they will
+                    # fall through to the Visual C dependency of Python.exe.
+                    # This way, when installed for a restricted user (e.g.
+                    # runtimes are not in WinSxS folder, but in Python's own
+                    # folder), the runtimes do not need to be in every folder
+                    # with .pyd's.
+                    manifest_f = open(temp_manifest, "rb")
+                    manifest_buf = manifest_f.read()
+                    manifest_f.close()
+                    pattern = re.compile(
+                        r"""<assemblyIdentity.*?name=("|')Microsoft\."""\
+                        r"""VC\d{2}\.CRT("|').*?(/>|</assemblyIdentity>)""",
+                        re.DOTALL)
+                    manifest_buf = re.sub(pattern, "", manifest_buf)
+                    pattern = "<dependentAssembly>\s*</dependentAssembly>"
+                    manifest_buf = re.sub(pattern, "", manifest_buf)
+                    manifest_f = open(temp_manifest, "wb")
+                    manifest_f.write(manifest_buf)
+                    manifest_f.close()
+                except IOError:
+                    pass
             out_arg = '-outputresource:%s;%s' % (output_filename, mfid)
             try:
                 self.spawn(['mt.exe', '-nologo', '-manifest',

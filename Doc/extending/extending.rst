@@ -20,6 +20,13 @@ source file by including the header ``"Python.h"``.
 The compilation of an extension module depends on its intended use as well as on
 your system setup; details are given in later chapters.
 
+Do note that if your use case is calling C library functions or system calls,
+you should consider using the :mod:`ctypes` module rather than writing custom
+C code. Not only does :mod:`ctypes` let you write Python code to interface
+with C code, but it is more portable between implementations of Python than
+writing and compiling an extension module which typically ties you to CPython.
+
+
 
 .. _extending-simpleexample:
 
@@ -221,8 +228,27 @@ needed to ensure that it will not be discarded, causing :cdata:`SpamError` to
 become a dangling pointer. Should it become a dangling pointer, C code which
 raises the exception could cause a core dump or other unintended side effects.
 
-We discuss the use of PyMODINIT_FUNC as a function return type later in this
+We discuss the use of ``PyMODINIT_FUNC`` as a function return type later in this
 sample.
+
+The :exc:`spam.error` exception can be raised in your extension module using a
+call to :cfunc:`PyErr_SetString` as shown below::
+
+   static PyObject *
+   spam_system(PyObject *self, PyObject *args)
+   {
+       const char *command;
+       int sts;
+
+       if (!PyArg_ParseTuple(args, "s", &command))
+           return NULL;
+       sts = system(command);
+       if (sts < 0) {
+           PyErr_SetString(SpamError, "System command failed");
+           return NULL;
+       }
+       return PyLong_FromLong(sts);
+   }
 
 
 .. _backtoexample:
@@ -1219,16 +1245,23 @@ like this::
    static int
    import_spam(void)
    {
-       PyObject *module = PyImport_ImportModule("spam");
+       PyObject *c_api_object;
+       PyObject *module;
 
-       if (module != NULL) {
-           PyObject *c_api_object = PyObject_GetAttrString(module, "_C_API");
-           if (c_api_object == NULL)
-               return -1;
-           if (PyCObject_Check(c_api_object))
-               PySpam_API = (void **)PyCObject_AsVoidPtr(c_api_object);
-           Py_DECREF(c_api_object);
+       module = PyImport_ImportModule("spam");
+       if (module == NULL)
+           return -1;
+
+       c_api_object = PyObject_GetAttrString(module, "_C_API");
+       if (c_api_object == NULL) {
+           Py_DECREF(module);
+           return -1;
        }
+       if (PyCObject_Check(c_api_object))
+           PySpam_API = (void **)PyCObject_AsVoidPtr(c_api_object);
+
+       Py_DECREF(c_api_object);
+       Py_DECREF(module);
        return 0;
    }
 

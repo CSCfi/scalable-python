@@ -21,7 +21,7 @@ setup script). Indirectly provides the  :class:`distutils.dist.Distribution` and
 .. function:: setup(arguments)
 
    The basic do-everything function that does most everything you could ever ask
-   for from a Distutils method. See XXXXX
+   for from a Distutils method.
 
    The setup function takes a large number of arguments. These are laid out in the
    following table.
@@ -1012,7 +1012,7 @@ directories.
    errors are ignored (apart from being reported to ``sys.stdout`` if *verbose* is
    true).
 
-**\*\*** Some of this could be replaced with the shutil module? **\*\***
+.. XXX Some of this could be replaced with the shutil module?
 
 
 :mod:`distutils.file_util` --- Single file operations
@@ -1328,8 +1328,7 @@ provides the following additional features:
   the "negative alias" of :option:`--verbose`, then :option:`--quiet` on the
   command line sets *verbose* to false.
 
-**\*\*** Should be replaced with :mod:`optik` (which is also now known as
-:mod:`optparse` in Python 2.3 and later). **\*\***
+.. XXX Should be replaced with :mod:`optparse`.
 
 
 .. function:: fancy_getopt(options, negative_opt, object, args)
@@ -1623,7 +1622,7 @@ lines, and joining lines with backslashes.
    +------------------+--------------------------------+---------+
 
    Note that since *rstrip_ws* can strip the trailing newline, the semantics of
-   :meth:`readline` must differ from those of the builtin file object's
+   :meth:`readline` must differ from those of the built-in file object's
    :meth:`readline` method!  In particular, :meth:`readline`  returns ``None`` for
    end-of-file: an empty string might just be a  blank line (or an all-whitespace
    line), if *rstrip_ws* is true  but *skip_blanks* is not.
@@ -1631,8 +1630,8 @@ lines, and joining lines with backslashes.
 
    .. method:: TextFile.open(filename)
 
-      Open a new file *filename*. This overrides any *file* or  *filename* constructor
-      arguments.
+      Open a new file *filename*.  This overrides any *file* or *filename*
+      constructor arguments.
 
 
    .. method:: TextFile.close()
@@ -1962,9 +1961,9 @@ it so that it's implementing the class :class:`peel_banana`, a subclass of
 Subclasses of :class:`Command` must define the following methods.
 
 
-.. method:: Command.initialize_options()(S)
+.. method:: Command.initialize_options()
 
-   et default values for all the options that this command supports.  Note that
+   Set default values for all the options that this command supports.  Note that
    these defaults may be overridden by other commands, by the setup script, by
    config files, or by the command-line.  Thus, this is not the place to code
    dependencies between options; generally, :meth:`initialize_options`

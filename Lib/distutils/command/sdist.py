@@ -4,7 +4,7 @@ Implements the Distutils 'sdist' command (create a source distribution)."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: sdist.py 68968 2009-01-26 17:20:15Z tarek.ziade $"
+__revision__ = "$Id: sdist.py 83992 2010-08-14 02:07:26Z eric.araujo $"
 
 import os, string
 import sys

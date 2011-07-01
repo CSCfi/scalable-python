@@ -314,8 +314,8 @@ The idea behind the "home scheme" is that you build and maintain a personal
 stash of Python modules.  This scheme's name is derived from the idea of a
 "home" directory on Unix, since it's not unusual for a Unix user to make their
 home directory have a layout similar to :file:`/usr/` or :file:`/usr/local/`.
-This scheme can be used by anyone, regardless of the operating system their
-installing for.
+This scheme can be used by anyone, regardless of the operating system they
+are installing for.
 
 Installing a new module distribution is as simple as ::
 
@@ -940,7 +940,8 @@ following steps.
 These compilers require some special libraries. This task is more complex than
 for Borland's C++, because there is no program to convert the library.  First
 you have to create a list of symbols which the Python DLL exports. (You can find
-a good program for this task at http://www.emmestech.com/software/cygwin/pexports-0.43/download_pexports.html)
+a good program for this task at
+http://www.emmestech.com/software/pexports-0.43/download_pexports.html).
 
 .. I don't understand what the next line means. --amk
 .. (inclusive the references on data structures.)

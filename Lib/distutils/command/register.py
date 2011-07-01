@@ -5,7 +5,7 @@ Implements the Distutils 'register' command (register with the repository).
 
 # created 2002/10/21, Richard Jones
 
-__revision__ = "$Id: register.py 67944 2008-12-27 13:28:42Z tarek.ziade $"
+__revision__ = "$Id: register.py 77719 2010-01-24 00:57:20Z tarek.ziade $"
 
 import os, string, urllib2, getpass, urlparse
 import StringIO
@@ -261,7 +261,6 @@ Your selection [default 1]: ''', log.INFO)
             if type(value) not in (type([]), type( () )):
                 value = [value]
             for value in value:
-                value = unicode(value).encode("utf-8")
                 body.write(sep_boundary)
                 body.write('\nContent-Disposition: form-data; name="%s"'%key)
                 body.write("\n\n")

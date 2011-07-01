@@ -74,11 +74,13 @@ from _ssl import \
      SSL_ERROR_EOF, \
      SSL_ERROR_INVALID_ERROR_CODE
 
-from socket import socket, _fileobject
+from socket import socket, _fileobject, _delegate_methods
+from socket import error as socket_error
 from socket import getnameinfo as _getnameinfo
 import base64        # for DER-to-PEM translation
+import errno
 
-class SSLSocket (socket):
+class SSLSocket(socket):
 
     """This class implements a subtype of socket.socket that wraps
     the underlying OS socket in an SSL context when necessary, and
@@ -90,20 +92,23 @@ class SSLSocket (socket):
                  do_handshake_on_connect=True,
                  suppress_ragged_eofs=True):
         socket.__init__(self, _sock=sock._sock)
-        # the initializer for socket trashes the methods (tsk, tsk), so...
-        self.send = lambda data, flags=0: SSLSocket.send(self, data, flags)
-        self.sendto = lambda data, addr, flags=0: SSLSocket.sendto(self, data, addr, flags)
-        self.recv = lambda buflen=1024, flags=0: SSLSocket.recv(self, buflen, flags)
-        self.recvfrom = lambda addr, buflen=1024, flags=0: SSLSocket.recvfrom(self, addr, buflen, flags)
-        self.recv_into = lambda buffer, nbytes=None, flags=0: SSLSocket.recv_into(self, buffer, nbytes, flags)
-        self.recvfrom_into = lambda buffer, nbytes=None, flags=0: SSLSocket.recvfrom_into(self, buffer, nbytes, flags)
+        # The initializer for socket overrides the methods send(), recv(), etc.
+        # in the instancce, which we don't need -- but we want to provide the
+        # methods defined in SSLSocket.
+        for attr in _delegate_methods:
+            try:
+                delattr(self, attr)
+            except AttributeError:
+                pass
 
         if certfile and not keyfile:
             keyfile = certfile
         # see if it's connected
         try:
             socket.getpeername(self)
-        except:
+        except socket_error, e:
+            if e.errno != errno.ENOTCONN:
+                raise
             # no, no connection yet
             self._sslobj = None
         else:
@@ -112,12 +117,7 @@ class SSLSocket (socket):
                                         keyfile, certfile,
                                         cert_reqs, ssl_version, ca_certs)
             if do_handshake_on_connect:
-                timeout = self.gettimeout()
-                try:
-                    self.settimeout(None)
-                    self.do_handshake()
-                finally:
-                    self.settimeout(timeout)
+                self.do_handshake()
         self.keyfile = keyfile
         self.certfile = certfile
         self.cert_reqs = cert_reqs
@@ -156,14 +156,14 @@ class SSLSocket (socket):
 
         return self._sslobj.peer_certificate(binary_form)
 
-    def cipher (self):
+    def cipher(self):
 
         if not self._sslobj:
             return None
         else:
             return self._sslobj.cipher()
 
-    def send (self, data, flags=0):
+    def send(self, data, flags=0):
         if self._sslobj:
             if flags != 0:
                 raise ValueError(
@@ -184,14 +184,14 @@ class SSLSocket (socket):
         else:
             return socket.send(self, data, flags)
 
-    def sendto (self, data, addr, flags=0):
+    def sendto(self, data, addr, flags=0):
         if self._sslobj:
             raise ValueError("sendto not allowed on instances of %s" %
                              self.__class__)
         else:
             return socket.sendto(self, data, addr, flags)
 
-    def sendall (self, data, flags=0):
+    def sendall(self, data, flags=0):
         if self._sslobj:
             if flags != 0:
                 raise ValueError(
@@ -206,24 +206,17 @@ class SSLSocket (socket):
         else:
             return socket.sendall(self, data, flags)
 
-    def recv (self, buflen=1024, flags=0):
+    def recv(self, buflen=1024, flags=0):
         if self._sslobj:
             if flags != 0:
                 raise ValueError(
-                    "non-zero flags not allowed in calls to sendall() on %s" %
+                    "non-zero flags not allowed in calls to recv() on %s" %
                     self.__class__)
-            while True:
-                try:
-                    return self.read(buflen)
-                except SSLError, x:
-                    if x.args[0] == SSL_ERROR_WANT_READ:
-                        continue
-                    else:
-                        raise x
+            return self.read(buflen)
         else:
             return socket.recv(self, buflen, flags)
 
-    def recv_into (self, buffer, nbytes=None, flags=0):
+    def recv_into(self, buffer, nbytes=None, flags=0):
         if buffer and (nbytes is None):
             nbytes = len(buffer)
         elif nbytes is None:
@@ -233,41 +226,34 @@ class SSLSocket (socket):
                 raise ValueError(
                   "non-zero flags not allowed in calls to recv_into() on %s" %
                   self.__class__)
-            while True:
-                try:
-                    tmp_buffer = self.read(nbytes)
-                    v = len(tmp_buffer)
-                    buffer[:v] = tmp_buffer
-                    return v
-                except SSLError as x:
-                    if x.args[0] == SSL_ERROR_WANT_READ:
-                        continue
-                    else:
-                        raise x
+            tmp_buffer = self.read(nbytes)
+            v = len(tmp_buffer)
+            buffer[:v] = tmp_buffer
+            return v
         else:
             return socket.recv_into(self, buffer, nbytes, flags)
 
-    def recvfrom (self, addr, buflen=1024, flags=0):
+    def recvfrom(self, addr, buflen=1024, flags=0):
         if self._sslobj:
             raise ValueError("recvfrom not allowed on instances of %s" %
                              self.__class__)
         else:
             return socket.recvfrom(self, addr, buflen, flags)
 
-    def recvfrom_into (self, buffer, nbytes=None, flags=0):
+    def recvfrom_into(self, buffer, nbytes=None, flags=0):
         if self._sslobj:
             raise ValueError("recvfrom_into not allowed on instances of %s" %
                              self.__class__)
         else:
             return socket.recvfrom_into(self, buffer, nbytes, flags)
 
-    def pending (self):
+    def pending(self):
         if self._sslobj:
             return self._sslobj.pending()
         else:
             return 0
 
-    def unwrap (self):
+    def unwrap(self):
         if self._sslobj:
             s = self._sslobj.shutdown()
             self._sslobj = None
@@ -275,18 +261,18 @@ class SSLSocket (socket):
         else:
             raise ValueError("No SSL wrapper around " + str(self))
 
-    def shutdown (self, how):
+    def shutdown(self, how):
         self._sslobj = None
         socket.shutdown(self, how)
 
-    def close (self):
+    def close(self):
         if self._makefile_refs < 1:
             self._sslobj = None
             socket.close(self)
         else:
             self._makefile_refs -= 1
 
-    def do_handshake (self):
+    def do_handshake(self):
 
         """Perform a TLS/SSL handshake."""
 
@@ -333,7 +319,9 @@ class SSLSocket (socket):
         from the socket module."""
 
         self._makefile_refs += 1
-        return _fileobject(self, mode, bufsize)
+        # close=True so as to decrement the reference count when done with
+        # the file-like object.
+        return _fileobject(self, mode, bufsize, close=True)
 
 
 
@@ -373,7 +361,7 @@ def DER_cert_to_PEM_cert(der_cert_bytes):
         # preferred because older API gets line-length wrong
         f = base64.standard_b64encode(der_cert_bytes)
         return (PEM_HEADER + '\n' +
-                textwrap.fill(f, 64) +
+                textwrap.fill(f, 64) + '\n' +
                 PEM_FOOTER + '\n')
     else:
         return (PEM_HEADER + '\n' +
@@ -394,7 +382,7 @@ def PEM_cert_to_DER_cert(pem_cert_string):
     d = pem_cert_string.strip()[len(PEM_HEADER):-len(PEM_FOOTER)]
     return base64.decodestring(d)
 
-def get_server_certificate (addr, ssl_version=PROTOCOL_SSLv3, ca_certs=None):
+def get_server_certificate(addr, ssl_version=PROTOCOL_SSLv3, ca_certs=None):
 
     """Retrieve the certificate from the server at the specified address,
     and return it as a PEM-encoded string.
@@ -413,7 +401,7 @@ def get_server_certificate (addr, ssl_version=PROTOCOL_SSLv3, ca_certs=None):
     s.close()
     return DER_cert_to_PEM_cert(dercert)
 
-def get_protocol_name (protocol_code):
+def get_protocol_name(protocol_code):
     if protocol_code == PROTOCOL_TLSv1:
         return "TLSv1"
     elif protocol_code == PROTOCOL_SSLv23:
@@ -428,7 +416,7 @@ def get_protocol_name (protocol_code):
 
 # a replacement for the old socket.ssl function
 
-def sslwrap_simple (sock, keyfile=None, certfile=None):
+def sslwrap_simple(sock, keyfile=None, certfile=None):
 
     """A replacement for the old socket.ssl function.  Designed
     for compability with Python 2.5 and earlier.  Will disappear in

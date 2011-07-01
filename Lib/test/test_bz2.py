@@ -7,6 +7,7 @@ from cStringIO import StringIO
 import os
 import subprocess
 import sys
+import threading
 
 import bz2
 from bz2 import BZ2File, BZ2Compressor, BZ2Decompressor
@@ -284,6 +285,41 @@ class BZ2FileTest(BaseTest):
         bz2f.close()
         self.assertEqual(xlines, ['Test'])
 
+    def testThreading(self):
+        # Using a BZ2File from several threads doesn't deadlock (issue #7205).
+        data = "1" * 2**20
+        nthreads = 10
+        f = bz2.BZ2File(self.filename, 'wb')
+        try:
+            def comp():
+                for i in range(5):
+                    f.write(data)
+            threads = [threading.Thread(target=comp) for i in range(nthreads)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+        finally:
+            f.close()
+
+    def testMixedIterationReads(self):
+        # Issue #8397: mixed iteration and reads should be forbidden.
+        f = bz2.BZ2File(self.filename, 'wb')
+        try:
+            # The internal buffer size is hard-wired to 8192 bytes, we must
+            # write out more than that for the test to stop half through
+            # the buffer.
+            f.write(self.TEXT * 100)
+        finally:
+            f.close()
+        f = bz2.BZ2File(self.filename, 'rb')
+        try:
+            next(f)
+            self.assertRaises(ValueError, f.read)
+            self.assertRaises(ValueError, f.readline)
+            self.assertRaises(ValueError, f.readlines)
+        finally:
+            f.close()
 
 class BZ2CompressorTest(BaseTest):
     def testCompress(self):

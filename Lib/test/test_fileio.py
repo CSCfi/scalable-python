@@ -189,13 +189,24 @@ class OtherFileTests(unittest.TestCase):
         except ValueError as msg:
             if msg.args[0] != 0:
                 s = str(msg)
-                if s.find(TESTFN) != -1 or s.find(bad_mode) == -1:
+                if TESTFN in s or bad_mode not in s:
                     self.fail("bad error message for invalid mode: %s" % s)
             # if msg.args[0] == 0, we're probably on Windows where there may be
             # no obvious way to discover why open() failed.
         else:
             f.close()
             self.fail("no error for invalid mode: %s" % bad_mode)
+
+    def testTruncate(self):
+        f = _fileio._FileIO(TESTFN, 'w')
+        f.write(bytes(bytearray(range(10))))
+        self.assertEqual(f.tell(), 10)
+        f.truncate(5)
+        self.assertEqual(f.tell(), 10)
+        self.assertEqual(f.seek(0, os.SEEK_END), 5)
+        f.truncate(15)
+        self.assertEqual(f.tell(), 5)
+        self.assertEqual(f.seek(0, os.SEEK_END), 15)
 
     def testTruncateOnWindows(self):
         def bug801631():
@@ -248,7 +259,7 @@ class OtherFileTests(unittest.TestCase):
         self.assertRaises(TypeError, _fileio._FileIO, "1", 0, 0)
 
     def testWarnings(self):
-        with check_warnings() as w:
+        with check_warnings(quiet=True) as w:
             self.assertEqual(w.warnings, [])
             self.assertRaises(TypeError, _fileio._FileIO, [])
             self.assertEqual(w.warnings, [])

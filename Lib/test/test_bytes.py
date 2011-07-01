@@ -62,17 +62,18 @@ class BaseBytesTest(unittest.TestCase):
         b = self.type2test([Indexable(), Indexable(1), Indexable(254),
                             Indexable(255)])
         self.assertEqual(list(b), [0, 1, 254, 255])
-        self.assertRaises(ValueError, bytearray, [Indexable(-1)])
-        self.assertRaises(ValueError, bytearray, [Indexable(256)])
+        self.assertRaises(ValueError, self.type2test, [Indexable(-1)])
+        self.assertRaises(ValueError, self.type2test, [Indexable(256)])
 
     def test_from_ssize(self):
-        self.assertEqual(bytearray(0), b'')
-        self.assertEqual(bytearray(1), b'\x00')
-        self.assertEqual(bytearray(5), b'\x00\x00\x00\x00\x00')
-        self.assertRaises(ValueError, bytearray, -1)
+        self.assertEqual(self.type2test(0), b'')
+        self.assertEqual(self.type2test(1), b'\x00')
+        self.assertEqual(self.type2test(5), b'\x00\x00\x00\x00\x00')
+        self.assertRaises(ValueError, self.type2test, -1)
 
-        self.assertEqual(bytearray('0', 'ascii'), b'0')
-        self.assertEqual(bytearray(b'0'), b'0')
+        self.assertEqual(self.type2test('0', 'ascii'), b'0')
+        self.assertEqual(self.type2test(b'0'), b'0')
+        self.assertRaises(OverflowError, self.type2test, sys.maxsize + 1)
 
     def test_constructor_type_errors(self):
         self.assertRaises(TypeError, self.type2test, 0.0)
@@ -569,7 +570,7 @@ class ByteArrayTest(BaseBytesTest):
         self.assertEqual(b, bytearray([0, 1, 2, 42, 42, 42, 3, 4, 5, 6, 7, 8, 9]))
 
     def test_extended_set_del_slice(self):
-        indices = (0, None, 1, 3, 19, 300, -1, -2, -31, -300)
+        indices = (0, None, 1, 3, 19, 300, 1<<333, -1, -2, -31, -300)
         for start in indices:
             for stop in indices:
                 # Skip invalid step 0
@@ -786,6 +787,13 @@ class ByteArrayTest(BaseBytesTest):
             b[1:-1:2] = b""
         self.assertRaises(BufferError, delslice)
         self.assertEquals(b, orig)
+
+    def test_empty_bytearray(self):
+        # Issue #7561: operations on empty bytearrays could crash in many
+        # situations, due to a fragile implementation of the
+        # PyByteArray_AS_STRING() C macro.
+        self.assertRaises(ValueError, int, bytearray(b''))
+
 
 class AssortedBytesTest(unittest.TestCase):
     #

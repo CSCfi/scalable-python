@@ -142,7 +142,7 @@ _ssl
 
     Get the source code through
 
-    svn export http://svn.python.org/projects/external/openssl-0.9.8g
+    svn export http://svn.python.org/projects/external/openssl-0.9.8l
 
     ** NOTE: if you use the Tools\buildbot\external(-amd64).bat approach for
     obtaining external sources then you don't need to manually get the source
@@ -155,6 +155,8 @@ _ssl
     You must install the NASM assembler from
         http://nasm.sf.net
     for x86 builds.  Put nasmw.exe anywhere in your PATH.
+    Note: recent releases of nasm only have nasm.exe. Just rename it to 
+    nasmw.exe.
 
     You can also install ActivePerl from
         http://www.activestate.com/Products/ActivePerl/

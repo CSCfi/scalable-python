@@ -173,7 +173,7 @@ available.  They are listed here in alphabetical order.
 
    .. note::
 
-      When compiling a string with multi-line statements, line endings must be
+      When compiling a string with multi-line code, line endings must be
       represented by a single newline character (``'\n'``), and the input must
       be terminated by at least one newline character.  If line endings are
       represented by ``'\r\n'``, use :meth:`str.replace` to change them into
@@ -291,7 +291,7 @@ available.  They are listed here in alphabetical order.
 
    Return an enumerate object. *sequence* must be a sequence, an
    :term:`iterator`, or some other object which supports iteration.  The
-   :meth:`next` method of the iterator returned by :func:`enumerate` returns a
+   :meth:`!next` method of the iterator returned by :func:`enumerate` returns a
    tuple containing a count (from *start* which defaults to 0) and the
    corresponding value obtained from iterating over *iterable*.
    :func:`enumerate` is useful for obtaining an indexed series: ``(0, seq[0])``,
@@ -336,7 +336,7 @@ available.  They are listed here in alphabetical order.
    This function can also be used to execute arbitrary code objects (such as
    those created by :func:`compile`).  In this case pass a code object instead
    of a string.  If the code object has been compiled with ``'exec'`` as the
-   *kind* argument, :func:`eval`\'s return value will be ``None``.
+   *mode* argument, :func:`eval`\'s return value will be ``None``.
 
    Hints: dynamic execution of statements is supported by the :keyword:`exec`
    statement.  Execution of statements from a file is supported by the
@@ -399,8 +399,9 @@ available.  They are listed here in alphabetical order.
    iterable if function(item)]`` if function is not ``None`` and ``[item for item
    in iterable if item]`` if function is ``None``.
 
-   See :func:`itertools.filterfalse` for the complementary function that returns
-   elements of *iterable* for which *function* returns false.
+   See :func:`itertools.ifilter` and :func:`itertools.ifilterfalse` for iterator
+   versions of this function, including a variation that filters for elements
+   where the *function* returns false.
 
 
 .. function:: float([x])
@@ -523,8 +524,10 @@ available.  They are listed here in alphabetical order.
 
    Return the "identity" of an object.  This is an integer (or long integer) which
    is guaranteed to be unique and constant for this object during its lifetime.
-   Two objects with non-overlapping lifetimes may have the same :func:`id` value.
-   (Implementation note: this is the address of the object.)
+   Two objects with non-overlapping lifetimes may have the same :func:`id`
+   value.
+
+   .. impl-detail:: This is the address of the object.
 
 
 .. function:: input([prompt])
@@ -600,8 +603,16 @@ available.  They are listed here in alphabetical order.
    does not support either of those protocols, :exc:`TypeError` is raised. If the
    second argument, *sentinel*, is given, then *o* must be a callable object.  The
    iterator created in this case will call *o* with no arguments for each call to
-   its :meth:`next` method; if the value returned is equal to *sentinel*,
+   its :meth:`~iterator.next` method; if the value returned is equal to *sentinel*,
    :exc:`StopIteration` will be raised, otherwise the value will be returned.
+
+   One useful application of the second form of :func:`iter` is to read lines of
+   a file until a certain line is reached.  The following example reads a file
+   until ``"STOP"`` is reached: ::
+
+      with open("mydata.txt") as fp:
+          for line in iter(fp.readline, "STOP"):
+              process_line(line)
 
    .. versionadded:: 2.2
 
@@ -629,15 +640,13 @@ available.  They are listed here in alphabetical order.
 .. function:: locals()
 
    Update and return a dictionary representing the current local symbol table.
+   Free variables are returned by :func:`locals` when it is called in function
+   blocks, but not in class blocks.
 
    .. note::
 
-      The contents of this dictionary should not be modified; changes may not affect
-      the values of local variables used by the interpreter.
-
-   Free variables are returned by :func:`locals` when it is called in a function block.
-   Modifications of free variables may not affect the values used by the
-   interpreter.  Free variables are not returned in class blocks.
+      The contents of this dictionary should not be modified; changes may not
+      affect the values of local and free variables used by the interpreter.
 
 
 .. function:: long([x[, base]])
@@ -696,9 +705,9 @@ available.  They are listed here in alphabetical order.
 
 .. function:: next(iterator[, default])
 
-   Retrieve the next item from the *iterator* by calling its :meth:`next`
-   method.  If *default* is given, it is returned if the iterator is exhausted,
-   otherwise :exc:`StopIteration` is raised.
+   Retrieve the next item from the *iterator* by calling its
+   :meth:`~iterator.next` method.  If *default* is given, it is returned if the
+   iterator is exhausted, otherwise :exc:`StopIteration` is raised.
 
    .. versionadded:: 2.6
 
@@ -838,7 +847,7 @@ available.  They are listed here in alphabetical order.
 
    .. note::
 
-      This function is not normally available as a builtin since the name
+      This function is not normally available as a built-in since the name
       ``print`` is recognized as the :keyword:`print` statement.  To disable the
       statement and use the :func:`print` function, use this future statement at
       the top of your module::
@@ -855,7 +864,7 @@ available.  They are listed here in alphabetical order.
 
    *fget* is a function for getting an attribute value, likewise *fset* is a
    function for setting, and *fdel* a function for del'ing, an attribute.  Typical
-   use is to define a managed attribute x::
+   use is to define a managed attribute ``x``::
 
       class C(object):
           def __init__(self):
@@ -868,6 +877,9 @@ available.  They are listed here in alphabetical order.
           def delx(self):
               del self._x
           x = property(getx, setx, delx, "I'm the 'x' property.")
+
+   If then *c* is an instance of *C*, ``c.x`` will invoke the getter,
+   ``c.x = value`` will invoke the setter and ``del c.x`` the deleter.
 
    If given, *doc* will be the docstring of the property attribute. Otherwise, the
    property will copy *fget*'s docstring (if it exists).  This makes it possible to
@@ -1079,7 +1091,7 @@ available.  They are listed here in alphabetical order.
 .. function:: set([iterable])
    :noindex:
 
-   Return a new set, optionally with elements are taken from *iterable*.
+   Return a new set, optionally with elements taken from *iterable*.
    The set type is described in :ref:`types-set`.
 
    For other containers see the built in :class:`dict`, :class:`list`, and
@@ -1127,7 +1139,8 @@ available.  They are listed here in alphabetical order.
    value is ``None``.
 
    *key* specifies a function of one argument that is used to extract a comparison
-   key from each list element: ``key=str.lower``.  The default value is ``None``.
+   key from each list element: ``key=str.lower``.  The default value is ``None``
+   (compare the elements directly).
 
    *reverse* is a boolean value.  If set to ``True``, then the list elements are
    sorted as if each comparison were reversed.
@@ -1138,6 +1151,9 @@ available.  They are listed here in alphabetical order.
    each element only once.  To convert an old-style *cmp* function to a *key*
    function, see the `CmpToKey recipe in the ASPN cookbook
    <http://code.activestate.com/recipes/576653/>`_\.
+
+   For sorting examples and a brief sorting tutorial, see `Sorting HowTo
+   <http://wiki.python.org/moin/HowTo/Sorting/>`_\.
 
    .. versionadded:: 2.4
 
@@ -1349,10 +1365,10 @@ available.  They are listed here in alphabetical order.
 
 .. function:: vars([object])
 
-   Without arguments, return a dictionary corresponding to the current local symbol
-   table.  With a module, class or class instance object as argument (or anything
-   else that has a :attr:`__dict__` attribute), returns a dictionary corresponding
-   to the object's symbol table.
+   Without an argument, act like :func:`locals`.
+
+   With a module, class or class instance object as argument (or anything else that
+   has a :attr:`__dict__` attribute), return that attribute.
 
    .. note::
 
@@ -1371,14 +1387,15 @@ available.  They are listed here in alphabetical order.
    elements are never used (such as when the loop is usually terminated with
    :keyword:`break`).
 
-   .. note::
+   .. impl-detail::
 
-      :func:`xrange` is intended to be simple and fast. Implementations may impose
-      restrictions to achieve this. The C implementation of Python restricts all
-      arguments to native C longs ("short" Python integers), and also requires that
-      the number of elements fit in a native C long.  If a larger range is needed,
-      an alternate version can be crafted using the :mod:`itertools` module:
-      ``islice(count(start, step), (stop-start+step-1)//step)``.
+      :func:`xrange` is intended to be simple and fast.  Implementations may
+      impose restrictions to achieve this.  The C implementation of Python
+      restricts all arguments to native C longs ("short" Python integers), and
+      also requires that the number of elements fit in a native C long.  If a
+      larger range is needed, an alternate version can be crafted using the
+      :mod:`itertools` module: ``takewhile(lambda x: x<stop, (start+i*step
+      for i in count()))``.
 
 
 .. function:: zip([iterable, ...])
@@ -1426,8 +1443,8 @@ available.  They are listed here in alphabetical order.
       programming.
 
    This function is invoked by the :keyword:`import` statement.  It can be
-   replaced (by importing the :mod:`builtins` module and assigning to
-   ``builtins.__import__``) in order to change semantics of the
+   replaced (by importing the :mod:`__builtin__` module and assigning to
+   ``__builtin__.__import__``) in order to change semantics of the
    :keyword:`import` statement, but nowadays it is usually simpler to use import
    hooks (see :pep:`302`).  Direct use of :func:`__import__` is rare, except in
    cases where you want to import a module whose name is only known at runtime.

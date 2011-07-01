@@ -7,6 +7,7 @@ import re
 import pydoc
 import inspect
 import unittest
+import xml.etree
 import test.test_support
 from contextlib import contextmanager
 from test.test_support import TESTFN, forget, rmtree, EnvironmentVarGuard
@@ -236,6 +237,11 @@ class PyDocDocTest(unittest.TestCase):
             print_diffs(expected_text, result)
             self.fail("outputs are not equal, see diff above")
 
+    def test_issue8225(self):
+        # Test issue8225 to ensure no doc link appears for xml.etree
+        result, doc_loc = get_pydoc_text(xml.etree)
+        self.assertEqual(doc_loc, "", "MODULE DOCS incorrectly includes a link")
+
     def test_not_here(self):
         missing_module = "test.i_am_not_here"
         result = run_pydoc(missing_module)
@@ -287,6 +293,19 @@ class PyDocDocTest(unittest.TestCase):
         self.assertEqual(expected, result,
             "white space was not stripped from module name "
             "or other error output mismatch")
+
+    def test_stripid(self):
+        # test with strings, other implementations might have different repr()
+        stripid = pydoc.stripid
+        # strip the id
+        self.assertEqual(stripid('<function stripid at 0x88dcee4>'),
+                         '<function stripid>')
+        self.assertEqual(stripid('<function stripid at 0x01F65390>'),
+                         '<function stripid>')
+        # nothing to strip, return the same text
+        self.assertEqual(stripid('42'), '42')
+        self.assertEqual(stripid("<type 'exceptions.Exception'>"),
+                         "<type 'exceptions.Exception'>")
 
 
 class TestDescriptions(unittest.TestCase):
