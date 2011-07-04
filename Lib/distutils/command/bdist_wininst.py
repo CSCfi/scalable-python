@@ -5,7 +5,7 @@ exe-program."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: bdist_wininst.py 71422 2009-04-09 22:48:19Z tarek.ziade $"
+__revision__ = "$Id: bdist_wininst.py 83594 2010-08-02 21:45:43Z georg.brandl $"
 
 import sys, os, string
 from distutils.core import Command
@@ -93,7 +93,7 @@ class bdist_wininst (Command):
             short_version = get_python_version()
             if self.target_version and self.target_version != short_version:
                 raise DistutilsOptionError, \
-                      "target version can only be %s, or the '--skip_build'" \
+                      "target version can only be %s, or the '--skip-build'" \
                       " option must be specified" % (short_version,)
             self.target_version = short_version
 

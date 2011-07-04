@@ -189,7 +189,7 @@ type objects) *must* have the :attr:`ob_size` field.
    instance; this is normally :cfunc:`PyObject_Del` if the instance was allocated
    using :cfunc:`PyObject_New` or :cfunc:`PyObject_VarNew`, or
    :cfunc:`PyObject_GC_Del` if the instance was allocated using
-   :cfunc:`PyObject_GC_New` or :cfunc:`PyObject_GC_VarNew`.
+   :cfunc:`PyObject_GC_New` or :cfunc:`PyObject_GC_NewVar`.
 
    This field is inherited by subtypes.
 
@@ -1160,6 +1160,7 @@ Number Object Structures
             binaryfunc nb_add;
             binaryfunc nb_subtract;
             binaryfunc nb_multiply;
+            binaryfunc nb_divide;
             binaryfunc nb_remainder;
             binaryfunc nb_divmod;
             ternaryfunc nb_power;

@@ -18,6 +18,7 @@ import socket
 import random
 import logging
 from StringIO import StringIO
+from test import test_support
 
 
 # Work around broken sem_open implementations
@@ -1205,7 +1206,8 @@ class _TestManagerRestart(BaseTestCase):
     def test_rapid_restart(self):
         authkey = os.urandom(32)
         manager = QueueManager(
-            address=('localhost', 9999), authkey=authkey, serializer=SERIALIZER)
+            address=('localhost', 0), authkey=authkey, serializer=SERIALIZER)
+        addr = manager.get_server().address
         manager.start()
 
         p = self.Process(target=self._putter, args=(manager.address, authkey))
@@ -1215,7 +1217,7 @@ class _TestManagerRestart(BaseTestCase):
         del queue
         manager.shutdown()
         manager = QueueManager(
-            address=('localhost', 9999), authkey=authkey, serializer=SERIALIZER)
+            address=addr, authkey=authkey, serializer=SERIALIZER)
         manager.start()
         manager.shutdown()
 
@@ -1558,10 +1560,10 @@ class _TestSharedCTypes(BaseTestCase):
             return
 
         x = Value('i', 7, lock=lock)
-        y = Value(ctypes.c_double, 1.0/3.0, lock=lock)
+        y = Value(c_double, 1.0/3.0, lock=lock)
         foo = Value(_Foo, 3, 2, lock=lock)
-        arr = Array('d', range(10), lock=lock)
-        string = Array('c', 20, lock=lock)
+        arr = self.Array('d', range(10), lock=lock)
+        string = self.Array('c', 20, lock=lock)
         string.value = 'hello'
 
         p = self.Process(target=self._double, args=(x, y, foo, arr, string))
@@ -1932,7 +1934,9 @@ def test_main(run=None):
 
     loadTestsFromTestCase = unittest.defaultTestLoader.loadTestsFromTestCase
     suite = unittest.TestSuite(loadTestsFromTestCase(tc) for tc in testcases)
-    run(suite)
+    with test_support._check_py3k_warnings(
+            (".+__(get|set)slice__ has been removed", DeprecationWarning)):
+        run(suite)
 
     ThreadsMixin.pool.terminate()
     ProcessesMixin.pool.terminate()

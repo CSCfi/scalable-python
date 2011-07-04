@@ -32,7 +32,7 @@ import unittest
 from decimal import *
 import numbers
 from test.test_support import (TestSkipped, run_unittest, run_doctest,
-                               is_resource_enabled)
+                               is_resource_enabled, _check_py3k_warnings)
 import random
 try:
     import threading
@@ -40,7 +40,13 @@ except ImportError:
     threading = None
 
 # Useful Test Constant
-Signals = getcontext().flags.keys()
+Signals = tuple(getcontext().flags.keys())
+
+# Signals ordered with respect to precedence: when an operation
+# produces multiple signals, signals occurring later in the list
+# should be handled before those occurring earlier in the list.
+OrderedSignals = (Clamped, Rounded, Inexact, Subnormal,
+                  Underflow, Overflow, DivisionByZero, InvalidOperation)
 
 # Tests are built around these assumed context defaults.
 # test_main() restores the original context.
@@ -63,6 +69,44 @@ testdir = os.path.dirname(file) or os.curdir
 directory = testdir + os.sep + TESTDATADIR + os.sep
 
 skip_expected = not os.path.isdir(directory)
+
+# list of individual .decTest test ids that correspond to tests that
+# we're skipping for one reason or another.
+skipped_test_ids = set([
+    # Skip implementation-specific scaleb tests.
+    'scbx164',
+    'scbx165',
+
+    # For some operations (currently exp, ln, log10, power), the decNumber
+    # reference implementation imposes additional restrictions on the context
+    # and operands.  These restrictions are not part of the specification;
+    # however, the effect of these restrictions does show up in some of the
+    # testcases.  We skip testcases that violate these restrictions, since
+    # Decimal behaves differently from decNumber for these testcases so these
+    # testcases would otherwise fail.
+    'expx901',
+    'expx902',
+    'expx903',
+    'expx905',
+    'lnx901',
+    'lnx902',
+    'lnx903',
+    'lnx905',
+    'logx901',
+    'logx902',
+    'logx903',
+    'logx905',
+    'powx1183',
+    'powx1184',
+    'powx4001',
+    'powx4002',
+    'powx4003',
+    'powx4005',
+    'powx4008',
+    'powx4010',
+    'powx4012',
+    'powx4014',
+    ])
 
 # Make sure it actually raises errors when not expected and caught in flags
 # Slower, since it runs some things several times.
@@ -153,27 +197,6 @@ LOGICAL_FUNCTIONS = (
     'same_quantum',
     )
 
-# For some operations (currently exp, ln, log10, power), the decNumber
-# reference implementation imposes additional restrictions on the
-# context and operands.  These restrictions are not part of the
-# specification; however, the effect of these restrictions does show
-# up in some of the testcases.  We skip testcases that violate these
-# restrictions, since Decimal behaves differently from decNumber for
-# these testcases so these testcases would otherwise fail.
-
-decNumberRestricted = ('power', 'ln', 'log10', 'exp')
-DEC_MAX_MATH = 999999
-def outside_decNumber_bounds(v, context):
-    if (context.prec > DEC_MAX_MATH or
-        context.Emax > DEC_MAX_MATH or
-        -context.Emin > DEC_MAX_MATH):
-        return True
-    if not v._is_special and v and (
-        v.adjusted() > DEC_MAX_MATH or
-        v.adjusted() < 1-2*DEC_MAX_MATH):
-        return True
-    return False
-
 class DecimalTest(unittest.TestCase):
     """Class which tests the Decimal class against the test cases.
 
@@ -196,7 +219,7 @@ class DecimalTest(unittest.TestCase):
         if skip_expected:
             raise TestSkipped
             return
-        for line in open(file).xreadlines():
+        for line in open(file):
             line = line.replace('\r\n', '').replace('\n', '')
             #print line
             try:
@@ -263,6 +286,10 @@ class DecimalTest(unittest.TestCase):
             val = val.replace("'", '').replace('"', '')
             val = val.replace('SingleQuote', "'").replace('DoubleQuote', '"')
             return val
+
+        if id in skipped_test_ids:
+            return
+
         fname = nameAdapter.get(funct, funct)
         if fname == 'rescale':
             return
@@ -307,22 +334,6 @@ class DecimalTest(unittest.TestCase):
 
         ans = FixQuotes(ans)
 
-        # skip tests that are related to bounds imposed in the decNumber
-        # reference implementation
-        if fname in decNumberRestricted:
-            if fname == 'power':
-                if not (vals[1]._isinteger() and
-                        -1999999997 <= vals[1] <= 999999999):
-                    if outside_decNumber_bounds(vals[0], self.context) or \
-                            outside_decNumber_bounds(vals[1], self.context):
-                        #print "Skipping test %s" % s
-                        return
-            else:
-                if outside_decNumber_bounds(vals[0], self.context):
-                    #print "Skipping test %s" % s
-                    return
-
-
         if EXTENDEDERRORTEST and fname not in ('to_sci_string', 'to_eng_string'):
             for error in theirexceptions:
                 self.context.traps[error] = 1
@@ -336,6 +347,25 @@ class DecimalTest(unittest.TestCase):
                 else:
                     self.fail("Did not raise %s in %s" % (error, s))
                 self.context.traps[error] = 0
+
+            # as above, but add traps cumulatively, to check precedence
+            ordered_errors = [e for e in OrderedSignals if e in theirexceptions]
+            for error in ordered_errors:
+                self.context.traps[error] = 1
+                try:
+                    funct(*vals)
+                except error:
+                    pass
+                except Signals, e:
+                    self.fail("Raised %s in %s; expected %s" %
+                              (type(e), s, error))
+                else:
+                    self.fail("Did not raise %s in %s" % (error, s))
+            # reset traps
+            for error in ordered_errors:
+                self.context.traps[error] = 0
+
+
         if DEBUG:
             print "--", self.context
         try:
@@ -351,8 +381,9 @@ class DecimalTest(unittest.TestCase):
         myexceptions = self.getexceptions()
         self.context.clear_flags()
 
-        myexceptions.sort()
-        theirexceptions.sort()
+        with _check_py3k_warnings(quiet=True):
+            myexceptions.sort()
+            theirexceptions.sort()
 
         self.assertEqual(result, ans,
                          'Incorrect answer for ' + s + ' -- got ' + result)
@@ -607,12 +638,13 @@ class DecimalImplicitConstructionTest(unittest.TestCase):
             ('//', '__floordiv__', '__rfloordiv__'),
             ('**', '__pow__', '__rpow__')
         ]
-        if 1/2 == 0:
-            # testing with classic division, so add __div__
-            oplist.append(('/', '__div__', '__rdiv__'))
-        else:
-            # testing with -Qnew, so add __truediv__
-            oplist.append(('/', '__truediv__', '__rtruediv__'))
+        with _check_py3k_warnings():
+            if 1 / 2 == 0:
+                # testing with classic division, so add __div__
+                oplist.append(('/', '__div__', '__rdiv__'))
+            else:
+                # testing with -Qnew, so add __truediv__
+                oplist.append(('/', '__truediv__', '__rtruediv__'))
 
         for sym, lop, rop in oplist:
             setattr(E, lop, lambda self, other: 'str' + lop + str(other))
@@ -1065,8 +1097,9 @@ class DecimalUsabilityTest(unittest.TestCase):
         self.assertEqual(a, b)
 
         # with None
-        self.assertFalse(Decimal(1) < None)
-        self.assertTrue(Decimal(1) > None)
+        with _check_py3k_warnings():
+            self.assertFalse(Decimal(1) < None)
+            self.assertTrue(Decimal(1) > None)
 
     def test_copy_and_deepcopy_methods(self):
         d = Decimal('43.24')
@@ -1347,6 +1380,53 @@ class DecimalUsabilityTest(unittest.TestCase):
         self.assertEqual(str(Decimal(0).sqrt()),
                          str(c.sqrt(Decimal(0))))
 
+    def test_conversions_from_int(self):
+        # Check that methods taking a second Decimal argument will
+        # always accept an integer in place of a Decimal.
+        self.assertEqual(Decimal(4).compare(3),
+                         Decimal(4).compare(Decimal(3)))
+        self.assertEqual(Decimal(4).compare_signal(3),
+                         Decimal(4).compare_signal(Decimal(3)))
+        self.assertEqual(Decimal(4).compare_total(3),
+                         Decimal(4).compare_total(Decimal(3)))
+        self.assertEqual(Decimal(4).compare_total_mag(3),
+                         Decimal(4).compare_total_mag(Decimal(3)))
+        self.assertEqual(Decimal(10101).logical_and(1001),
+                         Decimal(10101).logical_and(Decimal(1001)))
+        self.assertEqual(Decimal(10101).logical_or(1001),
+                         Decimal(10101).logical_or(Decimal(1001)))
+        self.assertEqual(Decimal(10101).logical_xor(1001),
+                         Decimal(10101).logical_xor(Decimal(1001)))
+        self.assertEqual(Decimal(567).max(123),
+                         Decimal(567).max(Decimal(123)))
+        self.assertEqual(Decimal(567).max_mag(123),
+                         Decimal(567).max_mag(Decimal(123)))
+        self.assertEqual(Decimal(567).min(123),
+                         Decimal(567).min(Decimal(123)))
+        self.assertEqual(Decimal(567).min_mag(123),
+                         Decimal(567).min_mag(Decimal(123)))
+        self.assertEqual(Decimal(567).next_toward(123),
+                         Decimal(567).next_toward(Decimal(123)))
+        self.assertEqual(Decimal(1234).quantize(100),
+                         Decimal(1234).quantize(Decimal(100)))
+        self.assertEqual(Decimal(768).remainder_near(1234),
+                         Decimal(768).remainder_near(Decimal(1234)))
+        self.assertEqual(Decimal(123).rotate(1),
+                         Decimal(123).rotate(Decimal(1)))
+        self.assertEqual(Decimal(1234).same_quantum(1000),
+                         Decimal(1234).same_quantum(Decimal(1000)))
+        self.assertEqual(Decimal('9.123').scaleb(-100),
+                         Decimal('9.123').scaleb(Decimal(-100)))
+        self.assertEqual(Decimal(456).shift(-1),
+                         Decimal(456).shift(Decimal(-1)))
+
+        self.assertEqual(Decimal(-12).fma(Decimal(45), 67),
+                         Decimal(-12).fma(Decimal(45), Decimal(67)))
+        self.assertEqual(Decimal(-12).fma(45, 67),
+                         Decimal(-12).fma(Decimal(45), Decimal(67)))
+        self.assertEqual(Decimal(-12).fma(45, Decimal(67)),
+                         Decimal(-12).fma(Decimal(45), Decimal(67)))
+
 
 class DecimalPythonAPItests(unittest.TestCase):
 
@@ -1479,18 +1559,20 @@ class ContextFlags(unittest.TestCase):
                 for flag in extra_flags:
                     if flag not in expected_flags:
                         expected_flags.append(flag)
-                expected_flags.sort()
+                with _check_py3k_warnings(quiet=True):
+                    expected_flags.sort()
 
                 # flags we actually got
                 new_flags = [k for k,v in context.flags.items() if v]
-                new_flags.sort()
+                with _check_py3k_warnings(quiet=True):
+                    new_flags.sort()
 
                 self.assertEqual(ans, new_ans,
                                  "operation produces different answers depending on flags set: " +
                                  "expected %s, got %s." % (ans, new_ans))
                 self.assertEqual(new_flags, expected_flags,
-                                  "operation raises different flags depending on flags set: " +
-                                  "expected %s, got %s" % (expected_flags, new_flags))
+                                 "operation raises different flags depending on flags set: " +
+                                 "expected %s, got %s" % (expected_flags, new_flags))
 
 def test_main(arith=False, verbose=None, todo_tests=None, debug=None):
     """ Execute the tests.

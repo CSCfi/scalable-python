@@ -1,7 +1,7 @@
 # Autodetecting setup.py script for building the Python extensions
 #
 
-__version__ = "$Revision: 75282 $"
+__version__ = "$Revision: 82930 $"
 
 import sys, os, imp, re, optparse
 from glob import glob
@@ -15,6 +15,7 @@ from distutils.core import Extension, setup
 from distutils.command.build_ext import build_ext
 from distutils.command.install import install
 from distutils.command.install_lib import install_lib
+from distutils.spawn import find_executable
 
 # This global variable is used to hold the list of modules to be disabled.
 disabled_module_list = []
@@ -25,6 +26,25 @@ def add_dir_to_list(dirlist, dir):
     2) 'dir' actually exists, and is a directory."""
     if dir is not None and os.path.isdir(dir) and dir not in dirlist:
         dirlist.insert(0, dir)
+
+def macosx_sdk_root():
+    """
+    Return the directory of the current OSX SDK,
+    or '/' if no SDK was specified.
+    """
+    cflags = sysconfig.get_config_var('CFLAGS')
+    m = re.search(r'-isysroot\s+(\S+)', cflags)
+    if m is None:
+        sysroot = '/'
+    else:
+        sysroot = m.group(1)
+    return sysroot
+
+def is_macosx_sdk_path(path):
+    """
+    Returns True if 'path' can be located in an OSX SDK
+    """
+    return (path.startswith('/usr/') and not path.startswith('/usr/local')) or path.startswith('/System/')
 
 def find_file(filename, std_dirs, paths):
     """Searches for the directory where a given file is located,
@@ -37,15 +57,28 @@ def find_file(filename, std_dirs, paths):
     'paths' is a list of additional locations to check; if the file is
         found in one of them, the resulting list will contain the directory.
     """
+    if sys.platform == 'darwin':
+        # Honor the MacOSX SDK setting when one was specified.
+        # An SDK is a directory with the same structure as a real
+        # system, but with only header files and libraries.
+        sysroot = macosx_sdk_root()
 
     # Check the standard locations
     for dir in std_dirs:
         f = os.path.join(dir, filename)
+
+        if sys.platform == 'darwin' and is_macosx_sdk_path(dir):
+            f = os.path.join(sysroot, dir[1:], filename)
+
         if os.path.exists(f): return []
 
     # Check the additional directories
     for dir in paths:
         f = os.path.join(dir, filename)
+
+        if sys.platform == 'darwin' and is_macosx_sdk_path(dir):
+            f = os.path.join(sysroot, dir[1:], filename)
+
         if os.path.exists(f):
             return [dir]
 
@@ -57,11 +90,19 @@ def find_library_file(compiler, libname, std_dirs, paths):
     if result is None:
         return None
 
+    if sys.platform == 'darwin':
+        sysroot = macosx_sdk_root()
+
     # Check whether the found file is in one of the standard directories
     dirname = os.path.dirname(result)
     for p in std_dirs:
         # Ensure path doesn't end with path separator
         p = p.rstrip(os.sep)
+
+        if sys.platform == 'darwin' and is_macosx_sdk_path(p):
+            if os.path.join(sysroot, p[1:]) == dirname:
+                return [ ]
+
         if p == dirname:
             return [ ]
 
@@ -70,6 +111,11 @@ def find_library_file(compiler, libname, std_dirs, paths):
     for p in paths:
         # Ensure path doesn't end with path separator
         p = p.rstrip(os.sep)
+
+        if sys.platform == 'darwin' and is_macosx_sdk_path(p):
+            if os.path.join(sysroot, p[1:]) == dirname:
+                return [ p ]
+
         if p == dirname:
             return [p]
     else:
@@ -555,34 +601,66 @@ class PyBuildExt(build_ext):
 
         # readline
 #        do_readline = self.compiler.find_library_file(lib_dirs, 'readline')
-#        if platform == 'darwin': # and os.uname()[2] < '9.':
-            # MacOSX 10.4 has a broken readline. Don't try to build
-            # the readline module unless the user has installed a fixed
-            # readline package
-            # FIXME: The readline emulation on 10.5 is better, but the
-            # readline module doesn't compile out of the box.
-#            if find_file('readline/rlconf.h', inc_dirs, []) is None:
         do_readline = False
+        readline_termcap_library = ""
+        curses_library = ""
+        # Determine if readline is already linked against curses or tinfo.
+        if do_readline and find_executable('ldd'):
+            fp = os.popen("ldd %s" % do_readline)
+            ldd_output = fp.readlines()
+            ret = fp.close()
+            if ret is None or ret >> 8 == 0:
+                for ln in ldd_output:
+                    if 'curses' in ln:
+                        readline_termcap_library = re.sub(
+                            r'.*lib(n?cursesw?)\.so.*', r'\1', ln
+                        ).rstrip()
+                        break
+                    if 'tinfo' in ln: # termcap interface split out from ncurses
+                        readline_termcap_library = 'tinfo'
+                        break
+        # Issue 7384: If readline is already linked against curses,
+        # use the same library for the readline and curses modules.
+        # Disabled since applications relying on ncursesw might break.
+        #
+        # if 'curses' in readline_termcap_library:
+        #    curses_library = readline_termcap_library
+        # elif self.compiler.find_library_file(lib_dirs, 'ncursesw'):
+        # (...)
+        if self.compiler.find_library_file(lib_dirs, 'ncursesw'):
+            curses_library = 'ncursesw'
+        elif self.compiler.find_library_file(lib_dirs, 'ncurses'):
+            curses_library = 'ncurses'
+        elif self.compiler.find_library_file(lib_dirs, 'curses'):
+            curses_library = 'curses'
+
+        if platform == 'darwin':
+            os_release = int(os.uname()[2].split('.')[0])
+            dep_target = sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET')
+            if dep_target and dep_target.split('.') < ['10', '5']:
+                os_release = 8
+            if os_release < 9:
+                # MacOSX 10.4 has a broken readline. Don't try to build
+                # the readline module unless the user has installed a fixed
+                # readline package
+                if find_file('readline/rlconf.h', inc_dirs, []) is None:
+                    do_readline = False
         if do_readline:
-            if sys.platform == 'darwin':
+            if platform == 'darwin' and os_release < 9:
                 # In every directory on the search path search for a dynamic
                 # library and then a static library, instead of first looking
                 # for dynamic libraries on the entiry path.
                 # This way a staticly linked custom readline gets picked up
-                # before the (broken) dynamic library in /usr/lib.
+                # before the (possibly broken) dynamic library in /usr/lib.
                 readline_extra_link_args = ('-Wl,-search_paths_first',)
             else:
                 readline_extra_link_args = ()
 
             readline_libs = ['readline']
-            if self.compiler.find_library_file(lib_dirs,
-                                                 'ncursesw'):
-                readline_libs.append('ncursesw')
-            elif self.compiler.find_library_file(lib_dirs,
-                                                 'ncurses'):
-                readline_libs.append('ncurses')
-            elif self.compiler.find_library_file(lib_dirs, 'curses'):
-                readline_libs.append('curses')
+            if readline_termcap_library:
+                pass # Issue 7384: Already linked against curses or tinfo.
+            elif curses_library:
+                readline_libs.append(curses_library)
             elif self.compiler.find_library_file(lib_dirs +
                                                ['/usr/lib/termcap'],
                                                'termcap'):
@@ -643,24 +721,24 @@ class PyBuildExt(build_ext):
         openssl_ver = 0
         openssl_ver_re = re.compile(
             '^\s*#\s*define\s+OPENSSL_VERSION_NUMBER\s+(0x[0-9a-fA-F]+)' )
-        for ssl_inc_dir in inc_dirs + search_for_ssl_incs_in:
-            name = os.path.join(ssl_inc_dir, 'openssl', 'opensslv.h')
-            if os.path.isfile(name):
-                try:
-                    incfile = open(name, 'r')
-                    for line in incfile:
-                        m = openssl_ver_re.match(line)
-                        if m:
-                            openssl_ver = eval(m.group(1))
-                            break
-                except IOError:
-                    pass
 
-            # first version found is what we'll use (as the compiler should)
-            if openssl_ver:
-                break
+        # look for the openssl version header on the compiler search path.
+        opensslv_h = find_file('openssl/opensslv.h', [],
+                inc_dirs + search_for_ssl_incs_in)
+        if opensslv_h:
+            name = os.path.join(opensslv_h[0], 'openssl/opensslv.h')
+            if sys.platform == 'darwin' and is_macosx_sdk_path(name):
+                name = os.path.join(macosx_sdk_root(), name[1:])
+            try:
+                incfile = open(name, 'r')
+                for line in incfile:
+                    m = openssl_ver_re.match(line)
+                    if m:
+                        openssl_ver = eval(m.group(1))
+            except IOError, msg:
+                print "IOError while reading opensshv.h:", msg
+                pass
 
-        #print 'openssl_ver = 0x%08x' % openssl_ver
 
         if (ssl_incs is not None and
             ssl_libs is not None and
@@ -788,12 +866,19 @@ class PyBuildExt(build_ext):
 
         db_ver_inc_map = {}
 
+        if sys.platform == 'darwin':
+            sysroot = macosx_sdk_root()
+
         class db_found(Exception): pass
         try:
             # See whether there is a Sleepycat header in the standard
             # search path.
             for d in inc_dirs + db_inc_paths:
                 f = os.path.join(d, "db.h")
+
+                if sys.platform == 'darwin' and is_macosx_sdk_path(d):
+                    f = os.path.join(sysroot, d[1:], "db.h")
+
                 if db_setup_debug: print "db: looking for db.h in", f
                 if os.path.exists(f):
                     f = open(f).read()
@@ -813,7 +898,7 @@ class PyBuildExt(build_ext):
                                 print "being ignored (4.6.x must be >= 4.6.21)"
                                 continue
 
-                        if ( (not db_ver_inc_map.has_key(db_ver)) and
+                        if ( (db_ver not in db_ver_inc_map) and
                             allow_db_ver(db_ver) ):
                             # save the include directory with the db.h version
                             # (first occurrence only)
@@ -840,7 +925,21 @@ class PyBuildExt(build_ext):
                     db_incdir.replace("include", 'lib64'),
                     db_incdir.replace("include", 'lib'),
                 ]
-                db_dirs_to_check = filter(os.path.isdir, db_dirs_to_check)
+
+                if sys.platform != 'darwin':
+                    db_dirs_to_check = filter(os.path.isdir, db_dirs_to_check)
+
+                else:
+                    # Same as other branch, but takes OSX SDK into account
+                    tmp = []
+                    for dn in db_dirs_to_check:
+                        if is_macosx_sdk_path(dn):
+                            if os.path.isdir(os.path.join(sysroot, dn[1:])):
+                                tmp.append(dn)
+                        else:
+                            if os.path.isdir(dn):
+                                tmp.append(dn)
+                    db_dirs_to_check = tmp
 
                 # Look for a version specific db-X.Y before an ambiguoius dbX
                 # XXX should we -ever- look for a dbX name?  Do any
@@ -902,8 +1001,15 @@ class PyBuildExt(build_ext):
         # Scan the default include directories before the SQLite specific
         # ones. This allows one to override the copy of sqlite on OSX,
         # where /usr/include contains an old version of sqlite.
+        if sys.platform == 'darwin':
+            sysroot = macosx_sdk_root()
+
         for d in inc_dirs + sqlite_inc_paths:
             f = os.path.join(d, "sqlite3.h")
+
+            if sys.platform == 'darwin' and is_macosx_sdk_path(d):
+                f = os.path.join(sysroot, d[1:], "sqlite3.h")
+
             if os.path.exists(f):
                 if sqlite_setup_debug: print "sqlite: found %s"%f
                 incf = open(f).read()
@@ -987,6 +1093,12 @@ class PyBuildExt(build_ext):
         # the more recent berkeleydb's db.h file first in the include path
         # when attempting to compile and it will fail.
         f = "/usr/include/db.h"
+
+        if sys.platform == 'darwin':
+            if is_macosx_sdk_path(f):
+                sysroot = macosx_sdk_root()
+                f = os.path.join(sysroot, f[1:])
+
         if os.path.exists(f) and not db_incs:
             data = open(f).read()
             m = re.search(r"#s*define\s+HASHVERSION\s+2\s*", data)
@@ -1062,7 +1174,8 @@ class PyBuildExt(build_ext):
                 missing.append('resource')
 
             # Sun yellow pages. Some systems have the functions in libc.
-            if platform not in ['cygwin', 'atheos', 'qnx6']:
+            if (platform not in ['cygwin', 'atheos', 'qnx6'] and
+                find_file('rpcsvc/yp_prot.h', inc_dirs, []) is not None):
                 if (self.compiler.find_library_file(lib_dirs, 'nsl')):
                     libs = ['nsl']
                 else:
@@ -1077,19 +1190,15 @@ class PyBuildExt(build_ext):
         # Curses support, requiring the System V version of curses, often
         # provided by the ncurses library.
         panel_library = 'panel'
-        if (self.compiler.find_library_file(lib_dirs, 'ncursesw')):
-            curses_libs = ['ncursesw']
-            # Bug 1464056: If _curses.so links with ncursesw,
-            # _curses_panel.so must link with panelw.
-            panel_library = 'panelw'
+        if curses_library.startswith('ncurses'):
+            if curses_library == 'ncursesw':
+                # Bug 1464056: If _curses.so links with ncursesw,
+                # _curses_panel.so must link with panelw.
+                panel_library = 'panelw'
+            curses_libs = [curses_library]
             exts.append( Extension('_curses', ['_cursesmodule.c'],
                                    libraries = curses_libs) )
-        elif (self.compiler.find_library_file(lib_dirs, 'ncurses')):
-            curses_libs = ['ncurses']
-            exts.append( Extension('_curses', ['_cursesmodule.c'],
-                                   libraries = curses_libs) )
-        elif (self.compiler.find_library_file(lib_dirs, 'curses')
-              and platform != 'darwin'):
+        elif curses_library == 'curses' and platform != 'darwin':
                 # OSX has an old Berkeley curses, not good enough for
                 # the _curses module.
             if (self.compiler.find_library_file(lib_dirs, 'terminfo')):
@@ -1321,9 +1430,13 @@ class PyBuildExt(build_ext):
             if macros.get('HAVE_SEM_OPEN', False):
                 multiprocessing_srcs.append('_multiprocessing/semaphore.c')
 
-        exts.append ( Extension('_multiprocessing', multiprocessing_srcs,
-                                 define_macros=macros.items(),
-                                 include_dirs=["Modules/_multiprocessing"]))
+        if sysconfig.get_config_var('WITH_THREAD'):
+            exts.append ( Extension('_multiprocessing', multiprocessing_srcs,
+                                    define_macros=macros.items(),
+                                    include_dirs=["Modules/_multiprocessing"]))
+        else:
+            missing.append('_multiprocessing')
+
         # End multiprocessing
 
 
@@ -1358,7 +1471,7 @@ class PyBuildExt(build_ext):
         if platform == 'darwin' and ("--disable-toolbox-glue" not in
                 sysconfig.get_config_var("CONFIG_ARGS")):
 
-            if os.uname()[2] > '8.':
+            if int(os.uname()[2].split('.')[0]) >= 8:
                 # We're on Mac OS X 10.4 or later, the compiler should
                 # support '-Wno-deprecated-declarations'. This will
                 # surpress deprecation warnings for the Carbon extensions,
@@ -1472,14 +1585,22 @@ class PyBuildExt(build_ext):
             join(os.getenv('HOME'), '/Library/Frameworks')
         ]
 
+        sysroot = macosx_sdk_root()
+
         # Find the directory that contains the Tcl.framework and Tk.framework
         # bundles.
         # XXX distutils should support -F!
         for F in framework_dirs:
             # both Tcl.framework and Tk.framework should be present
+
+
             for fw in 'Tcl', 'Tk':
-                if not exists(join(F, fw + '.framework')):
-                    break
+                if is_macosx_sdk_path(F):
+                    if not exists(join(sysroot, F[1:], fw + '.framework')):
+                        break
+                else:
+                    if not exists(join(F, fw + '.framework')):
+                        break
             else:
                 # ok, F is now directory with both frameworks. Continure
                 # building
@@ -1509,7 +1630,12 @@ class PyBuildExt(build_ext):
         # architectures.
         cflags = sysconfig.get_config_vars('CFLAGS')[0]
         archs = re.findall('-arch\s+(\w+)', cflags)
-        fp = os.popen("file %s/Tk.framework/Tk | grep 'for architecture'"%(F,))
+
+        if is_macosx_sdk_path(F):
+            fp = os.popen("file %s/Tk.framework/Tk | grep 'for architecture'"%(os.path.join(sysroot, F[1:]),))
+        else:
+            fp = os.popen("file %s/Tk.framework/Tk | grep 'for architecture'"%(F,))
+
         detected_archs = []
         for ln in fp:
             a = ln.split()[-1]
@@ -1707,17 +1833,18 @@ class PyBuildExt(build_ext):
                     return False
 
             fficonfig = {}
-            execfile(ffi_configfile, globals(), fficonfig)
-            ffi_srcdir = os.path.join(fficonfig['ffi_srcdir'], 'src')
+            exec open(ffi_configfile) in fficonfig
 
             # Add .S (preprocessed assembly) to C compiler source extensions.
             self.compiler.src_extensions.append('.S')
 
             include_dirs = [os.path.join(ffi_builddir, 'include'),
-                            ffi_builddir, ffi_srcdir]
+                            ffi_builddir,
+                            os.path.join(ffi_srcdir, 'src')]
             extra_compile_args = fficonfig['ffi_cflags'].split()
 
-            ext.sources.extend(fficonfig['ffi_sources'])
+            ext.sources.extend(os.path.join(ffi_srcdir, f) for f in
+                               fficonfig['ffi_sources'])
             ext.include_dirs.extend(include_dirs)
             ext.extra_compile_args.extend(extra_compile_args)
         return True

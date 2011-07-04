@@ -48,13 +48,38 @@ This module defines one class called :class:`Popen`:
 
    On Unix, with *shell=False* (default): In this case, the Popen class uses
    :meth:`os.execvp` to execute the child program. *args* should normally be a
-   sequence.  A string will be treated as a sequence with the string as the only
-   item (the program to execute).
+   sequence.  If a string is specified for *args*, it will be used as the name
+   or path of the program to execute; this will only work if the program is
+   being given no arguments.
 
-   On Unix, with *shell=True*: If args is a string, it specifies the command string
-   to execute through the shell.  If *args* is a sequence, the first item specifies
-   the command string, and any additional items will be treated as additional shell
-   arguments.
+   .. note::
+
+      :meth:`shlex.split` can be useful when determining the correct
+      tokenization for *args*, especially in complex cases::
+
+         >>> import shlex, subprocess
+         >>> command_line = raw_input()
+         /bin/vikings -input eggs.txt -output "spam spam.txt" -cmd "echo '$MONEY'"
+         >>> args = shlex.split(command_line)
+         >>> print args
+         ['/bin/vikings', '-input', 'eggs.txt', '-output', 'spam spam.txt', '-cmd', "echo '$MONEY'"]
+         >>> p = subprocess.Popen(args) # Success!
+
+      Note in particular that options (such as *-input*) and arguments (such
+      as *eggs.txt*) that are separated by whitespace in the shell go in separate
+      list elements, while arguments that need quoting or backslash escaping when
+      used in the shell (such as filenames containing spaces or the *echo* command
+      shown above) are single list elements.
+
+   On Unix, with *shell=True*: If args is a string, it specifies the command
+   string to execute through the shell.  This means that the string must be
+   formatted exactly as it would be when typed at the shell prompt.  This
+   includes, for example, quoting or backslash escaping filenames with spaces in
+   them.  If *args* is a sequence, the first item specifies the command string, and
+   any additional items will be treated as additional arguments to the shell
+   itself.  That is to say, *Popen* does the equivalent of::
+
+      Popen(['/bin/sh', '-c', args[0], args[1], ...])
 
    On Windows: the :class:`Popen` class uses CreateProcess() to execute the child
    program, which operates on strings.  If *args* is a sequence, it will be
@@ -69,11 +94,21 @@ This module defines one class called :class:`Popen`:
    size.  A negative *bufsize* means to use the system default, which usually means
    fully buffered.  The default value for *bufsize* is :const:`0` (unbuffered).
 
+   .. note::
+
+      If you experience performance issues, it is recommended that you try to
+      enable buffering by setting *bufsize* to either -1 or a large enough
+      positive value (such as 4096).
+
    The *executable* argument specifies the program to execute. It is very seldom
    needed: Usually, the program to execute is defined by the *args* argument. If
    ``shell=True``, the *executable* argument specifies which shell to use. On Unix,
    the default shell is :file:`/bin/sh`.  On Windows, the default shell is
-   specified by the :envvar:`COMSPEC` environment variable.
+   specified by the :envvar:`COMSPEC` environment variable. The only reason you
+   would need to specify ``shell=True`` on Windows is where the command you
+   wish to execute is actually built in to the shell, eg ``dir``, ``copy``.
+   You don't need ``shell=True`` to run a batch file, nor to run a console-based
+   executable.
 
    *stdin*, *stdout* and *stderr* specify the executed programs' standard input,
    standard output and standard error file handles, respectively.  Valid values
@@ -122,9 +157,10 @@ This module defines one class called :class:`Popen`:
 
    .. note::
 
-      This feature is only available if Python is built with universal newline support
-      (the default).  Also, the newlines attribute of the file objects :attr:`stdout`,
-      :attr:`stdin` and :attr:`stderr` are not updated by the communicate() method.
+      This feature is only available if Python is built with universal newline
+      support (the default).  Also, the newlines attribute of the file objects
+      :attr:`stdout`, :attr:`stdin` and :attr:`stderr` are not updated by the
+      communicate() method.
 
    The *startupinfo* and *creationflags*, if given, will be passed to the
    underlying CreateProcess() function.  They can specify things such as appearance
@@ -156,9 +192,9 @@ This module also defines two shortcut functions:
    Run command with arguments.  Wait for command to complete, then return the
    :attr:`returncode` attribute.
 
-   The arguments are the same as for the Popen constructor.  Example::
+   The arguments are the same as for the :class:`Popen` constructor.  Example::
 
-      retcode = call(["ls", "-l"])
+      >>> retcode = subprocess.call(["ls", "-l"])
 
 
 .. function:: check_call(*popenargs, **kwargs)
@@ -168,9 +204,10 @@ This module also defines two shortcut functions:
    :exc:`CalledProcessError` object will have the return code in the
    :attr:`returncode` attribute.
 
-   The arguments are the same as for the Popen constructor.  Example::
+   The arguments are the same as for the :class:`Popen` constructor.  Example::
 
-      check_call(["ls", "-l"])
+      >>> subprocess.check_call(["ls", "-l"])
+      0
 
    .. versionadded:: 2.5
 
@@ -308,6 +345,9 @@ The following attributes are also available:
 
    The process ID of the child process.
 
+   Note that if you set the *shell* argument to ``True``, this is the process ID
+   of the spawned shell.
+
 
 .. attribute:: Popen.returncode
 
@@ -365,7 +405,7 @@ Replacing :func:`os.system`
    sts = os.system("mycmd" + " myarg")
    ==>
    p = Popen("mycmd" + " myarg", shell=True)
-   sts = os.waitpid(p.pid, 0)
+   sts = os.waitpid(p.pid, 0)[1]
 
 Notes:
 
@@ -473,7 +513,7 @@ Return code handling translates as follows::
    pipe = os.popen("cmd", 'w')
    ...
    rc = pipe.close()
-   if rc != None and rc % 256:
+   if rc is not None and rc >> 8:
        print "There were some errors"
    ==>
    process = Popen("cmd", 'w', shell=True, stdin=PIPE)

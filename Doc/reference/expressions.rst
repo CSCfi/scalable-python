@@ -185,6 +185,7 @@ brackets:
    list_comprehension: `expression` `list_for`
    list_for: "for" `target_list` "in" `old_expression_list` [`list_iter`]
    old_expression_list: `old_expression` [("," `old_expression`)+ [","]]
+   old_expression: `or_test` | `old_lambda_form`
    list_iter: `list_for` | `list_if`
    list_if: "if" `old_expression` [`list_iter`]
 
@@ -663,13 +664,13 @@ slots for which no default value is specified, a :exc:`TypeError` exception is
 raised.  Otherwise, the list of filled slots is used as the argument list for
 the call.
 
-.. note::
+.. impl-detail::
 
-   An implementation may provide builtin functions whose positional parameters do
-   not have names, even if they are 'named' for the purpose of documentation, and
-   which therefore cannot be supplied by keyword.  In CPython, this is the case for
-   functions implemented in C that use :cfunc:`PyArg_ParseTuple` to parse their
-   arguments.
+   An implementation may provide built-in functions whose positional parameters
+   do not have names, even if they are 'named' for the purpose of documentation,
+   and which therefore cannot be supplied by keyword.  In CPython, this is the
+   case for functions implemented in C that use :cfunc:`PyArg_ParseTuple` to
+   parse their arguments.
 
 If there are more positional arguments than there are formal parameter slots, a
 :exc:`TypeError` exception is raised, unless a formal parameter using the syntax
@@ -1032,7 +1033,7 @@ The operators ``<``, ``>``, ``==``, ``>=``, ``<=``, and ``!=`` compare the
 values of two objects.  The objects need not have the same type. If both are
 numbers, they are converted to a common type.  Otherwise, objects of different
 types *always* compare unequal, and are ordered consistently but arbitrarily.
-You can control comparison behavior of objects of non-builtin types by defining
+You can control comparison behavior of objects of non-built-in types by defining
 a ``__cmp__`` method or rich comparison methods like ``__gt__``, described in
 section :ref:`specialnames`.
 
@@ -1063,10 +1064,12 @@ Comparison of objects of the same type depends on the type:
   lists compare equal. [#]_ Outcomes other than equality are resolved
   consistently, but are not otherwise defined. [#]_
 
-* Most other objects of builtin types compare unequal unless they are the same
+* Most other objects of built-in types compare unequal unless they are the same
   object; the choice whether one object is considered smaller or larger than
   another one is made arbitrarily but consistently within one execution of a
   program.
+
+.. _membership-test-details:
 
 The operators :keyword:`in` and :keyword:`not in` test for collection
 membership.  ``x in s`` evaluates to true if *x* is a member of the collection
@@ -1092,7 +1095,12 @@ string, so ``"" in "abc"`` will return ``True``.
 For user-defined classes which define the :meth:`__contains__` method, ``x in
 y`` is true if and only if ``y.__contains__(x)`` is true.
 
-For user-defined classes which do not define :meth:`__contains__` and do define
+For user-defined classes which do not define :meth:`__contains__` but do define
+:meth:`__iter__`, ``x in y`` is true if some value ``z`` with ``x == z`` is
+produced while iterating over ``y``.  If an exception is raised during the
+iteration, it is as if :keyword:`in` raised that exception.
+
+Lastly, the old-style iteration protocol is tried: if a class defines
 :meth:`__getitem__`, ``x in y`` is true if and only if there is a non-negative
 integer index *i* such that ``x == y[i]``, and all lower integer indices do not
 raise :exc:`IndexError` exception. (If any other exception is raised, it is as
@@ -1129,12 +1137,7 @@ Boolean operations
    pair: Conditional; expression
    pair: Boolean; operation
 
-Boolean operations have the lowest priority of all Python operations:
-
 .. productionlist::
-   expression: `conditional_expression` | `lambda_form`
-   old_expression: `or_test` | `old_lambda_form`
-   conditional_expression: `or_test` ["if" `or_test` "else" `expression`]
    or_test: `and_test` | `or_test` "or" `and_test`
    and_test: `not_test` | `and_test` "and" `not_test`
    not_test: `comparison` | "not" `not_test`
@@ -1150,12 +1153,6 @@ special method for a way to change this.)
 
 The operator :keyword:`not` yields ``True`` if its argument is false, ``False``
 otherwise.
-
-The expression ``x if C else y`` first evaluates *C* (*not* *x*); if *C* is
-true, *x* is evaluated and its value is returned; otherwise, *y* is evaluated
-and its value is returned.
-
-.. versionadded:: 2.5
 
 .. index:: operator: and
 
@@ -1174,6 +1171,29 @@ replaced by a default value if it is empty, the expression ``s or 'foo'`` yields
 the desired value.  Because :keyword:`not` has to invent a value anyway, it does
 not bother to return a value of the same type as its argument, so e.g., ``not
 'foo'`` yields ``False``, not ``''``.)
+
+
+Conditional Expressions
+=======================
+
+.. versionadded:: 2.5
+
+.. index::
+   pair: conditional; expression
+   pair: ternary; operator
+
+.. productionlist::
+   conditional_expression: `or_test` ["if" `or_test` "else" `expression`]
+   expression: `conditional_expression` | `lambda_form`
+
+Conditional expressions (sometimes called a "ternary operator") have the lowest
+priority of all Python operations.
+
+The expression ``x if C else y`` first evaluates the condition, *C* (*not* *x*);
+if *C* is true, *x* is evaluated and its value is returned; otherwise, *y* is
+evaluated and its value is returned.
+
+See :pep:`308` for more details about conditional expressions.
 
 
 .. _lambdas:
@@ -1269,6 +1289,8 @@ groups from right to left).
 +===============================================+=====================================+
 | :keyword:`lambda`                             | Lambda expression                   |
 +-----------------------------------------------+-------------------------------------+
+| :keyword:`if` -- :keyword:`else`              | Conditional expression              |
++-----------------------------------------------+-------------------------------------+
 | :keyword:`or`                                 | Boolean OR                          |
 +-----------------------------------------------+-------------------------------------+
 | :keyword:`and`                                | Boolean AND                         |
@@ -1328,7 +1350,7 @@ groups from right to left).
    level, they may be counter-intuitive to users. For example, the
    strings ``u"\u00C7"`` and ``u"\u0043\u0327"`` compare differently,
    even though they both represent the same unicode character (LATIN
-   CAPTITAL LETTER C WITH CEDILLA). To compare strings in a human
+   CAPITAL LETTER C WITH CEDILLA). To compare strings in a human
    recognizable way, compare using :func:`unicodedata.normalize`.
 
 .. [#] The implementation computes this efficiently, without constructing lists or

@@ -41,6 +41,18 @@ section, or values in a special ``DEFAULT`` section.  Additional defaults can be
 provided on initialization and retrieval.  Lines beginning with ``'#'`` or
 ``';'`` are ignored and may be used to provide comments.
 
+Configuration files may include comments, prefixed by specific characters (``#``
+and ``;``).  Comments may appear on their own in an otherwise empty line, or may
+be entered in lines holding values or spection names.  In the latter case, they
+need to be preceded by a whitespace character to be recognized as a comment.
+(For backwards compatibility, only ``;`` starts an inline comment, while ``#``
+does not.)
+
+On top of the core functionality, :class:`SafeConfigParser` supports
+interpolation.  This means values can contain format strings which refer to
+other values in the same section, or values in a special ``DEFAULT`` section.
+Additional defaults can be provided on initialization.
+
 For example::
 
    [My Section]
@@ -56,7 +68,7 @@ Default values can be specified by passing them into the :class:`ConfigParser`
 constructor as a dictionary.  Additional defaults  may be passed into the
 :meth:`get` method which will override all others.
 
-Sections are normally stored in a builtin dictionary. An alternative dictionary
+Sections are normally stored in a built-in dictionary. An alternative dictionary
 type can be passed to the :class:`ConfigParser` constructor. For example, if a
 dictionary type is passed that sorts its keys, the sections will be sorted on
 write-back, as will be the keys within each section.
@@ -102,6 +114,11 @@ write-back, as will be the keys within each section.
    .. XXX Need to explain what's safer/more predictable about it.
 
    .. versionadded:: 2.3
+
+
+.. exception:: Error
+
+   Base class for all other configparser exceptions.
 
 
 .. exception:: NoSectionError
@@ -317,12 +334,23 @@ RawConfigParser Objects
 
 .. method:: RawConfigParser.optionxform(option)
 
-   Transforms the option name *option* as found in an input file or as passed in by
-   client code to the form that should be used in the internal structures.  The
-   default implementation returns a lower-case version of *option*; subclasses may
-   override this or client code can set an attribute of this name on instances to
-   affect this behavior.  Setting this to :func:`str`, for example, would make
-   option names case sensitive.
+   Transforms the option name *option* as found in an input file or as passed in
+   by client code to the form that should be used in the internal structures.
+   The default implementation returns a lower-case version of *option*;
+   subclasses may override this or client code can set an attribute of this name
+   on instances to affect this behavior.
+
+   You don't necessarily need to subclass a ConfigParser to use this method, you
+   can also re-set it on an instance, to a function that takes a string
+   argument.  Setting it to ``str``, for example, would make option names case
+   sensitive::
+
+      cfgparser = ConfigParser()
+      ...
+      cfgparser.optionxform = str
+
+   Note that when reading configuration files, whitespace around the
+   option names are stripped before :meth:`optionxform` is called.
 
 
 .. _configparser-objects:
@@ -336,11 +364,13 @@ The :class:`ConfigParser` class extends some methods of the
 
 .. method:: ConfigParser.get(section, option[, raw[, vars]])
 
-   Get an *option* value for the named *section*.  All the ``'%'`` interpolations
-   are expanded in the return values, based on the defaults passed into the
-   constructor, as well as the options *vars* provided, unless the *raw* argument
-   is true.
+   Get an *option* value for the named *section*.  If *vars* is provided, it
+   must be a dictionary.  The *option* is looked up in *vars* (if provided),
+   *section*, and in *defaults* in that order.
 
+   All the ``'%'`` interpolations are expanded in the return values, unless the
+   *raw* argument is true.  Values for interpolation keys are looked up in the
+   same manner as the option.
 
 .. method:: ConfigParser.items(section[, raw[, vars]])
 

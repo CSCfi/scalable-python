@@ -18,7 +18,7 @@
 #
 #   --  Gregory P. Smith <greg@krypto.org>
 #
-# $Id: test_dbtables.py 66088 2008-08-31 14:00:51Z jesus.cea $
+# $Id: test_dbtables.py 83562 2010-08-02 20:19:21Z ezio.melotti $
 
 import os, re
 try:
@@ -341,7 +341,7 @@ class TableDBTestCase(unittest.TestCase):
         self.tdb.Insert(tabname, {'Type': 'Unknown', 'Access': '0'})
 
         def set_type(type):
-            if type == None:
+            if type is None:
                 return 'MP3'
             return type
 

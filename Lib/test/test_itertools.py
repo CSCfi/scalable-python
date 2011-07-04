@@ -5,6 +5,9 @@ from weakref import proxy
 import sys
 import operator
 import random
+import copy
+import pickle
+from functools import reduce
 maxsize = test_support.MAX_Py_ssize_t
 minsize = -maxsize-1
 
@@ -110,7 +113,7 @@ class TestBasicOps(unittest.TestCase):
             values = [5*x-12 for x in range(n)]
             for r in range(n+2):
                 result = list(combinations(values, r))
-                self.assertEqual(len(result), 0 if r>n else fact(n) / fact(r) / fact(n-r)) # right number of combs
+                self.assertEqual(len(result), 0 if r>n else fact(n) // fact(r) // fact(n-r)) # right number of combs
                 self.assertEqual(len(result), len(set(result)))         # no repeats
                 self.assertEqual(result, sorted(result))                # lexicographic order
                 for c in result:
@@ -174,7 +177,7 @@ class TestBasicOps(unittest.TestCase):
             values = [5*x-12 for x in range(n)]
             for r in range(n+2):
                 result = list(permutations(values, r))
-                self.assertEqual(len(result), 0 if r>n else fact(n) / fact(n-r))      # right number of perms
+                self.assertEqual(len(result), 0 if r>n else fact(n) // fact(n-r))      # right number of perms
                 self.assertEqual(len(result), len(set(result)))         # no repeats
                 self.assertEqual(result, sorted(result))                # lexicographic order
                 for p in result:
@@ -214,6 +217,13 @@ class TestBasicOps(unittest.TestCase):
             r1 = repr(count(i)).replace('L', '')
             r2 = 'count(%r)'.__mod__(i).replace('L', '')
             self.assertEqual(r1, r2)
+
+        # check copy, deepcopy, pickle
+        for value in -3, 3, sys.maxint-5, sys.maxint+5:
+            c = count(value)
+            self.assertEqual(next(copy.copy(c)), value)
+            self.assertEqual(next(copy.deepcopy(c)), value)
+            self.assertEqual(next(pickle.loads(pickle.dumps(c))), value)
 
     def test_cycle(self):
         self.assertEqual(take(10, cycle('abc')), list('abcabcabca'))
@@ -361,7 +371,10 @@ class TestBasicOps(unittest.TestCase):
                 [range(1000), range(0), range(3000,3050), range(1200), range(1500)],
                 [range(1000), range(0), range(3000,3050), range(1200), range(1500), range(0)],
             ]:
-            target = map(None, *args)
+            # target = map(None, *args) <- this raises a py3k warning
+            # this is the replacement:
+            target = [tuple([arg[i] if i < len(arg) else None for arg in args])
+                      for i in range(max(map(len, args)))]
             self.assertEqual(list(izip_longest(*args)), target)
             self.assertEqual(list(izip_longest(*args, **{})), target)
             target = [tuple((e is None and 'X' or e) for e in t) for t in target]   # Replace None fills with 'X'
@@ -373,7 +386,8 @@ class TestBasicOps(unittest.TestCase):
         self.assertEqual(list(izip_longest([])), zip([]))
         self.assertEqual(list(izip_longest('abcdef')), zip('abcdef'))
 
-        self.assertEqual(list(izip_longest('abc', 'defg', **{})), map(None, 'abc', 'defg')) # empty keyword dict
+        self.assertEqual(list(izip_longest('abc', 'defg', **{})),
+                         zip(list('abc') + [None], 'defg'))  # empty keyword dict
         self.assertRaises(TypeError, izip_longest, 3)
         self.assertRaises(TypeError, izip_longest, range(3), 3)
 
@@ -397,6 +411,46 @@ class TestBasicOps(unittest.TestCase):
         self.assertEqual(min(ids), max(ids))
         ids = map(id, list(izip_longest('abc', 'def')))
         self.assertEqual(len(dict.fromkeys(ids)), len(ids))
+
+    def test_bug_7244(self):
+
+        class Repeater(object):
+            # this class is similar to itertools.repeat
+            def __init__(self, o, t, e):
+                self.o = o
+                self.t = int(t)
+                self.e = e
+            def __iter__(self): # its iterator is itself
+                return self
+            def next(self):
+                if self.t > 0:
+                    self.t -= 1
+                    return self.o
+                else:
+                    raise self.e
+
+        # Formerly this code in would fail in debug mode
+        # with Undetected Error and Stop Iteration
+        r1 = Repeater(1, 3, StopIteration)
+        r2 = Repeater(2, 4, StopIteration)
+        def run(r1, r2):
+            result = []
+            for i, j in izip_longest(r1, r2, fillvalue=0):
+                with test_support.captured_output('stdout'):
+                    print (i, j)
+                result.append((i, j))
+            return result
+        self.assertEqual(run(r1, r2), [(1,2), (1,2), (1,2), (0,2)])
+
+        # Formerly, the RuntimeError would be lost
+        # and StopIteration would stop as expected
+        r1 = Repeater(1, 3, RuntimeError)
+        r2 = Repeater(2, 4, StopIteration)
+        it = izip_longest(r1, r2, fillvalue=0)
+        self.assertEqual(next(it), (1, 2))
+        self.assertEqual(next(it), (1, 2))
+        self.assertEqual(next(it), (1, 2))
+        self.assertRaises(RuntimeError, next, it)
 
     def test_product(self):
         for args, result in [
@@ -1179,7 +1233,7 @@ Samuele
 # is differencing with a range so that consecutive numbers all appear in
 # same group.
 >>> data = [ 1,  4,5,6, 10, 15,16,17,18, 22, 25,26,27,28]
->>> for k, g in groupby(enumerate(data), lambda (i,x):i-x):
+>>> for k, g in groupby(enumerate(data), lambda t:t[0]-t[1]):
 ...     print map(operator.itemgetter(1), g)
 ...
 [1]

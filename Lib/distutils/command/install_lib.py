@@ -1,9 +1,15 @@
 # This module should be kept compatible with Python 2.1.
+"""distutils.command.install_lib
 
-__revision__ = "$Id: install_lib.py 72578 2009-05-12 07:04:51Z tarek.ziade $"
+Implements the Distutils 'install_lib' command
+(install all Python modules)."""
+
+__revision__ = "$Id: install_lib.py 81308 2010-05-18 23:37:50Z georg.brandl $"
 
 import os
 from types import IntType
+import sys
+
 from distutils.core import Command
 from distutils.errors import DistutilsOptionError
 
@@ -122,6 +128,10 @@ class install_lib (Command):
         return outfiles
 
     def byte_compile (self, files):
+        if sys.dont_write_bytecode:
+            self.warn('byte-compiling is disabled, skipping.')
+            return
+
         from distutils.util import byte_compile
 
         # Get the "--root" directory supplied to the "install" command,

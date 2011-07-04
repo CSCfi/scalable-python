@@ -30,13 +30,13 @@
 """Read from and write to tar format archives.
 """
 
-__version__ = "$Revision: 73770 $"
+__version__ = "$Revision: 81664 $"
 # $Source$
 
 version     = "0.9.0"
 __author__  = "Lars Gustäbel (lars@gustaebel.de)"
-__date__    = "$Date: 2009-07-02 11:37:21 -0400 (Thu, 02 Jul 2009) $"
-__cvsid__   = "$Id: tarfile.py 73770 2009-07-02 15:37:21Z jesus.cea $"
+__date__    = "$Date: 2010-06-03 06:07:08 -0400 (Thu, 03 Jun 2010) $"
+__cvsid__   = "$Id: tarfile.py 81664 2010-06-03 10:07:08Z lars.gustaebel $"
 __credits__ = "Gustavo Niemeyer, Niels Gustäbel, Richard Townsend."
 
 #---------
@@ -370,7 +370,7 @@ class _LowLevelFile:
         }[mode]
         if hasattr(os, "O_BINARY"):
             mode |= os.O_BINARY
-        self.fd = os.open(name, mode)
+        self.fd = os.open(name, mode, 0666)
 
     def close(self):
         os.close(self.fd)
@@ -1565,27 +1565,33 @@ class TarFile(object):
         self.inodes = {}        # dictionary caching the inodes of
                                 # archive members already added
 
-        if self.mode == "r":
-            self.firstmember = None
-            self.firstmember = self.next()
+        try:
+            if self.mode == "r":
+                self.firstmember = None
+                self.firstmember = self.next()
 
-        if self.mode == "a":
-            # Move to the end of the archive,
-            # before the first empty block.
-            self.firstmember = None
-            while True:
-                if self.next() is None:
-                    if self.offset > 0:
-                        self.fileobj.seek(- BLOCKSIZE, 1)
-                    break
+            if self.mode == "a":
+                # Move to the end of the archive,
+                # before the first empty block.
+                self.firstmember = None
+                while True:
+                    if self.next() is None:
+                        if self.offset > 0:
+                            self.fileobj.seek(- BLOCKSIZE, 1)
+                        break
 
-        if self.mode in "aw":
-            self._loaded = True
+            if self.mode in "aw":
+                self._loaded = True
 
-            if self.pax_headers:
-                buf = self.tarinfo.create_pax_global_header(self.pax_headers.copy())
-                self.fileobj.write(buf)
-                self.offset += len(buf)
+                if self.pax_headers:
+                    buf = self.tarinfo.create_pax_global_header(self.pax_headers.copy())
+                    self.fileobj.write(buf)
+                    self.offset += len(buf)
+        except:
+            if not self._extfileobj:
+                self.fileobj.close()
+            self.closed = True
+            raise
 
     def _getposix(self):
         return self.format == USTAR_FORMAT
@@ -1874,7 +1880,7 @@ class TarFile(object):
         tarinfo.mode = stmd
         tarinfo.uid = statres.st_uid
         tarinfo.gid = statres.st_gid
-        if stat.S_ISREG(stmd):
+        if type == REGTYPE:
             tarinfo.size = statres.st_size
         else:
             tarinfo.size = 0L

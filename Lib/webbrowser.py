@@ -625,7 +625,9 @@ if "BROWSER" in os.environ:
     # and prepend to _tryorder
     for cmdline in _userchoices:
         if cmdline != '':
-            _synthesize(cmdline, -1)
+            cmd = _synthesize(cmdline, -1)
+            if cmd[1] is None:
+                register(cmdline, None, GenericBrowser(cmdline), -1)
     cmdline = None # to make del work if _userchoices was empty
     del cmdline
     del _userchoices
@@ -648,7 +650,7 @@ def main():
     for o, a in opts:
         if o == '-n': new_win = 1
         elif o == '-t': new_win = 2
-    if len(args) <> 1:
+    if len(args) != 1:
         print >>sys.stderr, usage
         sys.exit(1)
 

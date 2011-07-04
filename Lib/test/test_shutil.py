@@ -103,7 +103,7 @@ class TestShutil(unittest.TestCase):
                 if os.path.exists(path):
                     os.remove(path)
             for path in (src_dir,
-                    os.path.abspath(os.path.join(dst_dir, os.path.pardir))
+                    os.path.dirname(dst_dir)
                 ):
                 if os.path.exists(path):
                     shutil.rmtree(path)
@@ -125,65 +125,68 @@ class TestShutil(unittest.TestCase):
         join = os.path.join
         exists = os.path.exists
         src_dir = tempfile.mkdtemp()
-        dst_dir = join(tempfile.mkdtemp(), 'destination')
-        write_data(join(src_dir, 'test.txt'), '123')
-        write_data(join(src_dir, 'test.tmp'), '123')
-        os.mkdir(join(src_dir, 'test_dir'))
-        write_data(join(src_dir, 'test_dir', 'test.txt'), '456')
-        os.mkdir(join(src_dir, 'test_dir2'))
-        write_data(join(src_dir, 'test_dir2', 'test.txt'), '456')
-        os.mkdir(join(src_dir, 'test_dir2', 'subdir'))
-        os.mkdir(join(src_dir, 'test_dir2', 'subdir2'))
-        write_data(join(src_dir, 'test_dir2', 'subdir', 'test.txt'), '456')
-        write_data(join(src_dir, 'test_dir2', 'subdir2', 'test.py'), '456')
-
-
-        # testing glob-like patterns
         try:
-            patterns = shutil.ignore_patterns('*.tmp', 'test_dir2')
-            shutil.copytree(src_dir, dst_dir, ignore=patterns)
-            # checking the result: some elements should not be copied
-            self.assert_(exists(join(dst_dir, 'test.txt')))
-            self.assert_(not exists(join(dst_dir, 'test.tmp')))
-            self.assert_(not exists(join(dst_dir, 'test_dir2')))
+            dst_dir = join(tempfile.mkdtemp(), 'destination')
+            write_data(join(src_dir, 'test.txt'), '123')
+            write_data(join(src_dir, 'test.tmp'), '123')
+            os.mkdir(join(src_dir, 'test_dir'))
+            write_data(join(src_dir, 'test_dir', 'test.txt'), '456')
+            os.mkdir(join(src_dir, 'test_dir2'))
+            write_data(join(src_dir, 'test_dir2', 'test.txt'), '456')
+            os.mkdir(join(src_dir, 'test_dir2', 'subdir'))
+            os.mkdir(join(src_dir, 'test_dir2', 'subdir2'))
+            write_data(join(src_dir, 'test_dir2', 'subdir', 'test.txt'), '456')
+            write_data(join(src_dir, 'test_dir2', 'subdir2', 'test.py'), '456')
+
+            # testing glob-like patterns
+            try:
+                patterns = shutil.ignore_patterns('*.tmp', 'test_dir2')
+                shutil.copytree(src_dir, dst_dir, ignore=patterns)
+                # checking the result: some elements should not be copied
+                self.assertTrue(exists(join(dst_dir, 'test.txt')))
+                self.assertTrue(not exists(join(dst_dir, 'test.tmp')))
+                self.assertTrue(not exists(join(dst_dir, 'test_dir2')))
+            finally:
+                if os.path.exists(dst_dir):
+                    shutil.rmtree(dst_dir)
+            try:
+                patterns = shutil.ignore_patterns('*.tmp', 'subdir*')
+                shutil.copytree(src_dir, dst_dir, ignore=patterns)
+                # checking the result: some elements should not be copied
+                self.assertTrue(not exists(join(dst_dir, 'test.tmp')))
+                self.assertTrue(not exists(join(dst_dir, 'test_dir2', 'subdir2')))
+                self.assertTrue(not exists(join(dst_dir, 'test_dir2', 'subdir')))
+            finally:
+                if os.path.exists(dst_dir):
+                    shutil.rmtree(dst_dir)
+
+            # testing callable-style
+            try:
+                def _filter(src, names):
+                    res = []
+                    for name in names:
+                        path = os.path.join(src, name)
+
+                        if (os.path.isdir(path) and
+                            path.split()[-1] == 'subdir'):
+                            res.append(name)
+                        elif os.path.splitext(path)[-1] in ('.py'):
+                            res.append(name)
+                    return res
+
+                shutil.copytree(src_dir, dst_dir, ignore=_filter)
+
+                # checking the result: some elements should not be copied
+                self.assertTrue(not exists(join(dst_dir, 'test_dir2', 'subdir2',
+                                        'test.py')))
+                self.assertTrue(not exists(join(dst_dir, 'test_dir2', 'subdir')))
+
+            finally:
+                if os.path.exists(dst_dir):
+                    shutil.rmtree(dst_dir)
         finally:
-            if os.path.exists(dst_dir):
-                shutil.rmtree(dst_dir)
-        try:
-            patterns = shutil.ignore_patterns('*.tmp', 'subdir*')
-            shutil.copytree(src_dir, dst_dir, ignore=patterns)
-            # checking the result: some elements should not be copied
-            self.assert_(not exists(join(dst_dir, 'test.tmp')))
-            self.assert_(not exists(join(dst_dir, 'test_dir2', 'subdir2')))
-            self.assert_(not exists(join(dst_dir, 'test_dir2', 'subdir')))
-        finally:
-            if os.path.exists(dst_dir):
-                shutil.rmtree(dst_dir)
-
-        # testing callable-style
-        try:
-            def _filter(src, names):
-                res = []
-                for name in names:
-                    path = os.path.join(src, name)
-
-                    if (os.path.isdir(path) and
-                        path.split()[-1] == 'subdir'):
-                        res.append(name)
-                    elif os.path.splitext(path)[-1] in ('.py'):
-                        res.append(name)
-                return res
-
-            shutil.copytree(src_dir, dst_dir, ignore=_filter)
-
-            # checking the result: some elements should not be copied
-            self.assert_(not exists(join(dst_dir, 'test_dir2', 'subdir2',
-                                    'test.py')))
-            self.assert_(not exists(join(dst_dir, 'test_dir2', 'subdir')))
-
-        finally:
-            if os.path.exists(dst_dir):
-                shutil.rmtree(dst_dir)
+            shutil.rmtree(src_dir)
+            shutil.rmtree(os.path.dirname(dst_dir))
 
     if hasattr(os, "symlink"):
         def test_dont_copy_file_onto_link_to_itself(self):
@@ -364,8 +367,113 @@ class TestMove(unittest.TestCase):
         finally:
             shutil.rmtree(TESTFN, ignore_errors=True)
 
+
+class TestCopyFile(unittest.TestCase):
+
+    _delete = False
+
+    class Faux(object):
+        _entered = False
+        _exited_with = None
+        _raised = False
+        def __init__(self, raise_in_exit=False, suppress_at_exit=True):
+            self._raise_in_exit = raise_in_exit
+            self._suppress_at_exit = suppress_at_exit
+        def read(self, *args):
+            return ''
+        def __enter__(self):
+            self._entered = True
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self._exited_with = exc_type, exc_val, exc_tb
+            if self._raise_in_exit:
+                self._raised = True
+                raise IOError("Cannot close")
+            return self._suppress_at_exit
+
+    def tearDown(self):
+        if self._delete:
+            del shutil.open
+
+    def _set_shutil_open(self, func):
+        shutil.open = func
+        self._delete = True
+
+    def test_w_source_open_fails(self):
+        def _open(filename, mode='r'):
+            if filename == 'srcfile':
+                raise IOError('Cannot open "srcfile"')
+            assert 0  # shouldn't reach here.
+
+        self._set_shutil_open(_open)
+
+        self.assertRaises(IOError, shutil.copyfile, 'srcfile', 'destfile')
+
+    def test_w_dest_open_fails(self):
+
+        srcfile = self.Faux()
+
+        def _open(filename, mode='r'):
+            if filename == 'srcfile':
+                return srcfile
+            if filename == 'destfile':
+                raise IOError('Cannot open "destfile"')
+            assert 0  # shouldn't reach here.
+
+        self._set_shutil_open(_open)
+
+        shutil.copyfile('srcfile', 'destfile')
+        self.assertTrue(srcfile._entered)
+        self.assertTrue(srcfile._exited_with[0] is IOError)
+        self.assertEqual(srcfile._exited_with[1].args,
+                         ('Cannot open "destfile"',))
+
+    def test_w_dest_close_fails(self):
+
+        srcfile = self.Faux()
+        destfile = self.Faux(True)
+
+        def _open(filename, mode='r'):
+            if filename == 'srcfile':
+                return srcfile
+            if filename == 'destfile':
+                return destfile
+            assert 0  # shouldn't reach here.
+
+        self._set_shutil_open(_open)
+
+        shutil.copyfile('srcfile', 'destfile')
+        self.assertTrue(srcfile._entered)
+        self.assertTrue(destfile._entered)
+        self.assertTrue(destfile._raised)
+        self.assertTrue(srcfile._exited_with[0] is IOError)
+        self.assertEqual(srcfile._exited_with[1].args,
+                         ('Cannot close',))
+
+    def test_w_source_close_fails(self):
+
+        srcfile = self.Faux(True)
+        destfile = self.Faux()
+
+        def _open(filename, mode='r'):
+            if filename == 'srcfile':
+                return srcfile
+            if filename == 'destfile':
+                return destfile
+            assert 0  # shouldn't reach here.
+
+        self._set_shutil_open(_open)
+
+        self.assertRaises(IOError,
+                          shutil.copyfile, 'srcfile', 'destfile')
+        self.assertTrue(srcfile._entered)
+        self.assertTrue(destfile._entered)
+        self.assertFalse(destfile._raised)
+        self.assertTrue(srcfile._exited_with[0] is None)
+        self.assertTrue(srcfile._raised)
+
+
 def test_main():
-    test_support.run_unittest(TestShutil, TestMove)
+    test_support.run_unittest(TestShutil, TestMove, TestCopyFile)
 
 if __name__ == '__main__':
     test_main()

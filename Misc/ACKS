@@ -13,6 +13,7 @@ PS: In the standard Python distribution, this file is encoded in Latin-1.
 David Abrahams
 Jim Ahlstrom
 Farhan Ahmad
+Yaniv Aknin
 Jyrki Alakuijala
 Billy G. Allie
 Kevin Altis
@@ -131,6 +132,7 @@ Tom Christiansen
 Vadim Chugunov
 David Cinege
 Mike Clarkson
+Andrew Clegg
 Brad Clements
 Steve Clift
 Nick Coghlan
@@ -149,6 +151,7 @@ Greg Couch
 Steve Cousins
 Alex Coventry
 Matthew Dixon Cowles
+Ryan Coyner
 Christopher A. Craig
 Laura Creighton
 Simon Cross
@@ -162,11 +165,14 @@ Scott David Daniels
 Ben Darnell
 Jonathan Dasteel
 John DeGood
+Ned Deily
 Vincent Delft
 Arnaud Delobelle
 Erik Demaine
 Roger Dev
 Raghuram Devarakonda
+Catherine Devlin
+Scott Dial
 Toby Dickenson
 Mark Dickinson
 Daniel Diniz
@@ -187,7 +193,7 @@ Luke Dunstan
 Andy Dustman
 Gary Duzan
 Eugene Dvurechenski
-Josip Dzolonga 
+Josip Dzolonga
 Maxim Dzumanenko
 Walter Dˆrwald
 Hans Eckardt
@@ -311,6 +317,7 @@ Joerg-Cyril Hoehle
 Gregor Hoffleit
 Chris Hoffman
 Albert Hofkamp
+Tomas Hoger
 Jonathan Hogg
 Gerrit Holl
 Shane Holloway
@@ -322,6 +329,7 @@ Rob Hooft
 Brian Hooper
 Randall Hopper
 Nadav Horesh
+Jan Hosang
 Ken Howard
 Brad Howes
 Chih-Hao Huang
@@ -334,6 +342,7 @@ Jeremy Hylton
 Gerhard H‰ring
 Mihai Ibanescu
 Lars Immisch
+Meador Inge
 Tony Ingraldi
 John Interrante
 Bob Ippolito
@@ -388,6 +397,7 @@ Pat Knight
 Greg Kochanski
 Damon Kohler
 Joseph Koshy
+Stefan Krah
 Bob Kras
 Holger Krekel
 Michael Kremer
@@ -397,6 +407,7 @@ Ivan Krstiƒá
 Andrew Kuchling
 Vladimir Kushnir
 Cameron Laird
+≈Åukasz Langa
 Tino Lange
 Andrew Langmead
 Detlef Lannert
@@ -414,6 +425,7 @@ Luc Lefebvre
 Vincent Legoll
 Kip Lehman
 Joerg Lehmann
+Robert Lehmann
 Luke Kenneth Casson Leighton
 Marc-Andre Lemburg
 John Lenton
@@ -517,6 +529,7 @@ Kevin O'Connor
 Tim O'Malley
 Pascal Oberndoerfer
 Jeffrey Ollie
+Adam Olsen
 Grant Olson
 Piet van Oostrum
 Jason Orendorff
@@ -574,8 +587,10 @@ Brian Quinlan
 Anders Qvist
 Burton Radons
 Antti Rasinen
+Sridhar Ratnakumar
 Eric Raymond
 Edward K. Ream
+Chris Rebert
 Marc Recht
 John Redford
 Terry Reedy
@@ -620,6 +635,7 @@ Hajime Saitou
 Rich Salz
 Kevin Samborn
 Ilya Sandler
+Mark Sapiro
 Ty Sarna
 Ben Sayer
 Michael Scharf
@@ -692,6 +708,7 @@ Andrew Svetlov
 Kalle Svensson
 Paul Swartz
 Thenault Sylvain
+PÈter SzabÛ
 Arfrever Frehtes Taifersar Arahesis
 Geoff Talvola
 William Tanksley
@@ -723,6 +740,7 @@ Lionel Ulmer
 Roger Upole
 Michael Urman
 Hector Urtubia
+Kyle VanderBeek
 Atul Varma
 Dmitry Vasiliev
 Alexandre Vassalotti
@@ -771,6 +789,7 @@ Dik Winter
 Blake Winton
 Jean-Claude Wippler
 Lars Wirzenius
+John Wiseman
 Chris Withers
 Stefan Witzel
 David Wolever
@@ -778,6 +797,7 @@ Klaus-Juergen Wolf
 Dan Wolfe
 Richard Wolff
 Gordon Worley
+Darren Worrall
 Thomas Wouters
 Heiko Wundram
 Doug Wyatt
@@ -796,3 +816,4 @@ Uwe Zessin
 Tarek Ziadé
 Peter ≈strand
 Jesse Noller
+Fredrik HÂÂrd

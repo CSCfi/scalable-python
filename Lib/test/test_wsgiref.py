@@ -9,7 +9,9 @@ from wsgiref.simple_server import WSGIServer, WSGIRequestHandler, demo_app
 from wsgiref.simple_server import make_server
 from StringIO import StringIO
 from SocketServer import BaseServer
-import re, sys
+import os
+import re
+import sys
 
 from test import test_support
 
@@ -386,6 +388,11 @@ class HeaderTests(TestCase):
 class ErrorHandler(BaseCGIHandler):
     """Simple handler subclass for testing BaseHandler"""
 
+    # BaseHandler records the OS environment at import time, but envvars
+    # might have been changed later by other tests, which trips up
+    # HandlerTests.testEnviron().
+    os_environ = dict(os.environ.items())
+
     def __init__(self,**kw):
         setup_testing_defaults(kw)
         BaseCGIHandler.__init__(
@@ -425,10 +432,10 @@ class HandlerTests(TestCase):
         env = handler.environ
         from os import environ
         for k,v in environ.items():
-            if not empty.has_key(k):
+            if k not in empty:
                 self.assertEqual(env[k],v)
         for k,v in empty.items():
-            self.failUnless(env.has_key(k))
+            self.assertTrue(k in env)
 
     def testEnviron(self):
         h = TestHandler(X="Y")
@@ -441,7 +448,7 @@ class HandlerTests(TestCase):
         h = BaseCGIHandler(None,None,None,{})
         h.setup_environ()
         for key in 'wsgi.url_scheme', 'wsgi.input', 'wsgi.errors':
-            self.assert_(h.environ.has_key(key))
+            self.assertTrue(key in h.environ)
 
     def testScheme(self):
         h=TestHandler(HTTPS="on"); h.setup_environ()
@@ -516,7 +523,8 @@ class HandlerTests(TestCase):
             "Content-Length: %d\r\n"
             "\r\n%s" % (h.error_status,len(h.error_body),h.error_body))
 
-        self.failUnless(h.stderr.getvalue().find("AssertionError")<>-1)
+        self.assertTrue("AssertionError" in h.stderr.getvalue(),
+                        "AssertionError not in stderr")
 
     def testErrorAfterOutput(self):
         MSG = "Some output has been sent"
@@ -529,7 +537,8 @@ class HandlerTests(TestCase):
         self.assertEqual(h.stdout.getvalue(),
             "Status: 200 OK\r\n"
             "\r\n"+MSG)
-        self.failUnless(h.stderr.getvalue().find("AssertionError")<>-1)
+        self.assertTrue("AssertionError" in h.stderr.getvalue(),
+                        "AssertionError not in stderr")
 
 
     def testHeaderFormats(self):

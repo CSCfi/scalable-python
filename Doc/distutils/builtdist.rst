@@ -143,8 +143,8 @@ commands.
 Creating dumb built distributions
 =================================
 
-**\*\*** Need to document absolute vs. prefix-relative packages here, but first
-I have to implement it! **\*\***
+.. XXX Need to document absolute vs. prefix-relative packages here, but first
+       I have to implement it!
 
 
 .. _creating-rpms:
@@ -173,7 +173,7 @@ easily specify multiple formats in one run.  If you need to do both, you can
 explicitly specify multiple :command:`bdist_\*` commands and their options::
 
    python setup.py bdist_rpm --packager="John Doe <jdoe@example.org>" \
-                   bdist_wininst --target_version="2.0"
+                   bdist_wininst --target-version="2.0"
 
 Creating RPM packages is driven by a :file:`.spec` file, much as using the
 Distutils is driven by the setup script.  To make your life easier, the
@@ -318,7 +318,7 @@ the :option:`--no-target-compile` and/or the :option:`--no-target-optimize`
 option.
 
 By default the installer will display the cool "Python Powered" logo when it is
-run, but you can also supply your own bitmap which must be a Windows
+run, but you can also supply your own 152x161 bitmap which must be a Windows
 :file:`.bmp` file with the :option:`--bitmap` option.
 
 The installer will also display a large title on the desktop background window
@@ -426,13 +426,6 @@ built-in functions in the installation script.
    also the configuration.  For details refer to Microsoft's documentation of the
    :cfunc:`SHGetSpecialFolderPath` function.
 
-Vista User Access Control (UAC)
-===============================
-
-Starting with Python 2.6, bdist_wininst supports a :option:`--user-access-control`
-option.  The default is 'none' (meaning no UAC handling is done), and other
-valid values are 'auto' (meaning prompt for UAC elevation if Python was
-installed for all users) and 'force' (meaning always prompt for elevation)
 
 .. function:: create_shortcut(target, description, filename[, arguments[, workdir[, iconpath[, iconindex]]]])
 
@@ -444,3 +437,12 @@ installed for all users) and 'force' (meaning always prompt for elevation)
    and *iconindex* is the index of the icon in the file *iconpath*.  Again, for
    details consult the Microsoft documentation for the :class:`IShellLink`
    interface.
+
+
+Vista User Access Control (UAC)
+===============================
+
+Starting with Python 2.6, bdist_wininst supports a :option:`--user-access-control`
+option.  The default is 'none' (meaning no UAC handling is done), and other
+valid values are 'auto' (meaning prompt for UAC elevation if Python was
+installed for all users) and 'force' (meaning always prompt for elevation).

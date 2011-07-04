@@ -62,7 +62,7 @@ def _parseparam(s):
     while s[:1] == ';':
         s = s[1:]
         end = s.find(';')
-        while end > 0 and s.count('"', 0, end) % 2:
+        while end > 0 and (s.count('"', 0, end) - s.count('\\"', 0, end)) % 2:
             end = s.find(';', end + 1)
         if end < 0:
             end = len(s)
@@ -256,6 +256,8 @@ class Message:
                             charset=charset.get_output_charset())
         else:
             self.set_param('charset', charset.get_output_charset())
+        if isinstance(self._payload, unicode):
+            self._payload = self._payload.encode(charset.output_charset)
         if str(charset) != charset.get_output_charset():
             self._payload = charset.body_encode(self._payload)
         if not self.has_key('Content-Transfer-Encoding'):
@@ -674,7 +676,7 @@ class Message:
         missing = object()
         filename = self.get_param('filename', missing, 'content-disposition')
         if filename is missing:
-            filename = self.get_param('name', missing, 'content-disposition')
+            filename = self.get_param('name', missing, 'content-type')
         if filename is missing:
             return failobj
         return utils.collapse_rfc2231_value(filename).strip()

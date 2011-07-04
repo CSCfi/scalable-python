@@ -94,14 +94,13 @@ class urlopen_FileTests(unittest.TestCase):
         for line in self.returned_obj.__iter__():
             self.assertEqual(line, self.text)
 
-
 class ProxyTests(unittest.TestCase):
 
     def setUp(self):
         # Records changes to env vars
         self.env = test_support.EnvironmentVarGuard()
         # Delete all proxy related env vars
-        for k, v in os.environ.iteritems():
+        for k in os.environ.keys():
             if 'proxy' in k.lower():
                 self.env.unset(k)
 
@@ -158,6 +157,20 @@ Server: Apache/1.3.33 (Debian GNU/Linux) mod_ssl/2.8.22 OpenSSL/0.9.7e
 Connection: close
 Content-Type: text/html; charset=iso-8859-1
 ''')
+        try:
+            self.assertRaises(IOError, urllib.urlopen, "http://python.org/")
+        finally:
+            self.unfakehttp()
+
+    def test_invalid_redirect(self):
+        # urlopen() should raise IOError for many error codes.
+        self.fakehttp("""HTTP/1.1 302 Found
+Date: Wed, 02 Jan 2008 03:03:54 GMT
+Server: Apache/1.3.33 (Debian GNU/Linux) mod_ssl/2.8.22 OpenSSL/0.9.7e
+Location: file:README
+Connection: close
+Content-Type: text/html; charset=iso-8859-1
+""")
         try:
             self.assertRaises(IOError, urllib.urlopen, "http://python.org/")
         finally:
@@ -441,6 +454,32 @@ class UnquotingTests(unittest.TestCase):
                          "using unquote(): not all characters escaped: "
                          "%s" % result)
 
+    def test_unquoting_badpercent(self):
+        # Test unquoting on bad percent-escapes
+        given = '%xab'
+        expect = given
+        result = urllib.unquote(given)
+        self.assertEqual(expect, result, "using unquote(): %r != %r"
+                         % (expect, result))
+        given = '%x'
+        expect = given
+        result = urllib.unquote(given)
+        self.assertEqual(expect, result, "using unquote(): %r != %r"
+                         % (expect, result))
+        given = '%'
+        expect = given
+        result = urllib.unquote(given)
+        self.assertEqual(expect, result, "using unquote(): %r != %r"
+                         % (expect, result))
+
+    def test_unquoting_mixed_case(self):
+        # Test unquoting on mixed-case hex digits in the percent-escapes
+        given = '%Ab%eA'
+        expect = '\xab\xea'
+        result = urllib.unquote(given)
+        self.assertEqual(expect, result, "using unquote(): %r != %r"
+                         % (expect, result))
+
     def test_unquoting_parts(self):
         # Make sure unquoting works when have non-quoted characters
         # interspersed
@@ -591,6 +630,11 @@ class URLopener_Tests(unittest.TestCase):
 
         self.assertEqual(DummyURLopener().open(
             'spam://example/ /'),'//example/%20/')
+
+        # test the safe characters are not quoted by urlopen
+        self.assertEqual(DummyURLopener().open(
+            "spam://c:|windows%/:=&?~#+!$,;'@()*[]|/path/"),
+            "//c:|windows%/:=&?~#+!$,;'@()*[]|/path/")
 
 
 # Just commented them out.

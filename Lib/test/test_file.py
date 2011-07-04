@@ -34,13 +34,16 @@ class AutoFileTests(unittest.TestCase):
     def testAttributes(self):
         # verify expected attributes exist
         f = self.f
-        softspace = f.softspace
+
         f.name     # merely shouldn't blow up
         f.mode     # ditto
         f.closed   # ditto
 
-        # verify softspace is writable
-        f.softspace = softspace    # merely shouldn't blow up
+        with test_support._check_py3k_warnings(
+            ('file.softspace not supported in 3.x', DeprecationWarning)):
+            softspace = f.softspace
+            # verify softspace is writable
+            f.softspace = softspace    # merely shouldn't blow up
 
         # verify the others aren't
         for attr in 'name', 'mode', 'closed':
@@ -86,6 +89,8 @@ class AutoFileTests(unittest.TestCase):
         self.assert_(repr(self.f).startswith("<open file '" + TESTFN))
 
     def testErrors(self):
+        self.f.close()
+        self.f = open(TESTFN, 'rb')
         f = self.f
         self.assertEquals(f.name, TESTFN)
         self.assert_(not f.isatty())
@@ -109,19 +114,54 @@ class AutoFileTests(unittest.TestCase):
         for methodname in methods:
             method = getattr(self.f, methodname)
             # should raise on closed file
-            self.assertRaises(ValueError, method)
+            with test_support._check_py3k_warnings(quiet=True):
+                self.assertRaises(ValueError, method)
         self.assertRaises(ValueError, self.f.writelines, [])
 
         # file is closed, __exit__ shouldn't do anything
         self.assertEquals(self.f.__exit__(None, None, None), None)
         # it must also return None if an exception was given
         try:
-            1/0
+            1 // 0
         except:
             self.assertEquals(self.f.__exit__(*sys.exc_info()), None)
 
     def testReadWhenWriting(self):
         self.assertRaises(IOError, self.f.read)
+
+    def testIssue5677(self):
+        # Remark: Do not perform more than one test per open file,
+        # since that does NOT catch the readline error on Windows.
+        data = 'xxx'
+        for mode in ['w', 'wb', 'a', 'ab']:
+            for attr in ['read', 'readline', 'readlines']:
+                self.f = open(TESTFN, mode)
+                self.f.write(data)
+                self.assertRaises(IOError, getattr(self.f, attr))
+                self.f.close()
+
+            self.f = open(TESTFN, mode)
+            self.f.write(data)
+            self.assertRaises(IOError, lambda: [line for line in self.f])
+            self.f.close()
+
+            self.f = open(TESTFN, mode)
+            self.f.write(data)
+            self.assertRaises(IOError, self.f.readinto, bytearray(len(data)))
+            self.f.close()
+
+        for mode in ['r', 'rb', 'U', 'Ub', 'Ur', 'rU', 'rbU', 'rUb']:
+            self.f = open(TESTFN, mode)
+            self.assertRaises(IOError, self.f.write, data)
+            self.f.close()
+
+            self.f = open(TESTFN, mode)
+            self.assertRaises(IOError, self.f.writelines, [data, data])
+            self.f.close()
+
+            self.f = open(TESTFN, mode)
+            self.assertRaises(IOError, self.f.truncate)
+            self.f.close()
 
 class OtherFileTests(unittest.TestCase):
 
@@ -182,9 +222,9 @@ class OtherFileTests(unittest.TestCase):
         try:
             f = open(TESTFN, bad_mode)
         except ValueError, msg:
-            if msg[0] != 0:
+            if msg.args[0] != 0:
                 s = str(msg)
-                if s.find(TESTFN) != -1 or s.find(bad_mode) == -1:
+                if TESTFN in s or bad_mode not in s:
                     self.fail("bad error message for invalid mode: %s" % s)
             # if msg[0] == 0, we're probably on Windows where there may be
             # no obvious way to discover why open() failed.
@@ -381,6 +421,7 @@ class FileThreadingTests(unittest.TestCase):
         self._count_lock = threading.Lock()
         self.close_count = 0
         self.close_success_count = 0
+        self.use_buffering = False
 
     def tearDown(self):
         if self.f:
@@ -394,7 +435,10 @@ class FileThreadingTests(unittest.TestCase):
             pass
 
     def _create_file(self):
-        self.f = open(self.filename, "w+")
+        if self.use_buffering:
+            self.f = open(self.filename, "w+", buffering=1024*16)
+        else:
+            self.f = open(self.filename, "w+")
 
     def _close_file(self):
         with self._count_lock:
@@ -477,6 +521,12 @@ class FileThreadingTests(unittest.TestCase):
         self._test_close_open_io(io_func)
 
     def test_close_open_print(self):
+        def io_func():
+            print >> self.f, ''
+        self._test_close_open_io(io_func)
+
+    def test_close_open_print_buffered(self):
+        self.use_buffering = True
         def io_func():
             print >> self.f, ''
         self._test_close_open_io(io_func)
