@@ -566,7 +566,7 @@ ac_default_prefix=/usr/local
 ac_clean_files=
 ac_config_libobj_dir=.
 LIBOBJS=
-cross_compiling=no
+cross_compiling=yes
 subdirs=
 MFLAGS=
 MAKEFLAGS=
@@ -2146,6 +2146,9 @@ _ACEOF
   # On QNX 6.3.2, defining _XOPEN_SOURCE prevents netdb.h from
   # defining NI_NUMERICHOST.
   QNX/6.3.2)
+    define_xopen_source=no
+    ;;
+  Linux*|linux*|GNU*)
     define_xopen_source=no
     ;;
 
@@ -4549,13 +4552,13 @@ then
 	    if test "$Py_DEBUG" = 'true' ; then
 		# Optimization messes up debuggers, so turn it off for
 		# debug builds.
-		OPT="-g -Wall $STRICT_PROTO"
+		OPT="-g -Wall $STRICT_PROTO -dynamic"
 	    else
-		OPT="-g $WRAP -O3 -Wall $STRICT_PROTO"
+		OPT="-g $WRAP -O3 -Wall $STRICT_PROTO -dynamic"
 	    fi
 	    ;;
 	*)
-	    OPT="-O3 -Wall $STRICT_PROTO"
+	    OPT="-O3 -Wall $STRICT_PROTO -dynamic"
 	    ;;
 	esac
 	case $ac_sys_system in
@@ -13317,8 +13320,8 @@ then
 	hp*|HP*)
 	    LINKFORSHARED="-Wl,-E -Wl,+s";;
 #	    LINKFORSHARED="-Wl,-E -Wl,+s -Wl,+b\$(BINLIBDEST)/lib-dynload";;
-	BSD/OS/4*) LINKFORSHARED="-Xlinker -export-dynamic";;
-	Linux*|GNU*) LINKFORSHARED="-Xlinker -export-dynamic";;
+	BSD/OS/4*) LINKFORSHARED="-Xlinker -export-dynamic -dynamic";;
+	Linux*|GNU*) LINKFORSHARED="-Xlinker -export-dynamic -dynamic";;
 	# -u libsys_s pulls in all symbols in libsys
 	Darwin/*)
 		# -u _PyMac_Error is needed to pull in the mac toolbox glue,
@@ -17195,137 +17198,137 @@ fi
 # exit Python
 { echo "$as_me:$LINENO: checking for chflags" >&5
 echo $ECHO_N "checking for chflags... $ECHO_C" >&6; }
-if test "$cross_compiling" = yes; then
-  { { echo "$as_me:$LINENO: error: cannot run test program while cross compiling
-See \`config.log' for more details." >&5
-echo "$as_me: error: cannot run test program while cross compiling
-See \`config.log' for more details." >&2;}
-   { (exit 1); exit 1; }; }
-else
-  cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
+#if test "$cross_compiling" = yes; then
+#  { { echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+#See \`config.log' for more details." >&5
+#echo "$as_me: error: cannot run test program while cross compiling
+#See \`config.log' for more details." >&2;}
+#   { (exit 1); exit 1; }; }
+#else
+#  cat >conftest.$ac_ext <<_ACEOF
+#/* confdefs.h.  */
+#_ACEOF
+#cat confdefs.h >>conftest.$ac_ext
+#cat >>conftest.$ac_ext <<_ACEOF
+#/* end confdefs.h.  */
 
 #include <sys/stat.h>
 #include <unistd.h>
-int main(int argc, char*argv[])
-{
-  if(chflags(argv[0], 0) != 0)
-    return 1;
-  return 0;
-}
+#int main(int argc, char*argv[])
+#{
+#  if(chflags(argv[0], 0) != 0)
+#    return 1;
+#  return 0;
+#}
 
-_ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_link") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
+#_ACEOF
+#rm -f conftest$ac_exeext
+#if { (ac_try="$ac_link"
+#case "(($ac_try" in
+#  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+#  *) ac_try_echo=$ac_try;;
+#esac
+#eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+#  (eval "$ac_link") 2>&5
+#  ac_status=$?
+#  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+#  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+#  { (case "(($ac_try" in
+#  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+#  *) ac_try_echo=$ac_try;;
+#esac
+#eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+#  (eval "$ac_try") 2>&5
+#  ac_status=$?
+#  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+#  (exit $ac_status); }; }; then
+#
+#cat >>confdefs.h <<\_ACEOF
+##define HAVE_CHFLAGS 1
+#_ACEOF
 
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_CHFLAGS 1
-_ACEOF
-
-  { echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6; }
-else
-  echo "$as_me: program exited with status $ac_status" >&5
-echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-( exit $ac_status )
-{ echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
-fi
+#  { echo "$as_me:$LINENO: result: yes" >&5
+#echo "${ECHO_T}yes" >&6; }
+#else
+#  echo "$as_me: program exited with status $ac_status" >&5
+#echo "$as_me: failed program was:" >&5
+#sed 's/^/| /' conftest.$ac_ext >&5
+#
+#( exit $ac_status )
+#{ echo "$as_me:$LINENO: result: no" >&5
+#echo "${ECHO_T}no" >&6; }
+#
+#fi
+#rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+#fi
 
 
 
-{ echo "$as_me:$LINENO: checking for lchflags" >&5
-echo $ECHO_N "checking for lchflags... $ECHO_C" >&6; }
-if test "$cross_compiling" = yes; then
-  { { echo "$as_me:$LINENO: error: cannot run test program while cross compiling
-See \`config.log' for more details." >&5
-echo "$as_me: error: cannot run test program while cross compiling
-See \`config.log' for more details." >&2;}
-   { (exit 1); exit 1; }; }
-else
-  cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
+#{ echo "$as_me:$LINENO: checking for lchflags" >&5
+#echo $ECHO_N "checking for lchflags... $ECHO_C" >&6; }
+#if test "$cross_compiling" = yes; then
+#  { { echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+#See \`config.log' for more details." >&5
+#echo "$as_me: error: cannot run test program while cross compiling
+#See \`config.log' for more details." >&2;}
+#   { (exit 1); exit 1; }; }
+#else
+#  cat >conftest.$ac_ext <<_ACEOF
+#/* confdefs.h.  */
+#_ACEOF
+#cat confdefs.h >>conftest.$ac_ext
+#cat >>conftest.$ac_ext <<_ACEOF
+#/* end confdefs.h.  */
 
 #include <sys/stat.h>
 #include <unistd.h>
-int main(int argc, char*argv[])
-{
-  if(lchflags(argv[0], 0) != 0)
-    return 1;
-  return 0;
-}
+#int main(int argc, char*argv[])
+#{
+#  if(lchflags(argv[0], 0) != 0)
+#    return 1;
+#  return 0;
+#}
 
-_ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_link") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
+#_ACEOF
+#rm -f conftest$ac_exeext
+#if { (ac_try="$ac_link"
+#case "(($ac_try" in
+#  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+#  *) ac_try_echo=$ac_try;;
+#esac
+#eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+#  (eval "$ac_link") 2>&5
+#  ac_status=$?
+#  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+#  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+#  { (case "(($ac_try" in
+#  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+#  *) ac_try_echo=$ac_try;;
+#esac
+#eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+#  (eval "$ac_try") 2>&5
+#  ac_status=$?
+#  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+#  (exit $ac_status); }; }; then
 
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_LCHFLAGS 1
-_ACEOF
+#cat >>confdefs.h <<\_ACEOF
+##define HAVE_LCHFLAGS 1
+#_ACEOF
 
-  { echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6; }
-else
-  echo "$as_me: program exited with status $ac_status" >&5
-echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
+#  { echo "$as_me:$LINENO: result: yes" >&5
+#echo "${ECHO_T}yes" >&6; }
+#else
+#  echo "$as_me: program exited with status $ac_status" >&5
+#echo "$as_me: failed program was:" >&5
+#sed 's/^/| /' conftest.$ac_ext >&5
 
-( exit $ac_status )
-{ echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
+#( exit $ac_status )
+#{ echo "$as_me:$LINENO: result: no" >&5
+#echo "${ECHO_T}no" >&6; }
 
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
-fi
+#fi
+#rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+#fi
 
 
 
@@ -24715,55 +24718,55 @@ fi
 
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
-{ echo "$as_me:$LINENO: checking for /dev/ptmx" >&5
-echo $ECHO_N "checking for /dev/ptmx... $ECHO_C" >&6; }
+#{ echo "$as_me:$LINENO: checking for /dev/ptmx" >&5
+#echo $ECHO_N "checking for /dev/ptmx... $ECHO_C" >&6; }
 
-if test -r /dev/ptmx
-then
-  { echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6; }
+#if test -r /dev/ptmx
+#then
+#  { echo "$as_me:$LINENO: result: yes" >&5
+#echo "${ECHO_T}yes" >&6; }
 
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_DEV_PTMX 1
-_ACEOF
+#cat >>confdefs.h <<\_ACEOF
+##define HAVE_DEV_PTMX 1
+#_ACEOF
 
-else
+#else
   { echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6; }
-fi
+#fi
 
 { echo "$as_me:$LINENO: checking for /dev/ptc" >&5
 echo $ECHO_N "checking for /dev/ptc... $ECHO_C" >&6; }
 
-if test -r /dev/ptc
-then
-  { echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6; }
+#if test -r /dev/ptc
+#then
+#  { echo "$as_me:$LINENO: result: yes" >&5
+#echo "${ECHO_T}yes" >&6; }
 
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_DEV_PTC 1
-_ACEOF
+#cat >>confdefs.h <<\_ACEOF
+##define HAVE_DEV_PTC 1
+#_ACEOF
 
-else
+#else
   { echo "$as_me:$LINENO: result: no" >&5
 echo "${ECHO_T}no" >&6; }
-fi
+#fi
 
 { echo "$as_me:$LINENO: checking for %zd printf() format support" >&5
 echo $ECHO_N "checking for %zd printf() format support... $ECHO_C" >&6; }
-if test "$cross_compiling" = yes; then
-  { { echo "$as_me:$LINENO: error: cannot run test program while cross compiling
-See \`config.log' for more details." >&5
-echo "$as_me: error: cannot run test program while cross compiling
-See \`config.log' for more details." >&2;}
-   { (exit 1); exit 1; }; }
-else
-  cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
+#if test "$cross_compiling" = yes; then
+#  { { echo "$as_me:$LINENO: error: cannot run test program while cross compiling
+#See \`config.log' for more details." >&5
+#echo "$as_me: error: cannot run test program while cross compiling
+#See \`config.log' for more details." >&2;}
+#   { (exit 1); exit 1; }; }
+#else
+#  cat >conftest.$ac_ext <<_ACEOF
+#/* confdefs.h.  */
+#_ACEOF
+#cat confdefs.h >>conftest.$ac_ext
+#cat >>conftest.$ac_ext <<_ACEOF
+#/* end confdefs.h.  */
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
@@ -24773,70 +24776,70 @@ cat >>conftest.$ac_ext <<_ACEOF
 #endif
 
 #ifdef HAVE_SSIZE_T
-typedef ssize_t Py_ssize_t;
+#typedef ssize_t Py_ssize_t;
 #elif SIZEOF_VOID_P == SIZEOF_LONG
-typedef long Py_ssize_t;
+#typedef long Py_ssize_t;
 #else
-typedef int Py_ssize_t;
+#typedef int Py_ssize_t;
 #endif
 
-int main()
-{
-    char buffer[256];
+#int main()
+#{
+#    char buffer[256];
+#
+#    if(sprintf(buffer, "%zd", (size_t)123) < 0)
+#       	return 1;
 
-    if(sprintf(buffer, "%zd", (size_t)123) < 0)
-       	return 1;
+#    if (strcmp(buffer, "123"))
+#	return 1;
 
-    if (strcmp(buffer, "123"))
-	return 1;
+#    if (sprintf(buffer, "%zd", (Py_ssize_t)-123) < 0)
+#       	return 1;
 
-    if (sprintf(buffer, "%zd", (Py_ssize_t)-123) < 0)
-       	return 1;
+#    if (strcmp(buffer, "-123"))
+#	return 1;
 
-    if (strcmp(buffer, "-123"))
-	return 1;
+#    return 0;
+#}
+#_ACEOF
+#rm -f conftest$ac_exeext
+#if { (ac_try="$ac_link"
+#case "(($ac_try" in
+#  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+#  *) ac_try_echo=$ac_try;;
+#esac
+#eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+#  (eval "$ac_link") 2>&5
+#  ac_status=$?
+#  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+#  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
+#  { (case "(($ac_try" in
+#  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+#  *) ac_try_echo=$ac_try;;
+#esac
+#eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+#  (eval "$ac_try") 2>&5
+#  ac_status=$?
+#  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+#  (exit $ac_status); }; }; then
+#  { echo "$as_me:$LINENO: result: yes" >&5
+#echo "${ECHO_T}yes" >&6; }
 
-    return 0;
-}
-_ACEOF
-rm -f conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_link") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  { echo "$as_me:$LINENO: result: yes" >&5
-echo "${ECHO_T}yes" >&6; }
+#cat >>confdefs.h <<\_ACEOF
+##define PY_FORMAT_SIZE_T "z"
+#_ACEOF
 
-cat >>confdefs.h <<\_ACEOF
-#define PY_FORMAT_SIZE_T "z"
-_ACEOF
+#else
+#  echo "$as_me: program exited with status $ac_status" >&5
+#echo "$as_me: failed program was:" >&5
+#sed 's/^/| /' conftest.$ac_ext >&5
 
-else
-  echo "$as_me: program exited with status $ac_status" >&5
-echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-( exit $ac_status )
-{ echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
-fi
+#( exit $ac_status )
+#{ echo "$as_me:$LINENO: result: no" >&5
+#echo "${ECHO_T}no" >&6; }
+#fi
+#rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
+#fi
 
 
 
