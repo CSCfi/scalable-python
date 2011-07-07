@@ -43,7 +43,7 @@ Py_FrozenMain(int argc, char **argv)
 
 	if (Py_VerboseFlag)
 #ifdef ENABLE_MPI
-		fprintf(stderr, "Parallel Python %s\n%s\n",
+		fprintf(stderr, "Scalable Python %s\n%s\n",
 			Py_GetVersion(), Py_GetCopyright());
 #else
 		fprintf(stderr, "Python %s\n%s\n",
