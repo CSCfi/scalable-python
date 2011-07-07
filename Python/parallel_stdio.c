@@ -19,12 +19,12 @@ static FILE *fp_dev_null;
 // Initialize wrapper stuff
 void init_io_wrappers() 
 {
-  int mpi_initialized;
+  int i, mpi_initialized;
   MPI_Initialized(&mpi_initialized);
   if (mpi_initialized)
   {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    for (int i=0; i < MAX_FILES; i++)
+    for (i=0; i < MAX_FILES; i++)
       parallel_fps[i] = -1;
     fp_dev_null = fopen("/dev/null", "rb");
     enabled = 1;
@@ -46,7 +46,8 @@ void disable_io_wrappers()
 // Utility function to check if the file pointer is "parallel"
 int check_fp(FILE *fp)
 {
-  for (int i=current_fp-1; i >=0; i--)
+  int i;
+  for (i=current_fp-1; i >=0; i--)
     if ( fp == parallel_fps[i] )
       return i+1;
 
