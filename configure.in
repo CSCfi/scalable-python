@@ -1809,7 +1809,10 @@ BLDSHARED=${BLDSHARED-$LDSHARED}
 AC_MSG_CHECKING(CCSHARED)
 if test -z "$CCSHARED"
 then
-	CCSHARED="-qpic"
+	case $CC in
+		*gcc*) CCSHARED="-fPIC";;
+		*) CCSHARED="-qpic";;
+	esac
 fi
 AC_MSG_RESULT($CCSHARED)
 # LINKFORSHARED are the flags passed to the $(CC) command that links
@@ -1817,7 +1820,10 @@ AC_MSG_RESULT($CCSHARED)
 AC_MSG_CHECKING(LINKFORSHARED)
 if test -z "$LINKFORSHARED"
 then
-	LINKFORSHARED="-qmkshrobj -qnostaticlink"
+	case $CC in 
+		*gcc*) LINKFORSHARED="-Xlinker -export-dynamic";;
+		*) LINKFORSHARED="-qmkshrobj -qnostaticlink";;
+	esac
 fi
 AC_MSG_RESULT($LINKFORSHARED)
 
