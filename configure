@@ -13395,6 +13395,33 @@ fi
 { $as_echo "$as_me:$LINENO: result: $SO" >&5
 $as_echo "$SO" >&6; }
 
+# CCSHARED are the C *flags* used to create objects to go into a shared
+# library (module) -- this is only needed for a few systems
+{ $as_echo "$as_me:$LINENO: checking CCSHARED" >&5
+$as_echo_n "checking CCSHARED... " >&6; }
+if test -z "$CCSHARED"
+then
+	case $CC in
+		*gcc*) CCSHARED="-fPIC";;
+		*) CCSHARED="-qpic";;
+	esac
+fi
+{ $as_echo "$as_me:$LINENO: result: $CCSHARED" >&5
+$as_echo "$CCSHARED" >&6; }
+# LINKFORSHARED are the flags passed to the $(CC) command that links
+# the python executable -- this is only needed for a few systems
+{ $as_echo "$as_me:$LINENO: checking LINKFORSHARED" >&5
+$as_echo_n "checking LINKFORSHARED... " >&6; }
+if test -z "$LINKFORSHARED"
+then
+	case $CC in
+		*gcc*) LINKFORSHARED="-Xlinker -export-dynamic";;
+		*) LINKFORSHARED="-qmkshrobj -qnostaticlink";;
+	esac
+fi
+{ $as_echo "$as_me:$LINENO: result: $LINKFORSHARED" >&5
+$as_echo "$LINKFORSHARED" >&6; }
+
 
 cat >>confdefs.h <<_ACEOF
 #define SHLIB_EXT "$SO"
@@ -13514,33 +13541,6 @@ fi
 { $as_echo "$as_me:$LINENO: result: $LDSHARED" >&5
 $as_echo "$LDSHARED" >&6; }
 BLDSHARED=${BLDSHARED-$LDSHARED}
-# CCSHARED are the C *flags* used to create objects to go into a shared
-# library (module) -- this is only needed for a few systems
-{ $as_echo "$as_me:$LINENO: checking CCSHARED" >&5
-$as_echo_n "checking CCSHARED... " >&6; }
-if test -z "$CCSHARED"
-then
-	case $CC in
-		*gcc*) CCSHARED="-fPIC";;
-		*) CCSHARED="-qpic";;
-	esac
-fi
-{ $as_echo "$as_me:$LINENO: result: $CCSHARED" >&5
-$as_echo "$CCSHARED" >&6; }
-# LINKFORSHARED are the flags passed to the $(CC) command that links
-# the python executable -- this is only needed for a few systems
-{ $as_echo "$as_me:$LINENO: checking LINKFORSHARED" >&5
-$as_echo_n "checking LINKFORSHARED... " >&6; }
-if test -z "$LINKFORSHARED"
-then
-	case $CC in
-		*gcc*) LINKFORSHARED="-Xlinker -export-dynamic";;
-		*) LINKFORSHARED="-qmkshrobj -qnostaticlink";;
-	esac
-fi
-{ $as_echo "$as_me:$LINENO: result: $LINKFORSHARED" >&5
-$as_echo "$LINKFORSHARED" >&6; }
-
 
 
 { $as_echo "$as_me:$LINENO: checking CFLAGSFORSHARED" >&5
