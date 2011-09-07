@@ -1691,6 +1691,29 @@ else
 fi
 AC_MSG_RESULT($SO)
 
+# CCSHARED are the C *flags* used to create objects to go into a shared
+# library (module) -- this is only needed for a few systems
+AC_MSG_CHECKING(CCSHARED)
+if test -z "$CCSHARED"
+then
+	case $CC in
+		*gcc*) CCSHARED="-fPIC";;
+		*) CCSHARED="-qpic";;
+	esac
+fi
+AC_MSG_RESULT($CCSHARED)
+# LINKFORSHARED are the flags passed to the $(CC) command that links
+# the python executable -- this is only needed for a few systems
+AC_MSG_CHECKING(LINKFORSHARED)
+if test -z "$LINKFORSHARED"
+then
+	case $CC in 
+		*gcc*) LINKFORSHARED="-Xlinker -export-dynamic";;
+		*) LINKFORSHARED="-qmkshrobj -qnostaticlink";;
+	esac
+fi
+AC_MSG_RESULT($LINKFORSHARED)
+
 AC_DEFINE_UNQUOTED(SHLIB_EXT, "$SO", [Define this to be extension of shared libraries (including the dot!).])
 # LDSHARED is the ld *command* used to create shared library
 # -- "cc -G" on SunOS 5.x, "ld -shared" on IRIX 5
@@ -1804,29 +1827,6 @@ then
 fi
 AC_MSG_RESULT($LDSHARED)
 BLDSHARED=${BLDSHARED-$LDSHARED}
-# CCSHARED are the C *flags* used to create objects to go into a shared
-# library (module) -- this is only needed for a few systems
-AC_MSG_CHECKING(CCSHARED)
-if test -z "$CCSHARED"
-then
-	case $CC in
-		*gcc*) CCSHARED="-fPIC";;
-		*) CCSHARED="-qpic";;
-	esac
-fi
-AC_MSG_RESULT($CCSHARED)
-# LINKFORSHARED are the flags passed to the $(CC) command that links
-# the python executable -- this is only needed for a few systems
-AC_MSG_CHECKING(LINKFORSHARED)
-if test -z "$LINKFORSHARED"
-then
-	case $CC in 
-		*gcc*) LINKFORSHARED="-Xlinker -export-dynamic";;
-		*) LINKFORSHARED="-qmkshrobj -qnostaticlink";;
-	esac
-fi
-AC_MSG_RESULT($LINKFORSHARED)
-
 
 AC_SUBST(CFLAGSFORSHARED)
 AC_MSG_CHECKING(CFLAGSFORSHARED)
