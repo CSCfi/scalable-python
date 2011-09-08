@@ -1872,7 +1872,37 @@ BLDSHARED=${BLDSHARED-$LDSHARED}
 AC_MSG_CHECKING(CCSHARED)
 if test -z "$CCSHARED"
 then
-	CCSHARED="-qpic"
+	case $ac_sys_system/$ac_sys_release in
+	SunOS*) if test "$GCC" = yes;
+		then CCSHARED="-fPIC";
+		elif test `uname -p` = sparc;
+		then CCSHARED="-xcode=pic32";
+		else CCSHARED="-Kpic";
+		fi;;
+	hp*|HP*) if test "$GCC" = yes;
+		 then CCSHARED="-fPIC";
+		 else CCSHARED="+z";
+		 fi;;
+	Linux*|GNU*) CCSHARED="-fPIC";;
+	BSD/OS*/4*) CCSHARED="-fpic";;
+	FreeBSD*|NetBSD*|OpenBSD*|DragonFly*) CCSHARED="-fPIC";;
+	OpenUNIX*|UnixWare*)
+		if test "$GCC" = "yes"
+		then CCSHARED="-fPIC"
+		else CCSHARED="-KPIC"
+		fi;;
+	SCO_SV*)
+		if test "$GCC" = "yes"
+		then CCSHARED="-fPIC"
+		else CCSHARED="-Kpic -belf"
+		fi;;
+	Monterey*) CCSHARED="-G";;
+	IRIX*/6*)  case $CC in
+		   *gcc*) CCSHARED="-shared";;
+		   *) CCSHARED="";;
+		   esac;;
+	atheos*) CCSHARED="-fPIC";;
+	esac
 fi
 AC_MSG_RESULT($CCSHARED)
 # LINKFORSHARED are the flags passed to the $(CC) command that links
@@ -1880,7 +1910,57 @@ AC_MSG_RESULT($CCSHARED)
 AC_MSG_CHECKING(LINKFORSHARED)
 if test -z "$LINKFORSHARED"
 then
-	LINKFORSHARED="-qmkshrobj -qnostaticlink"
+	case $ac_sys_system/$ac_sys_release in
+	AIX*)	LINKFORSHARED='-Wl,-bE:Modules/python.exp -lld';;
+	hp*|HP*)
+	    LINKFORSHARED="-Wl,-E -Wl,+s";;
+#	    LINKFORSHARED="-Wl,-E -Wl,+s -Wl,+b\$(BINLIBDEST)/lib-dynload";;
+	BSD/OS/4*) LINKFORSHARED="-Xlinker -export-dynamic";;
+	Linux*|GNU*) LINKFORSHARED="-Xlinker -export-dynamic";;
+	# -u libsys_s pulls in all symbols in libsys
+	Darwin/*) 
+		# -u _PyMac_Error is needed to pull in the mac toolbox glue,
+		# which is
+		# not used by the core itself but which needs to be in the core so
+		# that dynamically loaded extension modules have access to it.
+		# -prebind is no longer used, because it actually seems to give a
+		# slowdown in stead of a speedup, maybe due to the large number of
+		# dynamic loads Python does.
+
+		LINKFORSHARED="$extra_undefs"
+		if test "$enable_framework"
+		then
+			LINKFORSHARED="$LINKFORSHARED "'$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/$(PYTHONFRAMEWORK)'
+		fi
+		LINKFORSHARED="$LINKFORSHARED";;
+	OpenUNIX*|UnixWare*) LINKFORSHARED="-Wl,-Bexport";;
+	SCO_SV*) LINKFORSHARED="-Wl,-Bexport";;
+	ReliantUNIX*) LINKFORSHARED="-W1 -Blargedynsym";;
+	FreeBSD*|NetBSD*|OpenBSD*|DragonFly*) 
+		if [[ "`$CC -dM -E - </dev/null | grep __ELF__`" != "" ]]
+		then
+			LINKFORSHARED="-Wl,--export-dynamic"
+		fi;;
+	SunOS/5*) case $CC in
+		  *gcc*)
+		    if $CC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
+		    then
+			LINKFORSHARED="-Xlinker --export-dynamic"
+		    fi;;
+		  esac;;
+	CYGWIN*)
+		if test $enable_shared = "no"
+		then
+			LINKFORSHARED='-Wl,--out-implib=$(LDLIBRARY)'
+		fi;;
+	QNX*)
+		# -Wl,-E causes the symbols to be added to the dynamic
+		# symbol table so that they can be found when a module
+		# is loaded.  -N 2048K causes the stack size to be set
+		# to 2048 kilobytes so that the stack doesn't overflow
+		# when running test_compile.py.
+		LINKFORSHARED='-Wl,-E -N 2048K';;
+	esac
 fi
 AC_MSG_RESULT($LINKFORSHARED)
 
