@@ -13608,7 +13608,12 @@ then
 		 then CCSHARED="-fPIC";
 		 else CCSHARED="+z";
 		 fi;;
-	Linux*|GNU*) CCSHARED="-fPIC";;
+	Linux*|GNU*)
+		case $CC in
+			*gcc*) CCSHARED="-fPIC";;
+			*xlc*) CCSHARED="-qpic";;
+			*)     CCSHARED="";;
+		esac;;
 	BSD/OS*/4*) CCSHARED="-fpic";;
 	FreeBSD*|NetBSD*|OpenBSD*|DragonFly*) CCSHARED="-fPIC";;
 	OpenUNIX*|UnixWare*)
@@ -13643,7 +13648,12 @@ then
 	    LINKFORSHARED="-Wl,-E -Wl,+s";;
 #	    LINKFORSHARED="-Wl,-E -Wl,+s -Wl,+b\$(BINLIBDEST)/lib-dynload";;
 	BSD/OS/4*) LINKFORSHARED="-Xlinker -export-dynamic";;
-	Linux*|GNU*) LINKFORSHARED="-Xlinker -export-dynamic";;
+	Linux*|GNU*)
+		case $CC in
+			*gcc*) LINKFORSHARED="-Xlinker -export-dynamic";;
+			*xlc*) LINKFORSHARED="-qmkshrobj -qnostaticlink";;
+			*)     LINKFORSHARED="";;
+		esac;;
 	# -u libsys_s pulls in all symbols in libsys
 	Darwin/*)
 		# -u _PyMac_Error is needed to pull in the mac toolbox glue,
