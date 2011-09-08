@@ -13545,6 +13545,11 @@ BLDSHARED=${BLDSHARED-$LDSHARED}
 
 { $as_echo "$as_me:$LINENO: checking CFLAGSFORSHARED" >&5
 $as_echo_n "checking CFLAGSFORSHARED... " >&6; }
+case $CC in
+	*xlc)
+		CFLAGSFORSHARED="$CCSHARED"
+		;;
+esac
 if test ! "$LIBRARY" = "$LDLIBRARY"
 then
 	case $ac_sys_system in
