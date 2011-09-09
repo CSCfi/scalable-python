@@ -600,15 +600,50 @@ class PyBuildExt(build_ext):
             missing.extend(['imageop'])
 
         # readline
-#        do_readline = self.compiler.find_library_file(lib_dirs, 'readline')
-#        if platform == 'darwin': # and os.uname()[2] < '9.':
-            # MacOSX 10.4 has a broken readline. Don't try to build
-            # the readline module unless the user has installed a fixed
-            # readline package
-            # FIXME: The readline emulation on 10.5 is better, but the
-            # readline module doesn't compile out of the box.
-#            if find_file('readline/rlconf.h', inc_dirs, []) is None:
         do_readline = False
+        readline_termcap_library = ""
+        curses_library = ""
+        # Determine if readline is already linked against curses or tinfo.
+        if do_readline and find_executable('ldd'):
+            fp = os.popen("ldd %s" % do_readline)
+            ldd_output = fp.readlines()
+            ret = fp.close()
+            if ret is None or ret >> 8 == 0:
+                for ln in ldd_output:
+                    if 'curses' in ln:
+                        readline_termcap_library = re.sub(
+                            r'.*lib(n?cursesw?)\.so.*', r'\1', ln
+                        ).rstrip()
+                        break
+                    if 'tinfo' in ln: # termcap interface split out from ncurses
+                        readline_termcap_library = 'tinfo'
+                        break
+        # Issue 7384: If readline is already linked against curses,
+        # use the same library for the readline and curses modules.
+        # Disabled since applications relying on ncursesw might break.
+        #
+        # if 'curses' in readline_termcap_library:
+        #    curses_library = readline_termcap_library
+        # elif self.compiler.find_library_file(lib_dirs, 'ncursesw'):
+        # (...)
+        if self.compiler.find_library_file(lib_dirs, 'ncursesw'):
+            curses_library = 'ncursesw'
+        elif self.compiler.find_library_file(lib_dirs, 'ncurses'):
+            curses_library = 'ncurses'
+        elif self.compiler.find_library_file(lib_dirs, 'curses'):
+            curses_library = 'curses'
+
+        if platform == 'darwin':
+            os_release = int(os.uname()[2].split('.')[0])
+            dep_target = sysconfig.get_config_var('MACOSX_DEPLOYMENT_TARGET')
+            if dep_target and dep_target.split('.') < ['10', '5']:
+                os_release = 8
+            if os_release < 9:
+                # MacOSX 10.4 has a broken readline. Don't try to build
+                # the readline module unless the user has installed a fixed
+                # readline package
+                if find_file('readline/rlconf.h', inc_dirs, []) is None:
+                    do_readline = False
         if do_readline:
             if platform == 'darwin' and os_release < 9:
                 # In every directory on the search path search for a dynamic
