@@ -4,6 +4,9 @@
 #include "marshal.h"
 #include <time.h>
 
+#ifdef ENABLE_MPI
+#include "parallel_stdio.h"
+#endif
 
 #define IS_SOURCE   0x0
 #define IS_BYTECODE 0x1

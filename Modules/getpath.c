@@ -10,6 +10,10 @@
 #include <mach-o/dyld.h>
 #endif
 
+#ifdef ENABLE_MPI
+#include "parallel_stdio.h"
+#endif
+
 /* Search in some common locations for the associated Python libraries.
  *
  * Two directories must be found, the platform independent directory

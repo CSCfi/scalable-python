@@ -3550,7 +3550,7 @@ if test "x$external_python" != "xno"
 then
 	RUNPYTHON="$external_python"
 else
-	RUNPYTHON="\$(BUILDPYTHON)"
+	RUNPYTHON="./\$(BUILDPYTHON)"
 fi
 
 # check for endianness
