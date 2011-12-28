@@ -863,7 +863,7 @@ altinstall:	@FRAMEWORKALTINSTALLFIRST@ altbininstall libinstall inclinstall liba
                 sharedinstall oldsharedinstall @FRAMEWORKALTINSTALLLAST@
 
 # Install MPI-enabled libs and interpreter
-install_mpi:	altbininstall_mpi libainstall_mpi bininstall_mpi
+install-mpi:	altbininstall_mpi libainstall_mpi bininstall_mpi
 
 # Install shared libraries enabled by Setup
 DESTDIRS=	$(exec_prefix) $(LIBDIR) $(BINLIBDEST) $(DESTSHARED)
