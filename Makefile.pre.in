@@ -34,7 +34,7 @@ PCC= 	@CC@
 CXX=		@CXX@
 MAINCC=		@MAINCC@
 LINKCC=		@LINKCC@
-LINKMPICC= 	@MPICC@
+MPILINKCC= 	@MPILD@
 AR=		@AR@
 RANLIB=		@RANLIB@
 SVNVERSION=	@SVNVERSION@
@@ -61,11 +61,14 @@ MAKESETUP=      $(srcdir)/Modules/makesetup
 OPT=		@OPT@
 BASECFLAGS=	@BASECFLAGS@
 CFLAGS=		$(BASECFLAGS) @CFLAGS@ $(OPT) $(EXTRA_CFLAGS)
+MPI_CFLAGS= $(BASECFLAGS) @ENABLE_MPI@ @MPI_CFLAGS@ $(OPT) $(EXTRA_CFLAGS)
 # Both CPPFLAGS and LDFLAGS need to contain the shell's value for setup.py to
 # be able to build extension modules using the directories specified in the
 # environment variables
 CPPFLAGS=	-I. -IInclude -I$(srcdir)/Include @CPPFLAGS@
+MPI_CPPFLAGS= -I. -IInclude -I$(srcdir)/Include @MPI_CPPFLAGS@
 LDFLAGS=	@LDFLAGS@
+MPI_LDFLAGS= @MPI_LDFLAGS@
 LDLAST=		@LDLAST@
 SGI_ABI=	@SGI_ABI@
 CCSHARED=	@CCSHARED@
@@ -74,6 +77,11 @@ LINKFORSHARED=	@LINKFORSHARED@
 CFLAGSFORSHARED=@CFLAGSFORSHARED@
 # C flags used for building the interpreter object files
 PY_CFLAGS=	$(CFLAGS) $(CPPFLAGS) $(CFLAGSFORSHARED) -DPy_BUILD_CORE
+
+MPI_CCSHARED= @MPI_CFLAGS_SHARED_MODULE@
+MPI_LINKFORSHARED= @MPI_LDFLAGS_SHARED@
+MPI_CFLAGSFORSHARED= @MPI_CFLAGS_SHARED@
+MPI_PY_CFLAGS= $(MPI_CFLAGS) $(MPI_CPPFLAGS) $(MPI_CFLAGSFORSHARED) -DPy_BUILD_CORE
 
 
 # Machine-dependent subdirectories
@@ -108,6 +116,8 @@ SO=		@SO@
 LDSHARED=	@LDSHARED@
 BLDSHARED=	@BLDSHARED@
 DESTSHARED=	$(BINLIBDEST)/lib-dynload
+MPI_LDSHARED=  @MPILD_SHARED@
+MPI_BLDSHARED= @MPILD_SHARED_MODULE@
 
 # Executable suffix (.exe on Windows and Mac OS X)
 EXE=		@EXEEXT@
@@ -154,19 +164,26 @@ DISTDIRS=	$(SUBDIRS) $(SUBDIRSTOO) Ext-dummy
 DIST=		$(DISTFILES) $(DISTDIRS)
 
 
-LIBRARY=	@LIBRARY@
-LDLIBRARY=      @LDLIBRARY@
-BLDLIBRARY=     @BLDLIBRARY@
-DLLLIBRARY=	@DLLLIBRARY@
-LDLIBRARYDIR=   @LDLIBRARYDIR@
-INSTSONAME=	@INSTSONAME@
+LIBRARY=      @LIBRARY@
+LDLIBRARY=    @LDLIBRARY@
+BLDLIBRARY=   @BLDLIBRARY@
+DLLLIBRARY=   @DLLLIBRARY@
+LDLIBRARYDIR= @LDLIBRARYDIR@
+INSTSONAME=   @INSTSONAME@
 
+MPI_LIBRARY=    @MPI_LIBRARY@
+MPI_LDLIBRARY=  @MPI_LDLIBRARY@
+MPI_BLDLIBRARY= @MPI_BLDLIBRARY@
+MPI_DLLLIBRARY=	@MPI_DLLLIBRARY@
+MPI_INSTSONAME=	@MPI_INSTSONAME@
 
 LIBS=		@LIBS@
 LIBM=		@LIBM@
 LIBC=		@LIBC@
 SYSLIBS=	$(LIBM) $(LIBC)
 SHLIBS=		@SHLIBS@
+MPI_LIBS=   @MPI_LIBS@
+MPI_SHLIBS= @MPI_SHLIBS@
 
 THREADOBJ=	@THREADOBJ@
 DLINCLDIR=	@DLINCLDIR@
@@ -175,11 +192,12 @@ MACHDEP_OBJS=	@MACHDEP_OBJS@
 LIBOBJDIR=	Python/
 LIBOBJS=	@LIBOBJS@
 UNICODE_OBJS=   @UNICODE_OBJS@
-PARALLEL_OBJS= 	@PARALLEL_OBJS@
 
 PYTHON=		python$(EXE)
 BUILDPYTHON=	python$(BUILDEXE)
 RUNPYTHON=		@RUNPYTHON@
+MPI_PYTHON=		python_mpi$(EXE)
+MPI_BUILDPYTHON=	python_mpi$(BUILDEXE)
 
 # The task to run while instrument when building the profile-opt target
 PROFILE_TASK=	$(srcdir)/Tools/pybench/pybench.py -n 2 --with-gc --with-syscheck
@@ -192,8 +210,6 @@ PROFILE_TASK=	$(srcdir)/Tools/pybench/pybench.py -n 2 --with-gc --with-syscheck
 # Modules
 MODULE_OBJS=	\
 		Modules/config.o \
-		Modules/getpath.o \
-		Modules/main.o \
 		Modules/gcmodule.o
 
 # Used of signalmodule.o is not available
@@ -224,7 +240,7 @@ POBJS=		\
 		Parser/grammar.o \
 		Parser/pgen.o
 
-PARSER_OBJS=	$(POBJS) Parser/myreadline.o Parser/tokenizer.o
+PARSER_OBJS=	$(POBJS) Parser/myreadline.o
 
 PGOBJS=		\
 		Objects/obmalloc.o \
@@ -264,18 +280,14 @@ PYTHON_OBJS=	\
 		Python/codecs.o \
 		Python/errors.o \
 		Python/frozen.o \
-		Python/frozenmain.o \
 		Python/future.o \
 		Python/getargs.o \
 		Python/getcompiler.o \
 		Python/getcopyright.o \
-		Python/getmtime.o \
 		Python/getplatform.o \
 		Python/getversion.o \
 		Python/graminit.o \
-		Python/import.o \
 		Python/importdl.o \
-		Python/marshal.o \
 		Python/modsupport.o \
 		Python/mystrtoul.o \
 		Python/mysnprintf.o \
@@ -294,7 +306,6 @@ PYTHON_OBJS=	\
 		Python/pystrtod.o \
 		Python/formatter_unicode.o \
 		Python/formatter_string.o \
-		$(PARALLEL_OBJS) \
 		Python/$(DYNLOADFILE) \
 		$(LIBOBJS) \
 		$(MACHDEP_OBJS) \
@@ -318,7 +329,6 @@ OBJECT_OBJS=	\
 		Objects/enumobject.o \
 		Objects/exceptions.o \
 		Objects/genobject.o \
-		Objects/fileobject.o \
 		Objects/floatobject.o \
 		Objects/frameobject.o \
 		Objects/funcobject.o \
@@ -343,6 +353,34 @@ OBJECT_OBJS=	\
 
 
 ##########################################################################
+# MPI + serial objects
+
+SERIAL_OBJS=	\
+		Modules/getpath.o \
+		Modules/main.o \
+		Objects/fileobject.o \
+		Parser/tokenizer.o \
+		Python/frozenmain.o \
+		Python/getmtime.o \
+		Python/import.o \
+		Python/marshal.o
+
+
+MPI_OBJS=	\
+		Modules/getpath_mpi.o \
+		Modules/main_mpi.o \
+		Objects/fileobject_mpi.o \
+		Parser/tokenizer_mpi.o \
+		Python/frozenmain_mpi.o \
+		Python/getmtime_mpi.o \
+		Python/import_mpi.o \
+		Python/marshal_mpi.o
+
+	#	Modules/zipimport_mpi.o
+	#	Python/dynload_shlib_mpi.o
+
+
+##########################################################################
 # objects that get linked into the Python library
 LIBRARY_OBJS=	\
 		Modules/getbuildinfo.o \
@@ -351,6 +389,17 @@ LIBRARY_OBJS=	\
 		$(PYTHON_OBJS) \
 		$(MODULE_OBJS) \
 		$(SIGNAL_OBJS) \
+		$(SERIAL_OBJS) \
+		$(MODOBJS)
+
+MPI_LIBRARY_OBJS=	\
+		Modules/getbuildinfo_mpi.o \
+		$(PARSER_OBJS) \
+		$(OBJECT_OBJS) \
+		$(PYTHON_OBJS) \
+		$(MODULE_OBJS) \
+		$(SIGNAL_OBJS) \
+		$(MPI_OBJS) \
 		$(MODOBJS)
 
 #########################################################################
@@ -358,7 +407,9 @@ LIBRARY_OBJS=	\
 
 # Default target
 all:		build_all
+mpi:		build_mpi
 build_all:	$(BUILDPYTHON) oldsharedmods sharedmods
+build_mpi:  $(MPI_BUILDPYTHON) sharedmods
 
 # Compile a binary with gcc profile guided optimization.
 profile-opt:
@@ -389,15 +440,14 @@ coverage:
 
 # Build the interpreter
 $(BUILDPYTHON):	Modules/python.o $(LIBRARY) $(LDLIBRARY)
-	if test "$(LINKMPICC)"; then \
-		$(LINKMPICC) $(LDFLAGS) $(LINKFORSHARED) -o $@ \
-			Modules/python.o \
-			$(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST); \
-	else \
-		$(LINKCC) $(LDFLAGS) $(LINKFORSHARED) -o $@ \
-			Modules/python.o \
-			$(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST); \
-	fi
+	$(LINKCC) $(LDFLAGS) $(LINKFORSHARED) -o $@ \
+		Modules/python.o \
+		$(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST)
+
+$(MPI_BUILDPYTHON):	Modules/python_mpi.o $(MPI_LIBRARY) $(MPI_LDLIBRARY)
+	$(MPILINKCC) $(MPI_LDFLAGS) $(MPI_LINKFORSHARED) -o $@ \
+		Modules/python_mpi.o \
+		$(MPI_BLDLIBRARY) $(MPI_LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST)
 
 platform: $(BUILDPYTHON)
 	$(RUNSHARED) $(RUNPYTHON) -E -c 'import sys ; from distutils.util import get_platform ; print get_platform()+"-"+sys.version[0:3]' >platform
@@ -419,6 +469,7 @@ $(LIBRARY): $(LIBRARY_OBJS)
 	$(AR) cr $@ $(OBJECT_OBJS)
 	$(AR) cr $@ $(PYTHON_OBJS)
 	$(AR) cr $@ $(MODULE_OBJS) $(SIGNAL_OBJS)
+	$(AR) cr $@ $(SERIAL_OBJS)
 	$(AR) cr $@ $(MODOBJS)
 	$(RANLIB) $@
 
@@ -436,6 +487,34 @@ libpython$(VERSION).dylib: $(LIBRARY_OBJS)
 
 libpython$(VERSION).sl: $(LIBRARY_OBJS)
 	$(LDSHARED) $(LDFLAGS) -o $@ $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM) $(LDLAST)
+
+
+# Build libraries w/ MPI.
+#
+$(MPI_LIBRARY): $(MPI_LIBRARY_OBJS)
+	-rm -f $@
+	$(AR) cr $@ Modules/getbuildinfo_mpi.o
+	$(AR) cr $@ $(PARSER_OBJS)
+	$(AR) cr $@ $(OBJECT_OBJS)
+	$(AR) cr $@ $(PYTHON_OBJS)
+	$(AR) cr $@ $(MODULE_OBJS) $(SIGNAL_OBJS)
+	$(AR) cr $@ $(MPI_OBJS)
+	$(AR) cr $@ $(MODOBJS)
+	$(RANLIB) $@
+
+libpython$(VERSION)_mpi.so: $(MPI_LIBRARY_OBJS)
+	if test $(MPI_INSTSONAME) != $(MPI_LDLIBRARY); then \
+		$(MPI_LDSHARED) $(MPI_LDFLAGS) -Wl,-h$(MPI_INSTSONAME) -o $(MPI_INSTSONAME) $(MPI_LIBRARY_OBJS) $(MODLIBS) $(MPI_SHLIBS) $(LIBC) $(LIBM) $(LDLAST); \
+		$(LN) -f $(MPI_INSTSONAME) $@; \
+	else \
+		$(MPI_LDSHARED) $(MPI_LDFLAGS) -o $@ $(MPI_LIBRARY_OBJS) $(MODLIBS) $(MPI_SHLIBS) $(LIBC) $(LIBM) $(LDLAST); \
+	fi
+
+libpython$(VERSION)_mpi.dylib: $(MPI_LIBRARY_OBJS)
+	 $(MPICC) -dynamiclib -Wl,-single_module $(MPI_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(prefix)/lib/libpython$(VERSION)_mpi.dylib -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(MPI_LIBRARY_OBJS) $(MPI_SHLIBS) $(LIBC) $(LIBM) $(LDLAST)
+
+libpython$(VERSION)_mpi.sl: $(MPI_LIBRARY_OBJS)
+	$(MPI_LDSHARED) $(MPI_LDFLAGS) -o $@ $(MPI_LIBRARY_OBJS) $(MODLIBS) $(MPI_SHLIBS) $(LIBC) $(LIBM) $(LDLAST)
 
 # This rule is here for OPENSTEP/Rhapsody/MacOSX. It builds a temporary
 # minimal framework (not including the Lib directory and such) in the current
@@ -474,6 +553,12 @@ $(DLLLIBRARY) libpython$(VERSION).dll.a: $(LIBRARY_OBJS)
 	else true; \
 	fi
 
+$(MPI_DLLLIBRARY) libpython$(VERSION)_mpi.dll.a: $(MPI_LIBRARY_OBJS)
+	if test -n "$(MPI_DLLLIBRARY)"; then \
+		$(MPI_LDSHARED) $(MPI_LDFLAGS) -Wl,--out-implib=$@ -o $(MPI_DLLLIBRARY) $^ \
+			$(MPI_LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST); \
+	else true; \
+	fi
 
 oldsharedmods: $(SHAREDMODS)
 
@@ -511,9 +596,20 @@ Modules/getbuildinfo.o: $(PARSER_OBJS) \
 		$(PYTHON_OBJS) \
 		$(MODULE_OBJS) \
 		$(SIGNAL_OBJS) \
+		$(SERIAL_OBJS) \
 		$(MODOBJS) \
 		$(srcdir)/Modules/getbuildinfo.c
 	$(CC) -c $(PY_CFLAGS) -DSVNVERSION="\"`LC_ALL=C $(SVNVERSION)`\"" -o $@ $(srcdir)/Modules/getbuildinfo.c
+
+Modules/getbuildinfo_mpi.o: $(PARSER_OBJS) \
+		$(OBJECT_OBJS) \
+		$(PYTHON_OBJS) \
+		$(MODULE_OBJS) \
+		$(SIGNAL_OBJS) \
+		$(MPI_OBJS) \
+		$(MODOBJS) \
+		$(srcdir)/Modules/getbuildinfo.c
+	$(MPICC) -c $(MPI_PY_CFLAGS) -DSVNVERSION="\"`LC_ALL=C $(SVNVERSION)`\"" -o $@ $(srcdir)/Modules/getbuildinfo.c
 
 Modules/getpath.o: $(srcdir)/Modules/getpath.c Makefile
 	$(CC) -c $(PY_CFLAGS) -DPYTHONPATH='"$(PYTHONPATH)"' \
@@ -523,13 +619,22 @@ Modules/getpath.o: $(srcdir)/Modules/getpath.c Makefile
 		-DVPATH='"$(VPATH)"' \
 		-o $@ $(srcdir)/Modules/getpath.c
 
+Modules/getpath_mpi.o: $(srcdir)/Modules/getpath.c Makefile
+	$(MPICC) -c $(MPI_PY_CFLAGS) -DPYTHONPATH='"$(PYTHONPATH)"' \
+		-DPREFIX='"$(prefix)"' \
+		-DEXEC_PREFIX='"$(exec_prefix)"' \
+		-DVERSION='"$(VERSION)"' \
+		-DVPATH='"$(VPATH)"' \
+		-o $@ $(srcdir)/Modules/getpath.c
+
 Modules/python.o: $(srcdir)/Modules/python.c
 	$(MAINCC) -c $(PY_CFLAGS) -o $@ $(srcdir)/Modules/python.c
 
+Modules/python_mpi.o: $(srcdir)/Modules/python.c
+	$(MPICC) -c $(MPI_PY_CFLAGS) -o $@ $(srcdir)/Modules/python.c
+
 Python/parallel_stdio.o: $(srcdir)/Python/parallel_stdio.c
-	if test "$(MPICC)"; then \
-		$(MPICC) -c $(PY_CFLAGS) -o $@ $(srcdir)/Python/parallel_stdio.c; \
-	fi
+	$(MPICC) -c $(MPI_PY_CFLAGS) -o $@ $(srcdir)/Python/parallel_stdio.c
 
 $(GRAMMAR_H) $(GRAMMAR_C): $(PGEN) $(GRAMMAR_INPUT)
 		-@$(INSTALL) -d Include
@@ -592,6 +697,13 @@ Python/formatter_unicode.o: $(srcdir)/Python/formatter_unicode.c \
 
 Python/formatter_string.o: $(srcdir)/Python/formatter_string.c \
 				$(STRINGLIB_HEADERS)
+
+# MPI-enabled objects
+%_mpi.o: %_mpi.c
+	$(MPICC) $(MPI_PY_CFLAGS) -c -o $@ $<
+
+%_mpi$(SO): %_mpi.o
+	$(MPI_BLDSHARED) $< -o $@
 
 ############################################################################
 # Header files
@@ -678,6 +790,7 @@ PYTHON_HEADERS= \
 		$(PARSER_HEADERS)
 
 $(LIBRARY_OBJS) $(MODOBJS) Modules/python.o: $(PYTHON_HEADERS)
+$(MPI_OBJS) Modules/getbuildinfo_mpi.o: $(PYTHON_HEADERS)
 
 
 ######################################################################
@@ -743,9 +856,12 @@ memtest:	all platform
 
 # Install everything
 install:	@FRAMEWORKINSTALLFIRST@ altinstall bininstall maninstall @FRAMEWORKINSTALLLAST@
+install-mpi:	@FRAMEWORKINSTALLFIRST@ altinstall_mpi bininstall_mpi maninstall @FRAMEWORKINSTALLLAST@
 
 # Install almost everything without disturbing previous versions
 altinstall:	@FRAMEWORKALTINSTALLFIRST@ altbininstall libinstall inclinstall libainstall \
+                sharedinstall oldsharedinstall @FRAMEWORKALTINSTALLLAST@
+altinstall_mpi:	@FRAMEWORKALTINSTALLFIRST@ altbininstall_mpi libinstall inclinstall libainstall_mpi \
                 sharedinstall oldsharedinstall @FRAMEWORKALTINSTALLLAST@
 
 # Install shared libraries enabled by Setup
@@ -780,6 +896,15 @@ bininstall:	altbininstall
 	-rm -f $(DESTDIR)$(BINDIR)/python-config
 	(cd $(DESTDIR)$(BINDIR); $(LN) -s python$(VERSION)-config python-config)
 
+bininstall_mpi: altbininstall_mpi
+	-if test -f $(DESTDIR)$(BINDIR)/$(MPI_PYTHON) -o -h $(DESTDIR)$(BINDIR)/$(MPI_PYTHON); \
+	then rm -f $(DESTDIR)$(BINDIR)/$(MPI_PYTHON); \
+	else true; \
+	fi
+	(cd $(DESTDIR)$(BINDIR); $(LN) python$(VERSION)_mpi$(EXE) $(MPI_PYTHON))
+	-rm -f $(DESTDIR)$(BINDIR)/python_mpi-config
+	(cd $(DESTDIR)$(BINDIR); $(LN) -s python$(VERSION)_mpi-config python_mpi-config)
+
 # Install the interpreter with $(VERSION) affixed
 # This goes into $(exec_prefix)
 altbininstall:	$(BUILDPYTHON)
@@ -799,6 +924,28 @@ altbininstall:	$(BUILDPYTHON)
 			$(INSTALL_SHARED) $(LDLIBRARY) $(DESTDIR)$(LIBDIR)/$(INSTSONAME); \
 			if test $(LDLIBRARY) != $(INSTSONAME); then \
 				(cd $(DESTDIR)$(LIBDIR); $(LN) -sf $(INSTSONAME) $(LDLIBRARY)) \
+			fi \
+		fi; \
+	else	true; \
+	fi
+
+altbininstall_mpi:	$(MPI_BUILDPYTHON)
+	@for i in $(BINDIR) $(LIBDIR); \
+	do \
+		if test ! -d $(DESTDIR)$$i; then \
+			echo "Creating directory $$i"; \
+			$(INSTALL) -d -m $(DIRMODE) $(DESTDIR)$$i; \
+		else	true; \
+		fi; \
+	done
+	$(INSTALL_PROGRAM) $(MPI_BUILDPYTHON) $(DESTDIR)$(BINDIR)/python$(VERSION)_mpi$(EXE)
+	if test -f $(MPI_LDLIBRARY); then \
+		if test -n "$(MPI_DLLLIBRARY)" ; then \
+			$(INSTALL_SHARED) $(MPI_DLLLIBRARY) $(DESTDIR)$(BINDIR); \
+		else \
+			$(INSTALL_SHARED) $(MPI_LDLIBRARY) $(DESTDIR)$(LIBDIR)/$(MPI_INSTSONAME); \
+			if test $(MPI_LDLIBRARY) != $(MPI_INSTSONAME); then \
+				(cd $(DESTDIR)$(LIBDIR); $(LN) -sf $(MPI_INSTSONAME) $(MPI_LDLIBRARY)) \
 			fi \
 		fi; \
 	else	true; \
@@ -1014,6 +1161,31 @@ libainstall:	all
 		;; \
 	esac
 
+libainstall_mpi:	mpi
+	@for i in $(LIBDIR) $(LIBP) $(LIBPL); \
+	do \
+		if test ! -d $(DESTDIR)$$i; then \
+			echo "Creating directory $$i"; \
+			$(INSTALL) -d -m $(DIRMODE) $(DESTDIR)$$i; \
+		else	true; \
+		fi; \
+	done
+	@if test -d $(MPI_LIBRARY); then :; else \
+		if test "$(PYTHONFRAMEWORKDIR)" = no-framework; then \
+			if test "$(SO)" = .dll; then \
+				$(INSTALL_DATA) $(MPI_LDLIBRARY) $(DESTDIR)$(LIBPL) ; \
+			else \
+				$(INSTALL_DATA) $(MPI_LIBRARY) $(DESTDIR)$(LIBPL)/$(MPI_LIBRARY) ; \
+				$(RANLIB) $(DESTDIR)$(LIBPL)/$(MPI_LIBRARY) ; \
+			fi; \
+		else \
+			echo Skip install of $(MPI_LIBRARY) - use make frameworkinstall; \
+		fi; \
+	fi
+	sed -e "s,@EXENAME@,$(BINDIR)/python$(VERSION)_mpi$(EXE)," < $(srcdir)/Misc/python-config.in >python_mpi-config
+	$(INSTALL_SCRIPT) python_mpi-config $(DESTDIR)$(BINDIR)/python$(VERSION)_mpi-config
+	rm python_mpi-config
+
 # Install the dynamically loadable modules
 # This goes into $(exec_prefix)
 sharedinstall:
@@ -1112,7 +1284,7 @@ Makefile.pre: Makefile.pre.in config.status
 config.status:	$(srcdir)/configure
 	$(SHELL) $(srcdir)/configure $(CONFIG_ARGS)
 
-.PRECIOUS: config.status $(BUILDPYTHON) Makefile Makefile.pre
+.PRECIOUS: config.status $(BUILDPYTHON) $(MPI_BUILDPYTHON) Makefile Makefile.pre
 
 # Some make's put the object file in the current directory
 .c.o:
@@ -1167,6 +1339,7 @@ clobber: clean profile-removal
 	-rm -f $(BUILDPYTHON) $(PGEN) $(LIBRARY) $(LDLIBRARY) $(DLLLIBRARY) \
 		tags TAGS \
 		config.cache config.log pyconfig.h Modules/config.c
+	-rm -f $(MPI_BUILDPYTHON) $(MPI_LIBRARY) $(MPI_LDLIBRARY) $(MPI_DLLLIBRARY)
 	-rm -rf build platform
 	-rm -rf $(PYTHONFRAMEWORKDIR)
 
@@ -1232,5 +1405,6 @@ Python/thread.o: @THREADHEADERS@
 .PHONY: frameworkinstallmaclib frameworkinstallapps frameworkinstallunixtools
 .PHONY: frameworkaltinstallunixtools recheck autoconf clean clobber distclean 
 .PHONY: smelly funny patchcheck
+.PHONY: build_mpi mpi
 
 # IF YOU PUT ANYTHING HERE IT WILL GO AWAY

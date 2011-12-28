@@ -622,6 +622,15 @@ then
 fi
 AC_MSG_RESULT($LIBRARY)
 
+# MPI_LIBRARY is the name of the MPI-enabled library
+AC_SUBST(MPI_LIBRARY)
+AC_MSG_CHECKING(MPI_LIBRARY)
+if test -z "$MPI_LIBRARY"
+then
+	MPI_LIBRARY='libpython$(VERSION)_mpi.a'
+fi
+AC_MSG_RESULT($MPI_LIBRARY)
+
 # LDLIBRARY is the name of the library to link against (as opposed to the
 # name of the library into which to insert object files). BLDLIBRARY is also
 # the library to link against, usually. On Mac OS X frameworks, BLDLIBRARY
@@ -647,6 +656,16 @@ INSTSONAME='$(LDLIBRARY)'
 DLLLIBRARY=''
 LDLIBRARYDIR=''
 RUNSHARED=''
+
+# MPI-enabled libraries
+AC_SUBST(MPI_LDLIBRARY)
+AC_SUBST(MPI_DLLLIBRARY)
+AC_SUBST(MPI_BLDLIBRARY)
+AC_SUBST(MPI_INSTSONAME)
+MPI_LDLIBRARY="$MPI_LIBRARY"
+MPI_BLDLIBRARY='$(MPI_LDLIBRARY)'
+MPI_INSTSONAME='$(MPI_LDLIBRARY)'
+MPI_DLLLIBRARY=''
 
 # LINKCC is the command that links the python executable -- default is $(CC).
 # If CXX is set, and if it is needed to link a main function that was
@@ -795,6 +814,81 @@ else # shared is disabled
 fi
 
 AC_MSG_RESULT($LDLIBRARY)
+
+#
+# setup names for MPI-enabled libraries
+#
+AC_MSG_CHECKING(MPI_LDLIBRARY)
+
+# MacOSX framework builds are not supported w/ MPI
+if test "$enable_framework"
+then
+  # FIXME: echo an error message?
+  MPI_BLDLIBRARY=''
+else
+  MPI_BLDLIBRARY='$(MPI_LDLIBRARY)'
+fi
+
+# Other platforms follow
+if test $enable_shared = "yes"; then
+  case $ac_sys_system in
+    BeOS*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+      ;;
+    CYGWIN*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.dll.a'
+      MPI_DLLLIBRARY='libpython$(VERSION)_mpi.dll'
+      ;;
+    SunOS*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+      MPI_BLDLIBRARY='-Wl,-R,$(LIBDIR) -L. -lpython$(VERSION)_mpi'
+      MPI_INSTSONAME="$MPI_LDLIBRARY".$SOVERSION
+      ;;
+    Linux*|GNU*|NetBSD*|FreeBSD*|DragonFly*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+      MPI_BLDLIBRARY='-L. -lpython$(VERSION)_mpi'
+      case $ac_sys_system in
+        FreeBSD*)
+          SOVERSION=`echo $SOVERSION|cut -d "." -f 1`
+          ;;
+      esac
+      MPI_INSTSONAME="$MPI_LDLIBRARY".$SOVERSION
+      ;;
+    hp*|HP*)
+      case `uname -m` in
+        ia64)
+          MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+          ;;
+        *)
+          MPI_LDLIBRARY='libpython$(VERSION)_mpi.sl'
+          ;;
+      esac
+      MPI_BLDLIBRARY='-Wl,+b,$(LIBDIR) -L. -lpython$(VERSION)_mpi'
+      ;;
+    OSF*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+      MPI_BLDLIBRARY='-rpath $(LIBDIR) -L. -lpython$(VERSION)_mpi'
+      ;;
+    atheos*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+      MPI_BLDLIBRARY='-L. -lpython$(VERSION)_mpi'
+      ;;
+    Darwin*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.dylib'
+      MPI_BLDLIBRARY='-L. -lpython$(VERSION)_mpi'
+      ;;
+  esac
+else # shared is disabled
+  case $ac_sys_system in
+    CYGWIN*)
+      MPI_BLDLIBRARY='$(MPI_LIBRARY)'
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.dll.a'
+      ;;
+  esac
+fi
+
+AC_MSG_RESULT($MPI_LDLIBRARY)
+
 
 AC_PROG_RANLIB
 AC_SUBST(AR)
@@ -1719,6 +1813,122 @@ case $ac_sys_system/$ac_sys_release in
 	;;
 esac
 
+# enable MPI?
+AC_ARG_VAR(MPICC, [MPI C compiler command])
+AC_ARG_VAR(MPILD, [MPI linker])
+AC_ARG_VAR(MPI_CFLAGS, [MPI C compiler flags])
+AC_ARG_VAR(MPI_LDFLAGS, [MPI linker flags])
+AC_ARG_VAR(MPI_LIBS, [libraries to to the MPI linker])
+AC_ARG_VAR(MPI_CPP, [MPI C preprocessor])
+AC_ARG_VAR(MPI_CPPFLAGS, [MPI C preprocessor flags])
+
+AC_MSG_CHECKING([if --enable-mpi is specified])
+AC_ARG_ENABLE(mpi,
+			  AC_HELP_STRING(--enable-mpi, enable MPI support for parallel environments), 
+			  [],
+			  [enable_mpi=no])
+AC_MSG_RESULT($enable_mpi)
+AC_MSG_CHECKING([if --enable-debug-mpi is specified])
+AC_ARG_ENABLE(debug-mpi,
+			  AC_HELP_STRING(--enable-debug-mpi, turn on debugging for MPI), 
+			  [],
+			  [enable_debug_mpi=no])
+AC_MSG_RESULT($enable_debug_mpi)
+
+AC_SUBST(ENABLE_MPI)
+AC_MSG_CHECKING([for MPI C preprocessor symbols])
+if test "x$enable_mpi" != "xno"
+then
+	ENABLE_MPI="-DENABLE_MPI"
+	if test "x$enable_debug_mpi" != "xno"
+	then
+		ENABLE_MPI="$ENABLE_MPI -DDEBUG_MPI"
+	fi
+else
+	ENABLE_MPI=
+fi
+AC_MSG_RESULT($ENABLE_MPI)
+
+if test "x$enable_mpi" != "xno"
+then
+	if test -z "$MPICC"
+	then
+		AC_CHECK_PROG(MPICC, mpicc, mpicc, cc)
+	else
+		AC_MSG_CHECKING(MPICC)
+		AC_RESULT($MPICC)
+	fi
+fi
+if test -z "$MPICC"
+then
+	MPICC="$CC"
+fi
+
+AC_MSG_CHECKING(MPILD)
+if test -z "$MPILD"
+then
+	MPILD="$MPICC"
+fi
+AC_MSG_RESULT($MPILD)
+
+AC_MSG_CHECKING(MPI_CFLAGS)
+if test -z "$MPI_CFLAGS"
+then
+	MPI_CFLAGS="$CFLAGS"
+fi
+AC_RESULT($MPI_LDFLAGS)
+
+AC_MSG_CHECKING(MPI_LDFLAGS)
+if test -z "$MPI_LDFLAGS"
+then
+	MPI_LDFLAGS="$LDFLAGS"
+fi
+AC_RESULT($MPI_LDFLAGS)
+
+if test -z "$MPI_LIBS"
+then
+	libs="$LIBS"
+	AC_CHECK_LIB(mpi, MPI_Init)
+	MPI_LIBS="$LIBS"
+	LIBS="$libs"
+fi
+AC_MSG_CHECKING(MPI_LIBS)
+AC_RESULT($MPI_LIBS)
+
+AC_MSG_CHECKING(MPI_CPP)
+if test -z "$MPI_CPP"
+then
+	MPI_CPP="$CPP"
+fi
+AC_RESULT($MPI_CPP)
+
+AC_MSG_CHECKING(MPI_CPPFLAGS)
+if test -z "$MPI_CPPFLAGS"
+then
+	MPI_CPPFLAGS="$CPPFLAGS"
+fi
+AC_RESULT($MPI_CPPFLAGS)
+
+# use external python for install?
+AC_MSG_CHECKING([for an external python])
+AC_ARG_WITH(external-python,
+            AC_HELP_STRING(--with-external-python=/path/to/python, use external python for installation),
+			[case $withval in
+				no)  external_python=no;;
+				yes) external_python=python;;
+				*)   external_python=$withval;;
+			esac],
+			[external_python=no])
+AC_MSG_RESULT($external_python)
+AC_SUBST(RUNPYTHON)
+if test "x$external_python" != "xno"
+then
+	RUNPYTHON="$external_python"
+else
+	RUNPYTHON="./\$(BUILDPYTHON)"
+fi
+
+
 # Set info about shared libraries.
 AC_SUBST(SO)
 AC_SUBST(LDSHARED)
@@ -1974,7 +2184,6 @@ then
 fi
 AC_MSG_RESULT($LINKFORSHARED)
 
-
 AC_SUBST(CFLAGSFORSHARED)
 AC_MSG_CHECKING(CFLAGSFORSHARED)
 if test ! "$LIBRARY" = "$LDLIBRARY"
@@ -1989,6 +2198,200 @@ then
 	esac
 fi
 AC_MSG_RESULT($CFLAGSFORSHARED)
+
+#
+# MPI-enabled shared lib and modules
+#
+AC_ARG_VAR(MPILD_SHARED, [linker command for MPI-enabled shared libpython])
+AC_ARG_VAR(MPILD_SHARED_MODULE, [linker command for MPI-enabled shared modules])
+AC_ARG_VAR(MPI_CFLAGS_SHARED, [MPI C compiler flags for shared library])
+AC_ARG_VAR(MPI_CFLAGS_SHARED_MODULE, [MPI C compiler flags for shared modules])
+AC_ARG_VAR(MPI_LDFLAGS_SHARED, [MPI linker flags for shared library])
+
+AC_MSG_CHECKING(MPILD_SHARED)
+if test -z "$MPILD_SHARED"
+then
+	MPILD_SHARED="$MPILD -shared"
+fi
+AC_MSG_RESULT($MPILD_SHARED)
+
+AC_MSG_CHECKING(MPILD_SHARED_MODULE)
+if test -z "$MPILD_SHARED_MODULE"
+then
+	MPILD_SHARED="$MPILD_SHARED"
+fi
+AC_MSG_RESULT($MPILD_SHARED_MODULE)
+
+#
+## MPI-enabled shared libraries
+#AC_MSG_CHECKING([for the linker command for MPI-enabled shared libs])
+#if test -z "$MPILD_SHARED"
+#then
+#	if test -z "$MPI_LDSHARED"
+#	then
+#		AC_MSG_NOTICE([These linker commands are used to link non-MPI shared 
+#					   libraries:],
+#					  [LDSHARED=$LDSHARED], [BLDSHARED=$BLDSHARED], 
+#					  [To set corresponding commands for MPI-enabled shared 
+#					   libraries, use the option --with-mpild-shared to define 
+#					   the options, e.g. --with-mpild-shared="-shared", or use 
+#					   options --with-mpi-ldshared and --with-mpi-bldshared 
+#					   to explicitly define the commands.])
+#	fi
+#	MPILD_SHARED="$MPILD -shared"
+#else
+#	MPILD_SHARED="$MPILD $MPILD_SHARED"
+#fi
+#AC_MSG_RESULT($MPILD_SHARED)
+#
+#AC_MSG_CHECKING(MPI_LDSHARED)
+#if test -z "$MPI_LDSHARED"
+#then
+#	MPI_LDSHARED="$MPILD_SHARED"
+#fi
+#AC_MSG_RESULT($MPI_LDSHARED)
+#
+#AC_MSG_CHECKING(MPI_BLDSHARED)
+#if test -z "$MPI_BLDSHARED"
+#	MPI_BLDSHARED="$MPI_LDSHARED"
+#fi
+#AC_MSG_RESULT($MPI_BLDSHARED)
+#
+
+# C *flags* used to create objects to go into a MPI-enabled shared
+# library (module) -- this is only needed for a few systems
+AC_MSG_CHECKING(MPI_CFLAGS_SHARED_MODULE)
+if test -z "$MPI_CFLAGS_SHARED_MODULE"
+then
+	case $ac_sys_system/$ac_sys_release in
+		SunOS*)
+			if test "$MPICC" == "gcc";
+			then MPI_CFLAGS_SHARED_MODULE="-fPIC";
+			elif test `uname -p` = sparc;
+			then MPI_CFLAGS_SHARED_MODULE="-xcode=pic32";
+			else MPI_CFLAGS_SHARED_MODULE="-Kpic";
+			fi;;
+		hp*|HP*)
+			if test "$MPICC" = "gcc";
+			then MPI_CFLAGS_SHARED_MODULE="-fPIC";
+			else MPI_CFLAGS_SHARED_MODULE="+z";
+			fi;;
+		Linux*|GNU*)
+			case "$MPICC" in
+				*gcc*) MPI_CFLAGS_SHARED_MODULE="-fPIC";;
+				*xlc*) MPI_CFLAGS_SHARED_MODULE="-qpic";;
+				*)     MPI_CFLAGS_SHARED_MODULE="";;
+			esac;;
+		BSD/OS*/4*)
+			MPI_CFLAGS_SHARED_MODULE="-fpic";;
+		FreeBSD*|NetBSD*|OpenBSD*|DragonFly*)
+			MPI_CFLAGS_SHARED_MODULE="-fPIC";;
+		OpenUNIX*|UnixWare*)
+			if test "$MPICC" = "gcc"
+			then MPI_CFLAGS_SHARED_MODULE="-fPIC"
+			else MPI_CFLAGS_SHARED_MODULE="-KPIC"
+			fi;;
+		SCO_SV*)
+			if test "$MPICC" = "gcc"
+			then MPI_CFLAGS_SHARED_MODULE="-fPIC"
+			else MPI_CFLAGS_SHARED_MODULE="-Kpic -belf"
+			fi;;
+		Monterey*)
+			MPI_CFLAGS_SHARED_MODULE="-G";;
+		IRIX*/6*)
+			case "$MPICC" in
+				*gcc*) MPI_CFLAGS_SHARED_MODULE="-shared";;
+				*)     MPI_CFLAGS_SHARED_MODULE="";;
+			esac;;
+		atheos*)
+			MPI_CFLAGS_SHARED_MODULE="-fPIC";;
+	esac
+fi
+AC_MSG_RESULT($MPI_CFLAGS_SHARED_MODULE)
+
+# linker flags used to build the python executable using the shared 
+# libraries -- this is only needed for a few systems
+AC_MSG_CHECKING(MPI_LDFLAGS_SHARED)
+if test -z "$MPI_LDFLAGS_SHARED"
+then
+	case $ac_sys_system/$ac_sys_release in
+		AIX*)
+			MPI_LDFLAGS_SHARED='-Wl,-bE:Modules/python.exp -lld';;
+		hp*|HP*)
+			MPI_LDFLAGS_SHARED="-Wl,-E -Wl,+s";;
+		BSD/OS/4*)
+			MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
+		Linux*|GNU*)
+			case "$MPICC" in
+				*gcc*) MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
+				*xlc*) MPI_LDFLAGS_SHARED="-qmkshrobj -qnostaticlink";;
+				*)     MPI_LDFLAGS_SHARED="";;
+			esac;;
+		# -u libsys_s pulls in all symbols in libsys
+		Darwin/*)
+			# -u _PyMac_Error is needed to pull in the mac toolbox glue,
+			# which is
+			# not used by the core itself but which needs to be in the core so
+			# that dynamically loaded extension modules have access to it.
+			# -prebind is no longer used, because it actually seems to give a
+			# slowdown in stead of a speedup, maybe due to the large number of
+			# dynamic loads Python does.
+
+			MPI_LDFLAGS_SHARED="$extra_undefs"
+			if test "$enable_framework"
+			then
+				MPI_LDFLAGS_SHARED="$MPI_LDFLAGS_SHARED "'$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/$(PYTHONFRAMEWORK)'
+			fi
+			MPI_LDFLAGS_SHARED="$MPI_LDFLAGS_SHARED";;
+		OpenUNIX*|UnixWare*)
+			MPI_LDFLAGS_SHARED="-Wl,-Bexport";;
+		SCO_SV*)
+			MPI_LDFLAGS_SHARED="-Wl,-Bexport";;
+		ReliantUNIX*)
+			MPI_LDFLAGS_SHARED="-W1 -Blargedynsym";;
+		FreeBSD*|NetBSD*|OpenBSD*|DragonFly*)
+			if [[ "`$MPICC -dM -E - </dev/null | grep __ELF__`" != "" ]]
+			then
+				MPI_LDFLAGS_SHARED="-Wl,--export-dynamic"
+			fi;;
+		SunOS/5*)
+			case "$MPICC" in
+				*gcc*)
+					if $MPICC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
+					then
+						MPI_LDFLAGS_SHARED="-Xlinker --export-dynamic"
+					fi;;
+			esac;;
+		CYGWIN*)
+			if test $enable_shared = "no"
+			then
+				MPI_LDFLAGS_SHARED='-Wl,--out-implib=$(MPI_LDLIBRARY)'
+			fi;;
+		QNX*)
+			# -Wl,-E causes the symbols to be added to the dynamic
+			# symbol table so that they can be found when a module
+			# is loaded.  -N 2048K causes the stack size to be set
+			# to 2048 kilobytes so that the stack doesn't overflow
+			# when running test_compile.py.
+			MPI_LDFLAGS_SHARED='-Wl,-E -N 2048K';;
+	esac
+fi
+AC_MSG_RESULT($MPI_LDFLAGS_SHARED)
+
+AC_SUBST(MPI_CFLAGS_SHARED)
+AC_MSG_CHECKING(MPI_CFLAGS_SHARED)
+if test ! "$MPI_LIBRARY" = "$MPI_LDLIBRARY"
+then
+	case $ac_sys_system in
+	CYGWIN*)
+		# Cygwin needs MPI_CFLAGS_SHARED_MODULE when building extension DLLs
+		# but not when building the interpreter DLL.
+		MPI_CFLAGS_SHARED='';;
+	*)
+		MPI_CFLAGS_SHARED='$(MPI_CFLAGS_SHARED_MODULE)'
+	esac
+fi
+AC_MSG_RESULT($MPI_CFLAGS_SHARED)
 
 # SHLIBS are libraries (except -lc and -lm) to link to the python shared
 # library (with --enable-shared).
@@ -2005,6 +2408,14 @@ case "$ac_sys_system" in
 		SHLIBS='$(LIBS)';;
 esac
 AC_MSG_RESULT($SHLIBS)
+
+AC_SUBST(MPI_SHLIBS)
+AC_MSG_CHECKING(MPI_SHLIBS)
+case "$ac_sys_system" in
+	*)
+		MPI_SHLIBS='$(MPI_LIBS)';;
+esac
+AC_MSG_RESULT($MPI_SHLIBS)
 
 
 # checks for libraries
@@ -3496,61 +3907,6 @@ else
        PY_UNICODE_TYPE="no type found"
   fi
   AC_MSG_RESULT($PY_UNICODE_TYPE)
-fi
-
-# enable MPI?
-AC_MSG_CHECKING([if --enable-mpi is specified])
-AC_ARG_ENABLE(mpi,
-			  AC_HELP_STRING(--enable-mpi, enable MPI support for parallel environments), 
-			  [],
-			  [enable_mpi=no])
-AC_MSG_RESULT($enable_mpi)
-AC_MSG_CHECKING([if --enable-debug-mpi is specified])
-AC_ARG_ENABLE(debug-mpi,
-			  AC_HELP_STRING(--enable-debug-mpi, turn on debugging for MPI), 
-			  [],
-			  [enable_debug_mpi=no])
-AC_MSG_RESULT($enable_debug_mpi)
-if test "x$enable_debug_mpi" != "xno"
-then
-	DEBUG_MPI_FLAG="-DDEBUG_MPI"
-else
-	DEBUG_MPI_FLAG=
-fi
-
-AC_SUBST(PARALLEL_OBJS)
-if test "x$enable_mpi" != "xno"
-then
-	AC_DEFINE(ENABLE_MPI, 1, 
-			  [Define if you want to compile with MPI support])
-	AC_CHECK_LIB(mpi, MPI_Init)
-#	AC_CHECK_HEADER(mpi.h, , [AC_CHECK_LIB(mpi, MPI_Init)])
-#	LIBS="-lmpi $LIBS"
-	PARALLEL_OBJS="Python/parallel_stdio.o"
-	OPT="$OPT -DENABLE_MPI $DEBUG_MPI_FLAG"
-	AC_CHECK_PROG(MPICC, mpicc, mpicc, cc)
-	AC_SUBST(MPICC)
-else
-	PARALLEL_OBJS=
-fi
-
-# use external python for install?
-AC_MSG_CHECKING([for an external python])
-AC_ARG_WITH(external-python,
-            AC_HELP_STRING(--with-external-python=/path/to/python, use external python for installation),
-			[case $withval in 
-			 	no)  external_python=no;;
-				yes) external_python=python;;
-				*)   external_python=$withval;;
-			esac], 
-			[external_python=no])
-AC_MSG_RESULT($external_python)
-AC_SUBST(RUNPYTHON)
-if test "x$external_python" != "xno"
-then
-	RUNPYTHON="$external_python"
-else
-	RUNPYTHON="./\$(BUILDPYTHON)"
 fi
 
 # check for endianness
