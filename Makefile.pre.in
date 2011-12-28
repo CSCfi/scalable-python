@@ -374,7 +374,8 @@ MPI_OBJS=	\
 		Python/frozenmain_mpi.o \
 		Python/getmtime_mpi.o \
 		Python/import_mpi.o \
-		Python/marshal_mpi.o
+		Python/marshal_mpi.o \
+		Python/parallel_stdio.o
 
 	#	Modules/zipimport_mpi.o
 	#	Python/dynload_shlib_mpi.o
@@ -699,7 +700,7 @@ Python/formatter_string.o: $(srcdir)/Python/formatter_string.c \
 				$(STRINGLIB_HEADERS)
 
 # MPI-enabled objects
-%_mpi.o: %_mpi.c
+%_mpi.o: %.c
 	$(MPICC) $(MPI_PY_CFLAGS) -c -o $@ $<
 
 %_mpi$(SO): %_mpi.o
@@ -790,7 +791,7 @@ PYTHON_HEADERS= \
 		$(PARSER_HEADERS)
 
 $(LIBRARY_OBJS) $(MODOBJS) Modules/python.o: $(PYTHON_HEADERS)
-$(MPI_OBJS) Modules/getbuildinfo_mpi.o: $(PYTHON_HEADERS)
+$(MPI_OBJS) Modules/getbuildinfo_mpi.o: $(PYTHON_HEADERS) Include/parallel_stdio.h
 
 
 ######################################################################
@@ -856,13 +857,13 @@ memtest:	all platform
 
 # Install everything
 install:	@FRAMEWORKINSTALLFIRST@ altinstall bininstall maninstall @FRAMEWORKINSTALLLAST@
-install-mpi:	@FRAMEWORKINSTALLFIRST@ altinstall_mpi bininstall_mpi maninstall @FRAMEWORKINSTALLLAST@
 
 # Install almost everything without disturbing previous versions
 altinstall:	@FRAMEWORKALTINSTALLFIRST@ altbininstall libinstall inclinstall libainstall \
                 sharedinstall oldsharedinstall @FRAMEWORKALTINSTALLLAST@
-altinstall_mpi:	@FRAMEWORKALTINSTALLFIRST@ altbininstall_mpi libinstall inclinstall libainstall_mpi \
-                sharedinstall oldsharedinstall @FRAMEWORKALTINSTALLLAST@
+
+# Install MPI-enabled libs and interpreter
+install_mpi:	altbininstall_mpi libainstall_mpi bininstall_mpi
 
 # Install shared libraries enabled by Setup
 DESTDIRS=	$(exec_prefix) $(LIBDIR) $(BINLIBDEST) $(DESTSHARED)
