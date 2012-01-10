@@ -494,6 +494,7 @@ then
 fi
 
 AC_PROG_CC
+echo "norm. is gnu? $GCC"
 
 AC_SUBST(CXX)
 AC_SUBST(MAINCC)
@@ -1885,16 +1886,6 @@ then
 fi
 AC_MSG_RESULT($MPI_LDFLAGS)
 
-if test -z "$MPI_LIBS"
-then
-	libs="$LIBS"
-	AC_CHECK_LIB(mpi, MPI_Init)
-	MPI_LIBS="$LIBS"
-	LIBS="$libs"
-fi
-AC_MSG_CHECKING(MPI_LIBS)
-AC_MSG_RESULT($MPI_LIBS)
-
 AC_MSG_CHECKING(MPI_CPP)
 if test -z "$MPI_CPP"
 then
@@ -1928,6 +1919,59 @@ else
 	RUNPYTHON="./\$(BUILDPYTHON)"
 fi
 
+# FIXME: add test for xlc
+AC_MSG_CHECKING([for the compiler family of CC])
+case $( ($CC --version ; $CC -V) 2>/dev/null | egrep "^[[[:lower:]]]* \(([[[:alpha:]]]*)\).*" | sed -e 's/^[[[:lower:]]]* (\([[[:alpha:]]]*\)).*/\1/' ) in
+	GCC)
+		cc_family=gnu
+		;;
+	ICC)
+		cc_family=intel
+		;;
+esac
+if test -z $cc_family
+then
+	if $( ($CC --version ; $CC -V) 2>/dev/null | grep "^pgcc " )
+	then
+		cc_family=portland
+	else
+		if ( ($CC --version ; $CC -V) 2>&1 | grep "^Cray C " >/dev/null )
+		then
+			cc_family=cray
+		fi
+		if ( ($CC --version ; $CC -V) 2>&1 | grep "^PathScale(TM) Compiler Suite" >/dev/null )
+		then
+			cc_family=pathscale
+		fi
+	fi
+fi
+AC_MSG_RESULT($cc_family)
+AC_MSG_CHECKING([for the compiler family of MPICC])
+case $( ($MPICC --version ; $MPICC -V) 2>/dev/null | egrep "^[[[:lower:]]]* \(([[[:alpha:]]]*)\).*" | sed -e 's/^[[[:lower:]]]* (\([[[:alpha:]]]*\)).*/\1/' ) in
+	GCC)
+		mpicc_family=gnu
+		;;
+	ICC)
+		mpicc_family=intel
+		;;
+esac
+if test -z $mpicc_family
+then
+	if $( ($MPICC --version ; $MPICC -V) 2>/dev/null | grep "^pgcc " )
+	then
+		mpicc_family=portland
+	else
+		if ( ($MPICC --version ; $MPICC -V) 2>&1 | grep "^Cray C " >/dev/null )
+		then
+			mpicc_family=cray
+		fi
+		if ( ($MPICC --version ; $MPICC -V) 2>&1 | grep "^PathScale(TM) Compiler Suite" >/dev/null )
+		then
+			mpicc_family=pathscale
+		fi
+	fi
+fi
+AC_MSG_RESULT($mpicc_family)
 
 # Set info about shared libraries.
 AC_SUBST(SO)
@@ -2094,10 +2138,10 @@ then
 		 else CCSHARED="+z";
 		 fi;;
 	Linux*|GNU*) 
-		case $CC in 
-			*gcc*) CCSHARED="-fPIC";;
-			*xlc*) CCSHARED="-qpic";;
-			*)     CCSHARED="";;
+		case $cc_family in 
+			gnu) CCSHARED="-fPIC";;
+			ibm) CCSHARED="-qpic";;
+			*)   CCSHARED="";;
 		esac;;
 	BSD/OS*/4*) CCSHARED="-fpic";;
 	FreeBSD*|NetBSD*|OpenBSD*|DragonFly*) CCSHARED="-fPIC";;
@@ -2112,10 +2156,11 @@ then
 		else CCSHARED="-Kpic -belf"
 		fi;;
 	Monterey*) CCSHARED="-G";;
-	IRIX*/6*)  case $CC in
-		   *gcc*) CCSHARED="-shared";;
-		   *) CCSHARED="";;
-		   esac;;
+	IRIX*/6*) 
+		case $cc_family in
+			gnu) CCSHARED="-shared";;
+			*)   CCSHARED="";;
+		esac;;
 	atheos*) CCSHARED="-fPIC";;
 	esac
 fi
@@ -2132,10 +2177,10 @@ then
 #	    LINKFORSHARED="-Wl,-E -Wl,+s -Wl,+b\$(BINLIBDEST)/lib-dynload";;
 	BSD/OS/4*) LINKFORSHARED="-Xlinker -export-dynamic";;
 	Linux*|GNU*) 
-		case $CC in 
-			*gcc*) LINKFORSHARED="-Xlinker -export-dynamic";;
-			*xlc*) LINKFORSHARED="-qmkshrobj -qnostaticlink";;
-			*)     LINKFORSHARED="";;
+		case $cc_family in 
+			gnu) LINKFORSHARED="-Xlinker -export-dynamic";;
+			ibm) LINKFORSHARED="-qmkshrobj -qnostaticlink";;
+			*)   LINKFORSHARED="";;
 		esac;;
 	# -u libsys_s pulls in all symbols in libsys
 	Darwin/*) 
@@ -2161,13 +2206,14 @@ then
 		then
 			LINKFORSHARED="-Wl,--export-dynamic"
 		fi;;
-	SunOS/5*) case $CC in
-		  *gcc*)
-		    if $CC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
-		    then
-			LINKFORSHARED="-Xlinker --export-dynamic"
-		    fi;;
-		  esac;;
+	SunOS/5*) 
+		case $CC in
+			gnu)
+				if $CC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
+				then
+					LINKFORSHARED="-Xlinker --export-dynamic"
+				fi;;
+		esac;;
 	CYGWIN*)
 		if test $enable_shared = "no"
 		then
@@ -2265,43 +2311,43 @@ if test -z "$MPI_CFLAGS_SHARED_MODULE"
 then
 	case $ac_sys_system/$ac_sys_release in
 		SunOS*)
-			if test "$MPICC" == "gcc";
+			if test "$mpicc_family" == "gnu";
 			then MPI_CFLAGS_SHARED_MODULE="-fPIC";
 			elif test `uname -p` = sparc;
 			then MPI_CFLAGS_SHARED_MODULE="-xcode=pic32";
 			else MPI_CFLAGS_SHARED_MODULE="-Kpic";
 			fi;;
 		hp*|HP*)
-			if test "$MPICC" = "gcc";
+			if test "$mpicc_family" == "gnu";
 			then MPI_CFLAGS_SHARED_MODULE="-fPIC";
 			else MPI_CFLAGS_SHARED_MODULE="+z";
 			fi;;
 		Linux*|GNU*)
-			case "$MPICC" in
-				*gcc*) MPI_CFLAGS_SHARED_MODULE="-fPIC";;
-				*xlc*) MPI_CFLAGS_SHARED_MODULE="-qpic";;
-				*)     MPI_CFLAGS_SHARED_MODULE="";;
+			case "$mpicc_family" in
+				gnu) MPI_CFLAGS_SHARED_MODULE="-fPIC";;
+				ibm) MPI_CFLAGS_SHARED_MODULE="-qpic";;
+				*)   MPI_CFLAGS_SHARED_MODULE="";;
 			esac;;
 		BSD/OS*/4*)
 			MPI_CFLAGS_SHARED_MODULE="-fpic";;
 		FreeBSD*|NetBSD*|OpenBSD*|DragonFly*)
 			MPI_CFLAGS_SHARED_MODULE="-fPIC";;
 		OpenUNIX*|UnixWare*)
-			if test "$MPICC" = "gcc"
+			if test "$mpicc_family" == "gnu";
 			then MPI_CFLAGS_SHARED_MODULE="-fPIC"
 			else MPI_CFLAGS_SHARED_MODULE="-KPIC"
 			fi;;
 		SCO_SV*)
-			if test "$MPICC" = "gcc"
+			if test "$mpicc_family" == "gnu";
 			then MPI_CFLAGS_SHARED_MODULE="-fPIC"
 			else MPI_CFLAGS_SHARED_MODULE="-Kpic -belf"
 			fi;;
 		Monterey*)
 			MPI_CFLAGS_SHARED_MODULE="-G";;
 		IRIX*/6*)
-			case "$MPICC" in
-				*gcc*) MPI_CFLAGS_SHARED_MODULE="-shared";;
-				*)     MPI_CFLAGS_SHARED_MODULE="";;
+			case "$mpicc_family" in
+				gnu) MPI_CFLAGS_SHARED_MODULE="-shared";;
+				*)   MPI_CFLAGS_SHARED_MODULE="";;
 			esac;;
 		atheos*)
 			MPI_CFLAGS_SHARED_MODULE="-fPIC";;
@@ -2322,10 +2368,10 @@ then
 		BSD/OS/4*)
 			MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
 		Linux*|GNU*)
-			case "$MPICC" in
-				*gcc*) MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
-				*xlc*) MPI_LDFLAGS_SHARED="-qmkshrobj -qnostaticlink";;
-				*)     MPI_LDFLAGS_SHARED="";;
+			case "$mpicc_family" in
+				gnu) MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
+				ibm) MPI_LDFLAGS_SHARED="-qmkshrobj -qnostaticlink";;
+				*)   MPI_LDFLAGS_SHARED="";;
 			esac;;
 		# -u libsys_s pulls in all symbols in libsys
 		Darwin/*)
@@ -2355,8 +2401,8 @@ then
 				MPI_LDFLAGS_SHARED="-Wl,--export-dynamic"
 			fi;;
 		SunOS/5*)
-			case "$MPICC" in
-				*gcc*)
+			case "$mpicc_family" in
+				gnu)
 					if $MPICC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
 					then
 						MPI_LDFLAGS_SHARED="-Xlinker --export-dynamic"
@@ -4343,7 +4389,15 @@ then
 	LIBS="$LIBS -framework CoreFoundation"
 fi
 
-
+if test -z "$MPI_LIBS"
+then
+	libs="$LIBS"
+	AC_CHECK_LIB(mpi, MPI_Init)
+	MPI_LIBS="$LIBS"
+	LIBS="$libs"
+fi
+AC_MSG_CHECKING(MPI_LIBS)
+AC_MSG_RESULT($MPI_LIBS)
 
 AC_SUBST(SRCDIRS)
 SRCDIRS="Parser Grammar Objects Python Modules Mac"

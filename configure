@@ -3477,6 +3477,7 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
+echo "norm. is gnu? $GCC"
 
 
 
@@ -13719,92 +13720,6 @@ fi
 { $as_echo "$as_me:$LINENO: result: $MPI_LDFLAGS" >&5
 $as_echo "$MPI_LDFLAGS" >&6; }
 
-if test -z "$MPI_LIBS"
-then
-	libs="$LIBS"
-
-{ $as_echo "$as_me:$LINENO: checking for MPI_Init in -lmpi" >&5
-$as_echo_n "checking for MPI_Init in -lmpi... " >&6; }
-if test "${ac_cv_lib_mpi_MPI_Init+set}" = set; then
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lmpi  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char MPI_Init ();
-int
-main ()
-{
-return MPI_Init ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext && {
-	 test "$cross_compiling" = yes ||
-	 $as_test_x conftest$ac_exeext
-       }; then
-  ac_cv_lib_mpi_MPI_Init=yes
-else
-  $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	ac_cv_lib_mpi_MPI_Init=no
-fi
-
-rm -rf conftest.dSYM
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_mpi_MPI_Init" >&5
-$as_echo "$ac_cv_lib_mpi_MPI_Init" >&6; }
-if test "x$ac_cv_lib_mpi_MPI_Init" = x""yes; then
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBMPI 1
-_ACEOF
-
-  LIBS="-lmpi $LIBS"
-
-fi
-
-	MPI_LIBS="$LIBS"
-	LIBS="$libs"
-fi
-{ $as_echo "$as_me:$LINENO: checking MPI_LIBS" >&5
-$as_echo_n "checking MPI_LIBS... " >&6; }
-{ $as_echo "$as_me:$LINENO: result: $MPI_LIBS" >&5
-$as_echo "$MPI_LIBS" >&6; }
-
 { $as_echo "$as_me:$LINENO: checking MPI_CPP" >&5
 $as_echo_n "checking MPI_CPP... " >&6; }
 if test -z "$MPI_CPP"
@@ -13848,6 +13763,63 @@ else
 	RUNPYTHON="./\$(BUILDPYTHON)"
 fi
 
+# FIXME: add test for xlc
+{ $as_echo "$as_me:$LINENO: checking for the compiler family of CC" >&5
+$as_echo_n "checking for the compiler family of CC... " >&6; }
+case $( ($CC --version ; $CC -V) 2>/dev/null | egrep "^[[:lower:]]* \(([[:alpha:]]*)\).*" | sed -e 's/^[[:lower:]]* (\([[:alpha:]]*\)).*/\1/' ) in
+	GCC)
+		cc_family=gnu
+		;;
+	ICC)
+		cc_family=intel
+		;;
+esac
+if test -z $cc_family
+then
+	if $( ($CC --version ; $CC -V) 2>/dev/null | grep "^pgcc " )
+	then
+		cc_family=portland
+	else
+		if ( ($CC --version ; $CC -V) 2>&1 | grep "^Cray C " >/dev/null )
+		then
+			cc_family=cray
+		fi
+		if ( ($CC --version ; $CC -V) 2>&1 | grep "^PathScale(TM) Compiler Suite" >/dev/null )
+		then
+			cc_family=pathscale
+		fi
+	fi
+fi
+{ $as_echo "$as_me:$LINENO: result: $cc_family" >&5
+$as_echo "$cc_family" >&6; }
+{ $as_echo "$as_me:$LINENO: checking for the compiler family of MPICC" >&5
+$as_echo_n "checking for the compiler family of MPICC... " >&6; }
+case $( ($MPICC --version ; $MPICC -V) 2>/dev/null | egrep "^[[:lower:]]* \(([[:alpha:]]*)\).*" | sed -e 's/^[[:lower:]]* (\([[:alpha:]]*\)).*/\1/' ) in
+	GCC)
+		mpicc_family=gnu
+		;;
+	ICC)
+		mpicc_family=intel
+		;;
+esac
+if test -z $mpicc_family
+then
+	if $( ($MPICC --version ; $MPICC -V) 2>/dev/null | grep "^pgcc " )
+	then
+		mpicc_family=portland
+	else
+		if ( ($MPICC --version ; $MPICC -V) 2>&1 | grep "^Cray C " >/dev/null )
+		then
+			mpicc_family=cray
+		fi
+		if ( ($MPICC --version ; $MPICC -V) 2>&1 | grep "^PathScale(TM) Compiler Suite" >/dev/null )
+		then
+			mpicc_family=pathscale
+		fi
+	fi
+fi
+{ $as_echo "$as_me:$LINENO: result: $mpicc_family" >&5
+$as_echo "$mpicc_family" >&6; }
 
 # Set info about shared libraries.
 
@@ -14023,10 +13995,10 @@ then
 		 else CCSHARED="+z";
 		 fi;;
 	Linux*|GNU*)
-		case $CC in
-			*gcc*) CCSHARED="-fPIC";;
-			*xlc*) CCSHARED="-qpic";;
-			*)     CCSHARED="";;
+		case $cc_family in
+			gnu) CCSHARED="-fPIC";;
+			ibm) CCSHARED="-qpic";;
+			*)   CCSHARED="";;
 		esac;;
 	BSD/OS*/4*) CCSHARED="-fpic";;
 	FreeBSD*|NetBSD*|OpenBSD*|DragonFly*) CCSHARED="-fPIC";;
@@ -14041,10 +14013,11 @@ then
 		else CCSHARED="-Kpic -belf"
 		fi;;
 	Monterey*) CCSHARED="-G";;
-	IRIX*/6*)  case $CC in
-		   *gcc*) CCSHARED="-shared";;
-		   *) CCSHARED="";;
-		   esac;;
+	IRIX*/6*)
+		case $cc_family in
+			gnu) CCSHARED="-shared";;
+			*)   CCSHARED="";;
+		esac;;
 	atheos*) CCSHARED="-fPIC";;
 	esac
 fi
@@ -14063,10 +14036,10 @@ then
 #	    LINKFORSHARED="-Wl,-E -Wl,+s -Wl,+b\$(BINLIBDEST)/lib-dynload";;
 	BSD/OS/4*) LINKFORSHARED="-Xlinker -export-dynamic";;
 	Linux*|GNU*)
-		case $CC in
-			*gcc*) LINKFORSHARED="-Xlinker -export-dynamic";;
-			*xlc*) LINKFORSHARED="-qmkshrobj -qnostaticlink";;
-			*)     LINKFORSHARED="";;
+		case $cc_family in
+			gnu) LINKFORSHARED="-Xlinker -export-dynamic";;
+			ibm) LINKFORSHARED="-qmkshrobj -qnostaticlink";;
+			*)   LINKFORSHARED="";;
 		esac;;
 	# -u libsys_s pulls in all symbols in libsys
 	Darwin/*)
@@ -14092,13 +14065,14 @@ then
 		then
 			LINKFORSHARED="-Wl,--export-dynamic"
 		fi;;
-	SunOS/5*) case $CC in
-		  *gcc*)
-		    if $CC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
-		    then
-			LINKFORSHARED="-Xlinker --export-dynamic"
-		    fi;;
-		  esac;;
+	SunOS/5*)
+		case $CC in
+			gnu)
+				if $CC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
+				then
+					LINKFORSHARED="-Xlinker --export-dynamic"
+				fi;;
+		esac;;
 	CYGWIN*)
 		if test $enable_shared = "no"
 		then
@@ -14204,43 +14178,43 @@ if test -z "$MPI_CFLAGS_SHARED_MODULE"
 then
 	case $ac_sys_system/$ac_sys_release in
 		SunOS*)
-			if test "$MPICC" == "gcc";
+			if test "$mpicc_family" == "gnu";
 			then MPI_CFLAGS_SHARED_MODULE="-fPIC";
 			elif test `uname -p` = sparc;
 			then MPI_CFLAGS_SHARED_MODULE="-xcode=pic32";
 			else MPI_CFLAGS_SHARED_MODULE="-Kpic";
 			fi;;
 		hp*|HP*)
-			if test "$MPICC" = "gcc";
+			if test "$mpicc_family" == "gnu";
 			then MPI_CFLAGS_SHARED_MODULE="-fPIC";
 			else MPI_CFLAGS_SHARED_MODULE="+z";
 			fi;;
 		Linux*|GNU*)
-			case "$MPICC" in
-				*gcc*) MPI_CFLAGS_SHARED_MODULE="-fPIC";;
-				*xlc*) MPI_CFLAGS_SHARED_MODULE="-qpic";;
-				*)     MPI_CFLAGS_SHARED_MODULE="";;
+			case "$mpicc_family" in
+				gnu) MPI_CFLAGS_SHARED_MODULE="-fPIC";;
+				ibm) MPI_CFLAGS_SHARED_MODULE="-qpic";;
+				*)   MPI_CFLAGS_SHARED_MODULE="";;
 			esac;;
 		BSD/OS*/4*)
 			MPI_CFLAGS_SHARED_MODULE="-fpic";;
 		FreeBSD*|NetBSD*|OpenBSD*|DragonFly*)
 			MPI_CFLAGS_SHARED_MODULE="-fPIC";;
 		OpenUNIX*|UnixWare*)
-			if test "$MPICC" = "gcc"
+			if test "$mpicc_family" == "gnu";
 			then MPI_CFLAGS_SHARED_MODULE="-fPIC"
 			else MPI_CFLAGS_SHARED_MODULE="-KPIC"
 			fi;;
 		SCO_SV*)
-			if test "$MPICC" = "gcc"
+			if test "$mpicc_family" == "gnu";
 			then MPI_CFLAGS_SHARED_MODULE="-fPIC"
 			else MPI_CFLAGS_SHARED_MODULE="-Kpic -belf"
 			fi;;
 		Monterey*)
 			MPI_CFLAGS_SHARED_MODULE="-G";;
 		IRIX*/6*)
-			case "$MPICC" in
-				*gcc*) MPI_CFLAGS_SHARED_MODULE="-shared";;
-				*)     MPI_CFLAGS_SHARED_MODULE="";;
+			case "$mpicc_family" in
+				gnu) MPI_CFLAGS_SHARED_MODULE="-shared";;
+				*)   MPI_CFLAGS_SHARED_MODULE="";;
 			esac;;
 		atheos*)
 			MPI_CFLAGS_SHARED_MODULE="-fPIC";;
@@ -14263,10 +14237,10 @@ then
 		BSD/OS/4*)
 			MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
 		Linux*|GNU*)
-			case "$MPICC" in
-				*gcc*) MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
-				*xlc*) MPI_LDFLAGS_SHARED="-qmkshrobj -qnostaticlink";;
-				*)     MPI_LDFLAGS_SHARED="";;
+			case "$mpicc_family" in
+				gnu) MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
+				ibm) MPI_LDFLAGS_SHARED="-qmkshrobj -qnostaticlink";;
+				*)   MPI_LDFLAGS_SHARED="";;
 			esac;;
 		# -u libsys_s pulls in all symbols in libsys
 		Darwin/*)
@@ -14296,8 +14270,8 @@ then
 				MPI_LDFLAGS_SHARED="-Wl,--export-dynamic"
 			fi;;
 		SunOS/5*)
-			case "$MPICC" in
-				*gcc*)
+			case "$mpicc_family" in
+				gnu)
 					if $MPICC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
 					then
 						MPI_LDFLAGS_SHARED="-Xlinker --export-dynamic"
@@ -26638,7 +26612,91 @@ then
 	LIBS="$LIBS -framework CoreFoundation"
 fi
 
+if test -z "$MPI_LIBS"
+then
+	libs="$LIBS"
 
+{ $as_echo "$as_me:$LINENO: checking for MPI_Init in -lmpi" >&5
+$as_echo_n "checking for MPI_Init in -lmpi... " >&6; }
+if test "${ac_cv_lib_mpi_MPI_Init+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmpi  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char MPI_Init ();
+int
+main ()
+{
+return MPI_Init ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  ac_cv_lib_mpi_MPI_Init=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_lib_mpi_MPI_Init=no
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_mpi_MPI_Init" >&5
+$as_echo "$ac_cv_lib_mpi_MPI_Init" >&6; }
+if test "x$ac_cv_lib_mpi_MPI_Init" = x""yes; then
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBMPI 1
+_ACEOF
+
+  LIBS="-lmpi $LIBS"
+
+fi
+
+	MPI_LIBS="$LIBS"
+	LIBS="$libs"
+fi
+{ $as_echo "$as_me:$LINENO: checking MPI_LIBS" >&5
+$as_echo_n "checking MPI_LIBS... " >&6; }
+{ $as_echo "$as_me:$LINENO: result: $MPI_LIBS" >&5
+$as_echo "$MPI_LIBS" >&6; }
 
 
 SRCDIRS="Parser Grammar Objects Python Modules Mac"
