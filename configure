@@ -13724,7 +13724,7 @@ $as_echo "$MPI_LDFLAGS" >&6; }
 $as_echo_n "checking MPI_CPP... " >&6; }
 if test -z "$MPI_CPP"
 then
-	MPI_CPP="$CPP"
+	MPI_CPP="$MPICC"
 fi
 { $as_echo "$as_me:$LINENO: result: $MPI_CPP" >&5
 $as_echo "$MPI_CPP" >&6; }
@@ -13766,7 +13766,7 @@ fi
 # FIXME: add test for xlc
 { $as_echo "$as_me:$LINENO: checking for the compiler family of CC" >&5
 $as_echo_n "checking for the compiler family of CC... " >&6; }
-case $( ($CC --version ; $CC -V) 2>/dev/null | egrep "^[[:lower:]]* \(([[:alpha:]]*)\).*" | sed -e 's/^[[:lower:]]* (\([[:alpha:]]*\)).*/\1/' ) in
+case $( ($CC --version ; $CC -V ; $CC -qversion) 2>/dev/null | egrep "^[[:alnum:][:punct:]]* \(([[:alpha:]]*)\).*" | grep -v '^Copyright' | sed -e 's/^[[:alnum:][:punct:]]* (\([[:alpha:]]*\)).*/\1/' ) in
 	GCC)
 		cc_family=gnu
 		;;
@@ -13776,25 +13776,25 @@ case $( ($CC --version ; $CC -V) 2>/dev/null | egrep "^[[:lower:]]* \(([[:alpha:
 esac
 if test -z $cc_family
 then
-	if $( ($CC --version ; $CC -V) 2>/dev/null | grep "^pgcc " )
+	if ( ($CC --version ; $CC -V ; $CC -qversion) 2>/dev/null | grep "^pgcc " >/dev/null )
 	then
 		cc_family=portland
-	else
-		if ( ($CC --version ; $CC -V) 2>&1 | grep "^Cray C " >/dev/null )
-		then
-			cc_family=cray
-		fi
-		if ( ($CC --version ; $CC -V) 2>&1 | grep "^PathScale(TM) Compiler Suite" >/dev/null )
-		then
-			cc_family=pathscale
-		fi
+	elif ( ($CC --version ; $CC -V ; $CC -qversion) 2>/dev/null | grep "^IBM XL C" >/dev/null )
+	then
+		cc_family=ibm
+	elif ( ($CC --version ; $CC -V ; $CC -qversion) 2>&1 | grep "^Cray C " >/dev/null )
+	then
+		cc_family=cray
+	elif ( ($CC --version ; $CC -V ; $CC -qversion) 2>&1 | grep "^PathScale(TM) Compiler Suite" >/dev/null )
+	then
+		cc_family=pathscale
 	fi
 fi
 { $as_echo "$as_me:$LINENO: result: $cc_family" >&5
 $as_echo "$cc_family" >&6; }
 { $as_echo "$as_me:$LINENO: checking for the compiler family of MPICC" >&5
 $as_echo_n "checking for the compiler family of MPICC... " >&6; }
-case $( ($MPICC --version ; $MPICC -V) 2>/dev/null | egrep "^[[:lower:]]* \(([[:alpha:]]*)\).*" | sed -e 's/^[[:lower:]]* (\([[:alpha:]]*\)).*/\1/' ) in
+case $( ($MPICC --version ; $MPICC -V ; $MPICC -qversion) 2>/dev/null | egrep "^[[:alnum:][:punct:]]* \(([[:alpha:]]*)\).*" | grep -v '^Copyright' | sed -e 's/^[[:alnum:][:punct:]]* (\([[:alpha:]]*\)).*/\1/' ) in
 	GCC)
 		mpicc_family=gnu
 		;;
@@ -13804,18 +13804,18 @@ case $( ($MPICC --version ; $MPICC -V) 2>/dev/null | egrep "^[[:lower:]]* \(([[:
 esac
 if test -z $mpicc_family
 then
-	if $( ($MPICC --version ; $MPICC -V) 2>/dev/null | grep "^pgcc " )
+	if ( ($MPICC --version ; $MPICC -V ; $MPICC -qversion) 2>/dev/null | grep "^pgcc " >/dev/null )
 	then
 		mpicc_family=portland
-	else
-		if ( ($MPICC --version ; $MPICC -V) 2>&1 | grep "^Cray C " >/dev/null )
-		then
-			mpicc_family=cray
-		fi
-		if ( ($MPICC --version ; $MPICC -V) 2>&1 | grep "^PathScale(TM) Compiler Suite" >/dev/null )
-		then
-			mpicc_family=pathscale
-		fi
+	elif ( ($MPICC --version ; $MPICC -V ; $MPICC -qversion) 2>/dev/null | grep "^IBM XL C" >/dev/null )
+	then
+		mpicc_family=ibm
+	elif ( ($MPICC --version ; $MPICC -V ; $MPICC -qversion) 2>&1 | grep "^Cray C " >/dev/null )
+	then
+		mpicc_family=cray
+	elif ( ($MPICC --version ; $MPICC -V ; $MPICC -qversion) 2>&1 | grep "^PathScale(TM) Compiler Suite" >/dev/null )
+	then
+		mpicc_family=pathscale
 	fi
 fi
 { $as_echo "$as_me:$LINENO: result: $mpicc_family" >&5
