@@ -18,6 +18,9 @@
 #include "eval.h"
 #include "marshal.h"
 #include "abstract.h"
+#ifdef ENABLE_MPI
+#include "parallel_stdio.h"
+#endif
 
 #ifdef HAVE_SIGNAL_H
 #include <signal.h>
@@ -157,6 +160,9 @@ Py_InitializeEx(int install_sigs)
     if (initialized)
         return;
     initialized = 1;
+#ifdef ENABLE_MPI
+    init_io_wrappers();
+#endif
 
     if ((p = Py_GETENV("PYTHONDEBUG")) && *p != '\0')
         Py_DebugFlag = add_flag(Py_DebugFlag, p);
@@ -542,6 +548,9 @@ Py_Finalize(void)
 #endif
 
     call_ll_exitfuncs();
+#ifdef ENABLE_MPI
+    finalize_io_wrappers();
+#endif
 }
 
 /* Create and initialize a new interpreter and thread, and return the

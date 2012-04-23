@@ -363,8 +363,11 @@ SERIAL_OBJS=	\
 		Python/frozenmain.o \
 		Python/getmtime.o \
 		Python/import.o \
-		Python/marshal.o
-
+		Python/marshal.o \
+		Python/pythonrun.o \
+		Python/sysmodule.o \
+		Modules/zipimport.o \
+		Python/dynload_shlib.o
 
 MPI_OBJS=	\
 		Modules/getpath_mpi.o \
@@ -375,11 +378,11 @@ MPI_OBJS=	\
 		Python/getmtime_mpi.o \
 		Python/import_mpi.o \
 		Python/marshal_mpi.o \
-		Python/parallel_stdio.o
-
-	#	Modules/zipimport_mpi.o
-	#	Python/dynload_shlib_mpi.o
-
+		Python/parallel_stdio.o \
+		Python/pythonrun_mpi.o \
+		Python/sysmodule_mpi.o \
+		Modules/zipimport_mpi.o \
+		Python/dynload_shlib_mpi.o
 
 ##########################################################################
 # objects that get linked into the Python library

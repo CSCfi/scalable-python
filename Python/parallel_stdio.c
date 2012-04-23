@@ -37,6 +37,17 @@ void init_io_wrappers(void)
   }
 }
 
+// Finalize wrapper stuff
+void finalize_io_wrappers(void)
+{
+  if (initialized) 
+    {
+      MPI_Comm_free(&io_comm);
+      initialized = 0;
+      enabled = 0;
+    }
+}
+
 // switching wrapping on and off
 void enable_io_wrappers(void)
 {
