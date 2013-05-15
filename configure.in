@@ -2250,9 +2250,9 @@ AC_MSG_RESULT($CFLAGSFORSHARED)
 #
 AC_ARG_VAR(MPILD_SHARED, [linker command for MPI-enabled shared libpython])
 AC_ARG_VAR(MPILD_SHARED_MODULE, [linker command for MPI-enabled shared modules])
-AC_ARG_VAR(MPI_CFLAGS_SHARED, [MPI C compiler flags for shared library])
-AC_ARG_VAR(MPI_CFLAGS_SHARED_MODULE, [MPI C compiler flags for shared modules])
-AC_ARG_VAR(MPI_LDFLAGS_SHARED, [MPI linker flags for shared library])
+AC_ARG_VAR(MPI_CFLAGSFORSHARED, [MPI C compiler flags for shared library])
+AC_ARG_VAR(MPI_CCSHARED, [MPI C compiler flags for shared modules])
+AC_ARG_VAR(MPI_LINKFORSHARED, [MPI linker flags for shared library])
 
 AC_MSG_CHECKING(MPILD_SHARED)
 if test -z "$MPILD_SHARED"
@@ -2306,72 +2306,72 @@ AC_MSG_RESULT($MPILD_SHARED_MODULE)
 
 # C *flags* used to create objects to go into a MPI-enabled shared
 # library (module) -- this is only needed for a few systems
-AC_MSG_CHECKING(MPI_CFLAGS_SHARED_MODULE)
-if test -z "$MPI_CFLAGS_SHARED_MODULE"
+AC_MSG_CHECKING(MPI_CCSHARED)
+if test -z "$MPI_CCSHARED"
 then
 	case $ac_sys_system/$ac_sys_release in
 		SunOS*)
 			if test "$mpicc_family" == "gnu";
-			then MPI_CFLAGS_SHARED_MODULE="-fPIC";
+			then MPI_CCSHARED="-fPIC";
 			elif test `uname -p` = sparc;
-			then MPI_CFLAGS_SHARED_MODULE="-xcode=pic32";
-			else MPI_CFLAGS_SHARED_MODULE="-Kpic";
+			then MPI_CCSHARED="-xcode=pic32";
+			else MPI_CCSHARED="-Kpic";
 			fi;;
 		hp*|HP*)
 			if test "$mpicc_family" == "gnu";
-			then MPI_CFLAGS_SHARED_MODULE="-fPIC";
-			else MPI_CFLAGS_SHARED_MODULE="+z";
+			then MPI_CCSHARED="-fPIC";
+			else MPI_CCSHARED="+z";
 			fi;;
 		Linux*|GNU*)
 			case "$mpicc_family" in
-				gnu) MPI_CFLAGS_SHARED_MODULE="-fPIC";;
-				ibm) MPI_CFLAGS_SHARED_MODULE="-qpic";;
-				*)   MPI_CFLAGS_SHARED_MODULE="";;
+				gnu) MPI_CCSHARED="-fPIC";;
+				ibm) MPI_CCSHARED="-qpic";;
+				*)   MPI_CCSHARED="";;
 			esac;;
 		BSD/OS*/4*)
-			MPI_CFLAGS_SHARED_MODULE="-fpic";;
+			MPI_CCSHARED="-fpic";;
 		FreeBSD*|NetBSD*|OpenBSD*|DragonFly*)
-			MPI_CFLAGS_SHARED_MODULE="-fPIC";;
+			MPI_CCSHARED="-fPIC";;
 		OpenUNIX*|UnixWare*)
 			if test "$mpicc_family" == "gnu";
-			then MPI_CFLAGS_SHARED_MODULE="-fPIC"
-			else MPI_CFLAGS_SHARED_MODULE="-KPIC"
+			then MPI_CCSHARED="-fPIC"
+			else MPI_CCSHARED="-KPIC"
 			fi;;
 		SCO_SV*)
 			if test "$mpicc_family" == "gnu";
-			then MPI_CFLAGS_SHARED_MODULE="-fPIC"
-			else MPI_CFLAGS_SHARED_MODULE="-Kpic -belf"
+			then MPI_CCSHARED="-fPIC"
+			else MPI_CCSHARED="-Kpic -belf"
 			fi;;
 		Monterey*)
-			MPI_CFLAGS_SHARED_MODULE="-G";;
+			MPI_CCSHARED="-G";;
 		IRIX*/6*)
 			case "$mpicc_family" in
-				gnu) MPI_CFLAGS_SHARED_MODULE="-shared";;
-				*)   MPI_CFLAGS_SHARED_MODULE="";;
+				gnu) MPI_CCSHARED="-shared";;
+				*)   MPI_CCSHARED="";;
 			esac;;
 		atheos*)
-			MPI_CFLAGS_SHARED_MODULE="-fPIC";;
+			MPI_CCSHARED="-fPIC";;
 	esac
 fi
-AC_MSG_RESULT($MPI_CFLAGS_SHARED_MODULE)
+AC_MSG_RESULT($MPI_CCSHARED)
 
 # linker flags used to build the python executable using the shared 
 # libraries -- this is only needed for a few systems
-AC_MSG_CHECKING(MPI_LDFLAGS_SHARED)
-if test -z "$MPI_LDFLAGS_SHARED"
+AC_MSG_CHECKING(MPI_LINKFORSHARED)
+if test -z "$MPI_LINKFORSHARED"
 then
 	case $ac_sys_system/$ac_sys_release in
 		AIX*)
-			MPI_LDFLAGS_SHARED='-Wl,-bE:Modules/python.exp -lld';;
+			MPI_LINKFORSHARED='-Wl,-bE:Modules/python.exp -lld';;
 		hp*|HP*)
-			MPI_LDFLAGS_SHARED="-Wl,-E -Wl,+s";;
+			MPI_LINKFORSHARED="-Wl,-E -Wl,+s";;
 		BSD/OS/4*)
-			MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
+			MPI_LINKFORSHARED="-Xlinker -export-dynamic";;
 		Linux*|GNU*)
 			case "$mpicc_family" in
-				gnu) MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
-				ibm) MPI_LDFLAGS_SHARED="-qmkshrobj -qnostaticlink";;
-				*)   MPI_LDFLAGS_SHARED="";;
+				gnu) MPI_LINKFORSHARED="-Xlinker -export-dynamic";;
+				ibm) MPI_LINKFORSHARED="-qmkshrobj -qnostaticlink";;
+				*)   MPI_LINKFORSHARED="";;
 			esac;;
 		# -u libsys_s pulls in all symbols in libsys
 		Darwin/*)
@@ -2383,35 +2383,35 @@ then
 			# slowdown in stead of a speedup, maybe due to the large number of
 			# dynamic loads Python does.
 
-			MPI_LDFLAGS_SHARED="$extra_undefs"
+			MPI_LINKFORSHARED="$extra_undefs"
 			if test "$enable_framework"
 			then
-				MPI_LDFLAGS_SHARED="$MPI_LDFLAGS_SHARED "'$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/$(PYTHONFRAMEWORK)'
+				MPI_LINKFORSHARED="$MPI_LDFLAGS_SHARED "'$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/$(PYTHONFRAMEWORK)'
 			fi
-			MPI_LDFLAGS_SHARED="$MPI_LDFLAGS_SHARED";;
+			MPI_LINKFORSHARED="$MPI_LDFLAGS_SHARED";;
 		OpenUNIX*|UnixWare*)
-			MPI_LDFLAGS_SHARED="-Wl,-Bexport";;
+			MPI_LINKFORSHARED="-Wl,-Bexport";;
 		SCO_SV*)
-			MPI_LDFLAGS_SHARED="-Wl,-Bexport";;
+			MPI_LINKFORSHARED="-Wl,-Bexport";;
 		ReliantUNIX*)
-			MPI_LDFLAGS_SHARED="-W1 -Blargedynsym";;
+			MPI_LINKFORSHARED="-W1 -Blargedynsym";;
 		FreeBSD*|NetBSD*|OpenBSD*|DragonFly*)
 			if [[ "`$MPICC -dM -E - </dev/null | grep __ELF__`" != "" ]]
 			then
-				MPI_LDFLAGS_SHARED="-Wl,--export-dynamic"
+				MPI_LINKFORSHARED="-Wl,--export-dynamic"
 			fi;;
 		SunOS/5*)
 			case "$mpicc_family" in
 				gnu)
 					if $MPICC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
 					then
-						MPI_LDFLAGS_SHARED="-Xlinker --export-dynamic"
+						MPI_LINKFORSHARED="-Xlinker --export-dynamic"
 					fi;;
 			esac;;
 		CYGWIN*)
 			if test $enable_shared = "no"
 			then
-				MPI_LDFLAGS_SHARED='-Wl,--out-implib=$(MPI_LDLIBRARY)'
+				MPI_LINKFORSHARED='-Wl,--out-implib=$(MPI_LDLIBRARY)'
 			fi;;
 		QNX*)
 			# -Wl,-E causes the symbols to be added to the dynamic
@@ -2419,25 +2419,25 @@ then
 			# is loaded.  -N 2048K causes the stack size to be set
 			# to 2048 kilobytes so that the stack doesn't overflow
 			# when running test_compile.py.
-			MPI_LDFLAGS_SHARED='-Wl,-E -N 2048K';;
+			MPI_LINKFORSHARED='-Wl,-E -N 2048K';;
 	esac
 fi
-AC_MSG_RESULT($MPI_LDFLAGS_SHARED)
+AC_MSG_RESULT($MPI_LINKFORSHARED)
 
-AC_SUBST(MPI_CFLAGS_SHARED)
-AC_MSG_CHECKING(MPI_CFLAGS_SHARED)
+AC_SUBST(MPI_CFLAGSFORSHARED)
+AC_MSG_CHECKING(MPI_CFLAGSFORSHARED)
 if test ! "$MPI_LIBRARY" = "$MPI_LDLIBRARY"
 then
 	case $ac_sys_system in
 	CYGWIN*)
-		# Cygwin needs MPI_CFLAGS_SHARED_MODULE when building extension DLLs
+		# Cygwin needs MPI_CCSHARED when building extension DLLs
 		# but not when building the interpreter DLL.
-		MPI_CFLAGS_SHARED='';;
+		MPI_CFLAGSFORSHARED='';;
 	*)
-		MPI_CFLAGS_SHARED='$(MPI_CFLAGS_SHARED_MODULE)'
+		MPI_CFLAGSFORSHARED='$(MPI_CCSHARED)'
 	esac
 fi
-AC_MSG_RESULT($MPI_CFLAGS_SHARED)
+AC_MSG_RESULT($MPI_CFLAGSFORSHARED)
 
 # SHLIBS are libraries (except -lc and -lm) to link to the python shared
 # library (with --enable-shared).
