@@ -6,7 +6,7 @@
 #include "import.h"
 
 #ifdef ENABLE_MPI
-#include <mpi.h>
+#include "parallel_stdio.h"
 #endif
 
 #ifdef __VMS
@@ -486,9 +486,6 @@ Py_Main(int argc, char **argv)
 #else
     Py_SetProgramName(argv[0]);
 #endif
-#ifdef ENABLE_MPI
-	MPI_Init(&argc, &argv);
-#endif
     Py_Initialize();
 
     if (Py_VerboseFlag ||
@@ -616,9 +613,6 @@ Py_Main(int argc, char **argv)
     }
 
     Py_Finalize();
-#ifdef ENABLE_MPI
-	MPI_Finalize();
-#endif
 #ifdef RISCOS
     if (Py_RISCOSWimpFlag)
         fprintf(stderr, "\x0cq\x0c"); /* make frontend quit */

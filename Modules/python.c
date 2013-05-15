@@ -20,5 +20,11 @@ main(int argc, char **argv)
 	m = fpgetmask();
 	fpsetmask(m & ~FP_X_OFL);
 #endif
+#ifdef ENABLE_MPI
+        MPI_Init(&argc, &argv); 
+#endif
 	return Py_Main(argc, argv);
+#ifdef ENABLE_MPI
+        MPI_Finalize();
+#endif
 }

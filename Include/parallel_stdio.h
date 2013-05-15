@@ -22,6 +22,9 @@
 #define fstat __wrap_fstat
 #define stat(path, buf) __wrap_stat(path, buf)
 
+void init_io_wrappers(void);
+void finalize_io_wrappers(void);
+
 FILE* __wrap_fopen(const char *filename, const char *modes);
 int  __wrap_fclose(FILE *fp);
 void  __wrap_setbuf(FILE *fp, char *buf);

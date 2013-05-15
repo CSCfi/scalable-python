@@ -641,9 +641,6 @@ ac_includes_default="\
 ac_subst_vars='LTLIBOBJS
 SRCDIRS
 THREADHEADERS
-RUNPYTHON
-MPICC
-PARALLEL_OBJS
 UNICODE_OBJS
 LIBC
 LIBM
@@ -662,13 +659,28 @@ LDLAST
 USE_THREAD_MODULE
 SIGNAL_OBJS
 USE_SIGNAL_MODULE
+MPI_SHLIBS
 SHLIBS
+MPI_LDFLAGS_SHARED
+MPI_CFLAGS_SHARED_MODULE
+MPI_CFLAGS_SHARED
+MPILD_SHARED_MODULE
+MPILD_SHARED
 CFLAGSFORSHARED
 LINKFORSHARED
 CCSHARED
 BLDSHARED
 LDSHARED
 SO
+RUNPYTHON
+ENABLE_MPI
+MPI_CPPFLAGS
+MPI_CPP
+MPI_LIBS
+MPI_LDFLAGS
+MPI_CFLAGS
+MPILD
+MPICC
 LIBTOOL_CRUFT
 OTHER_LIBTOOL_OPT
 UNIVERSAL_ARCH_FLAGS
@@ -682,12 +694,17 @@ SVNVERSION
 AR
 RANLIB
 LINKCC
+MPI_INSTSONAME
+MPI_BLDLIBRARY
+MPI_DLLLIBRARY
+MPI_LDLIBRARY
 RUNSHARED
 INSTSONAME
 LDLIBRARYDIR
 BLDLIBRARY
 DLLLIBRARY
 LDLIBRARY
+MPI_LIBRARY
 LIBRARY
 BUILDEXEEXT
 EGREP
@@ -776,6 +793,9 @@ enable_shared
 enable_profiling
 with_pydebug
 enable_toolbox_glue
+enable_mpi
+enable_debug_mpi
+with_external_python
 with_libs
 with_system_ffi
 with_signal_module
@@ -792,9 +812,6 @@ with_fpectl
 with_libm
 with_libc
 enable_unicode
-enable_mpi
-enable_debug_mpi
-with_external_python
 '
       ac_precious_vars='build_alias
 host_alias
@@ -804,7 +821,19 @@ CFLAGS
 LDFLAGS
 LIBS
 CPPFLAGS
-CPP'
+CPP
+MPICC
+MPILD
+MPI_CFLAGS
+MPI_LDFLAGS
+MPI_LIBS
+MPI_CPP
+MPI_CPPFLAGS
+MPILD_SHARED
+MPILD_SHARED_MODULE
+MPI_CFLAGS_SHARED
+MPI_CFLAGS_SHARED_MODULE
+MPI_LDFLAGS_SHARED'
 
 
 # Initialize some variables set by options.
@@ -1433,12 +1462,12 @@ Optional Features:
   --enable-shared         disable/enable building shared python library
   --enable-profiling      enable C-level code profiling
   --enable-toolbox-glue   disable/enable MacOSX glue code for extensions
+  --enable-mpi            enable MPI support for parallel environments
+  --enable-debug-mpi      turn on debugging for MPI
   --enable-ipv6           Enable ipv6 (with ipv4) support
   --disable-ipv6          Disable ipv6 support
   --enable-unicode[=ucs[24]]
                           Enable Unicode strings (default is ucs2)
-  --enable-mpi            enable MPI support for parallel environments
-  --enable-debug-mpi      turn on debugging for MPI
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1455,6 +1484,8 @@ Optional Packages:
                           compiler
   --with-suffix=.exe      set executable suffix
   --with-pydebug          build with Py_DEBUG defined
+  --with-external-python=/path/to/python
+                          use external python for installation
   --with-libs='lib1 ...'  link against additional libs
   --with-system-ffi       build _ctypes module using an installed ffi library
   --with-signal-module    disable/enable signal module
@@ -1471,8 +1502,6 @@ Optional Packages:
   --with-fpectl           enable SIGFPE catching
   --with-libm=STRING      math library
   --with-libc=STRING      C library
-  --with-external-python=/path/to/python
-                          use external python for installation
 
 Some influential environment variables:
   CC          C compiler command
@@ -1483,6 +1512,24 @@ Some influential environment variables:
   CPPFLAGS    C/C++/Objective C preprocessor flags, e.g. -I<include dir> if
               you have headers in a nonstandard directory <include dir>
   CPP         C preprocessor
+  MPICC       MPI C compiler command
+  MPILD       MPI linker
+  MPI_CFLAGS  MPI C compiler flags
+  MPI_LDFLAGS MPI linker flags
+  MPI_LIBS    libraries to to the MPI linker
+  MPI_CPP     MPI C preprocessor
+  MPI_CPPFLAGS
+              MPI C preprocessor flags
+  MPILD_SHARED
+              linker command for MPI-enabled shared libpython
+  MPILD_SHARED_MODULE
+              linker command for MPI-enabled shared modules
+  MPI_CFLAGS_SHARED
+              MPI C compiler flags for shared library
+  MPI_CFLAGS_SHARED_MODULE
+              MPI C compiler flags for shared modules
+  MPI_LDFLAGS_SHARED
+              MPI linker flags for shared library
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -3430,6 +3477,7 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
+echo "norm. is gnu? $GCC"
 
 
 
@@ -4561,6 +4609,17 @@ fi
 { $as_echo "$as_me:$LINENO: result: $LIBRARY" >&5
 $as_echo "$LIBRARY" >&6; }
 
+# MPI_LIBRARY is the name of the MPI-enabled library
+
+{ $as_echo "$as_me:$LINENO: checking MPI_LIBRARY" >&5
+$as_echo_n "checking MPI_LIBRARY... " >&6; }
+if test -z "$MPI_LIBRARY"
+then
+	MPI_LIBRARY='libpython$(VERSION)_mpi.a'
+fi
+{ $as_echo "$as_me:$LINENO: result: $MPI_LIBRARY" >&5
+$as_echo "$MPI_LIBRARY" >&6; }
+
 # LDLIBRARY is the name of the library to link against (as opposed to the
 # name of the library into which to insert object files). BLDLIBRARY is also
 # the library to link against, usually. On Mac OS X frameworks, BLDLIBRARY
@@ -4586,6 +4645,16 @@ INSTSONAME='$(LDLIBRARY)'
 DLLLIBRARY=''
 LDLIBRARYDIR=''
 RUNSHARED=''
+
+# MPI-enabled libraries
+
+
+
+
+MPI_LDLIBRARY="$MPI_LIBRARY"
+MPI_BLDLIBRARY='$(MPI_LDLIBRARY)'
+MPI_INSTSONAME='$(MPI_LDLIBRARY)'
+MPI_DLLLIBRARY=''
 
 # LINKCC is the command that links the python executable -- default is $(CC).
 # If CXX is set, and if it is needed to link a main function that was
@@ -4794,6 +4863,83 @@ fi
 
 { $as_echo "$as_me:$LINENO: result: $LDLIBRARY" >&5
 $as_echo "$LDLIBRARY" >&6; }
+
+#
+# setup names for MPI-enabled libraries
+#
+{ $as_echo "$as_me:$LINENO: checking MPI_LDLIBRARY" >&5
+$as_echo_n "checking MPI_LDLIBRARY... " >&6; }
+
+# MacOSX framework builds are not supported w/ MPI
+if test "$enable_framework"
+then
+  # FIXME: echo an error message?
+  MPI_BLDLIBRARY=''
+else
+  MPI_BLDLIBRARY='$(MPI_LDLIBRARY)'
+fi
+
+# Other platforms follow
+if test $enable_shared = "yes"; then
+  case $ac_sys_system in
+    BeOS*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+      ;;
+    CYGWIN*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.dll.a'
+      MPI_DLLLIBRARY='libpython$(VERSION)_mpi.dll'
+      ;;
+    SunOS*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+      MPI_BLDLIBRARY='-Wl,-R,$(LIBDIR) -L. -lpython$(VERSION)_mpi'
+      MPI_INSTSONAME="$MPI_LDLIBRARY".$SOVERSION
+      ;;
+    Linux*|GNU*|NetBSD*|FreeBSD*|DragonFly*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+      MPI_BLDLIBRARY='-L. -lpython$(VERSION)_mpi'
+      case $ac_sys_system in
+        FreeBSD*)
+          SOVERSION=`echo $SOVERSION|cut -d "." -f 1`
+          ;;
+      esac
+      MPI_INSTSONAME="$MPI_LDLIBRARY".$SOVERSION
+      ;;
+    hp*|HP*)
+      case `uname -m` in
+        ia64)
+          MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+          ;;
+        *)
+          MPI_LDLIBRARY='libpython$(VERSION)_mpi.sl'
+          ;;
+      esac
+      MPI_BLDLIBRARY='-Wl,+b,$(LIBDIR) -L. -lpython$(VERSION)_mpi'
+      ;;
+    OSF*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+      MPI_BLDLIBRARY='-rpath $(LIBDIR) -L. -lpython$(VERSION)_mpi'
+      ;;
+    atheos*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.so'
+      MPI_BLDLIBRARY='-L. -lpython$(VERSION)_mpi'
+      ;;
+    Darwin*)
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.dylib'
+      MPI_BLDLIBRARY='-L. -lpython$(VERSION)_mpi'
+      ;;
+  esac
+else # shared is disabled
+  case $ac_sys_system in
+    CYGWIN*)
+      MPI_BLDLIBRARY='$(MPI_LIBRARY)'
+      MPI_LDLIBRARY='libpython$(VERSION)_mpi.dll.a'
+      ;;
+  esac
+fi
+
+{ $as_echo "$as_me:$LINENO: result: $MPI_LDLIBRARY" >&5
+$as_echo "$MPI_LDLIBRARY" >&6; }
+
 
 if test -n "$ac_tool_prefix"; then
   # Extract the first word of "${ac_tool_prefix}ranlib", so it can be a program name with args.
@@ -13445,6 +13591,236 @@ $as_echo "no" >&6; }
 	;;
 esac
 
+# enable MPI?
+
+
+
+
+
+
+
+
+{ $as_echo "$as_me:$LINENO: checking if --enable-mpi is specified" >&5
+$as_echo_n "checking if --enable-mpi is specified... " >&6; }
+# Check whether --enable-mpi was given.
+if test "${enable_mpi+set}" = set; then
+  enableval=$enable_mpi;
+else
+  enable_mpi=no
+fi
+
+{ $as_echo "$as_me:$LINENO: result: $enable_mpi" >&5
+$as_echo "$enable_mpi" >&6; }
+{ $as_echo "$as_me:$LINENO: checking if --enable-debug-mpi is specified" >&5
+$as_echo_n "checking if --enable-debug-mpi is specified... " >&6; }
+# Check whether --enable-debug-mpi was given.
+if test "${enable_debug_mpi+set}" = set; then
+  enableval=$enable_debug_mpi;
+else
+  enable_debug_mpi=no
+fi
+
+{ $as_echo "$as_me:$LINENO: result: $enable_debug_mpi" >&5
+$as_echo "$enable_debug_mpi" >&6; }
+
+
+{ $as_echo "$as_me:$LINENO: checking for MPI C preprocessor symbols" >&5
+$as_echo_n "checking for MPI C preprocessor symbols... " >&6; }
+if test "x$enable_mpi" != "xno"
+then
+	ENABLE_MPI="-DENABLE_MPI"
+	if test "x$enable_debug_mpi" != "xno"
+	then
+		ENABLE_MPI="$ENABLE_MPI -DDEBUG_MPI"
+	fi
+else
+	ENABLE_MPI=
+fi
+{ $as_echo "$as_me:$LINENO: result: $ENABLE_MPI" >&5
+$as_echo "$ENABLE_MPI" >&6; }
+
+if test "x$enable_mpi" != "xno"
+then
+	if test -z "$MPICC"
+	then
+		# Extract the first word of "mpicc", so it can be a program name with args.
+set dummy mpicc; ac_word=$2
+{ $as_echo "$as_me:$LINENO: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_prog_MPICC+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$MPICC"; then
+  ac_cv_prog_MPICC="$MPICC" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+  for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_MPICC="mpicc"
+    $as_echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_MPICC" && ac_cv_prog_MPICC="cc"
+fi
+fi
+MPICC=$ac_cv_prog_MPICC
+if test -n "$MPICC"; then
+  { $as_echo "$as_me:$LINENO: result: $MPICC" >&5
+$as_echo "$MPICC" >&6; }
+else
+  { $as_echo "$as_me:$LINENO: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+	else
+		{ $as_echo "$as_me:$LINENO: checking MPICC" >&5
+$as_echo_n "checking MPICC... " >&6; }
+		{ $as_echo "$as_me:$LINENO: result: $MPICC" >&5
+$as_echo "$MPICC" >&6; }
+	fi
+fi
+if test -z "$MPICC"
+then
+	MPICC="$CC"
+fi
+
+{ $as_echo "$as_me:$LINENO: checking MPILD" >&5
+$as_echo_n "checking MPILD... " >&6; }
+if test -z "$MPILD"
+then
+	MPILD="$MPICC"
+fi
+{ $as_echo "$as_me:$LINENO: result: $MPILD" >&5
+$as_echo "$MPILD" >&6; }
+
+{ $as_echo "$as_me:$LINENO: checking MPI_CFLAGS" >&5
+$as_echo_n "checking MPI_CFLAGS... " >&6; }
+if test -z "$MPI_CFLAGS"
+then
+	MPI_CFLAGS="$CFLAGS"
+fi
+{ $as_echo "$as_me:$LINENO: result: $MPI_LDFLAGS" >&5
+$as_echo "$MPI_LDFLAGS" >&6; }
+
+{ $as_echo "$as_me:$LINENO: checking MPI_LDFLAGS" >&5
+$as_echo_n "checking MPI_LDFLAGS... " >&6; }
+if test -z "$MPI_LDFLAGS"
+then
+	MPI_LDFLAGS="$LDFLAGS"
+fi
+{ $as_echo "$as_me:$LINENO: result: $MPI_LDFLAGS" >&5
+$as_echo "$MPI_LDFLAGS" >&6; }
+
+{ $as_echo "$as_me:$LINENO: checking MPI_CPP" >&5
+$as_echo_n "checking MPI_CPP... " >&6; }
+if test -z "$MPI_CPP"
+then
+	MPI_CPP="$MPICC"
+fi
+{ $as_echo "$as_me:$LINENO: result: $MPI_CPP" >&5
+$as_echo "$MPI_CPP" >&6; }
+
+{ $as_echo "$as_me:$LINENO: checking MPI_CPPFLAGS" >&5
+$as_echo_n "checking MPI_CPPFLAGS... " >&6; }
+if test -z "$MPI_CPPFLAGS"
+then
+	MPI_CPPFLAGS="$CPPFLAGS"
+fi
+{ $as_echo "$as_me:$LINENO: result: $MPI_CPPFLAGS" >&5
+$as_echo "$MPI_CPPFLAGS" >&6; }
+
+# use external python for install?
+{ $as_echo "$as_me:$LINENO: checking for an external python" >&5
+$as_echo_n "checking for an external python... " >&6; }
+
+# Check whether --with-external-python was given.
+if test "${with_external_python+set}" = set; then
+  withval=$with_external_python; case $withval in
+				no)  external_python=no;;
+				yes) external_python=python;;
+				*)   external_python=$withval;;
+			esac
+else
+  external_python=no
+fi
+
+{ $as_echo "$as_me:$LINENO: result: $external_python" >&5
+$as_echo "$external_python" >&6; }
+
+if test "x$external_python" != "xno"
+then
+	RUNPYTHON="$external_python"
+else
+	RUNPYTHON="./\$(BUILDPYTHON)"
+fi
+
+# FIXME: add test for xlc
+{ $as_echo "$as_me:$LINENO: checking for the compiler family of CC" >&5
+$as_echo_n "checking for the compiler family of CC... " >&6; }
+case $( ($CC --version ; $CC -V ; $CC -qversion) 2>/dev/null | egrep "^[[:alnum:][:punct:]]* \(([[:alpha:]]*)\).*" | grep -v '^Copyright' | sed -e 's/^[[:alnum:][:punct:]]* (\([[:alpha:]]*\)).*/\1/' ) in
+	GCC)
+		cc_family=gnu
+		;;
+	ICC)
+		cc_family=intel
+		;;
+esac
+if test -z $cc_family
+then
+	if ( ($CC --version ; $CC -V ; $CC -qversion) 2>/dev/null | grep "^pgcc " >/dev/null )
+	then
+		cc_family=portland
+	elif ( ($CC --version ; $CC -V ; $CC -qversion) 2>/dev/null | grep "^IBM XL C" >/dev/null )
+	then
+		cc_family=ibm
+	elif ( ($CC --version ; $CC -V ; $CC -qversion) 2>&1 | grep "^Cray C " >/dev/null )
+	then
+		cc_family=cray
+	elif ( ($CC --version ; $CC -V ; $CC -qversion) 2>&1 | grep "^PathScale(TM) Compiler Suite" >/dev/null )
+	then
+		cc_family=pathscale
+	fi
+fi
+{ $as_echo "$as_me:$LINENO: result: $cc_family" >&5
+$as_echo "$cc_family" >&6; }
+{ $as_echo "$as_me:$LINENO: checking for the compiler family of MPICC" >&5
+$as_echo_n "checking for the compiler family of MPICC... " >&6; }
+case $( ($MPICC --version ; $MPICC -V ; $MPICC -qversion) 2>/dev/null | egrep "^[[:alnum:][:punct:]]* \(([[:alpha:]]*)\).*" | grep -v '^Copyright' | sed -e 's/^[[:alnum:][:punct:]]* (\([[:alpha:]]*\)).*/\1/' ) in
+	GCC)
+		mpicc_family=gnu
+		;;
+	ICC)
+		mpicc_family=intel
+		;;
+esac
+if test -z $mpicc_family
+then
+	if ( ($MPICC --version ; $MPICC -V ; $MPICC -qversion) 2>/dev/null | grep "^pgcc " >/dev/null )
+	then
+		mpicc_family=portland
+	elif ( ($MPICC --version ; $MPICC -V ; $MPICC -qversion) 2>/dev/null | grep "^IBM XL C" >/dev/null )
+	then
+		mpicc_family=ibm
+	elif ( ($MPICC --version ; $MPICC -V ; $MPICC -qversion) 2>&1 | grep "^Cray C " >/dev/null )
+	then
+		mpicc_family=cray
+	elif ( ($MPICC --version ; $MPICC -V ; $MPICC -qversion) 2>&1 | grep "^PathScale(TM) Compiler Suite" >/dev/null )
+	then
+		mpicc_family=pathscale
+	fi
+fi
+{ $as_echo "$as_me:$LINENO: result: $mpicc_family" >&5
+$as_echo "$mpicc_family" >&6; }
+
 # Set info about shared libraries.
 
 
@@ -13618,7 +13994,12 @@ then
 		 then CCSHARED="-fPIC";
 		 else CCSHARED="+z";
 		 fi;;
-	Linux*|GNU*) CCSHARED="-fPIC";;
+	Linux*|GNU*)
+		case $cc_family in
+			gnu) CCSHARED="-fPIC";;
+			ibm) CCSHARED="-qpic";;
+			*)   CCSHARED="";;
+		esac;;
 	BSD/OS*/4*) CCSHARED="-fpic";;
 	FreeBSD*|NetBSD*|OpenBSD*|DragonFly*) CCSHARED="-fPIC";;
 	OpenUNIX*|UnixWare*)
@@ -13632,10 +14013,11 @@ then
 		else CCSHARED="-Kpic -belf"
 		fi;;
 	Monterey*) CCSHARED="-G";;
-	IRIX*/6*)  case $CC in
-		   *gcc*) CCSHARED="-shared";;
-		   *) CCSHARED="";;
-		   esac;;
+	IRIX*/6*)
+		case $cc_family in
+			gnu) CCSHARED="-shared";;
+			*)   CCSHARED="";;
+		esac;;
 	atheos*) CCSHARED="-fPIC";;
 	esac
 fi
@@ -13653,7 +14035,12 @@ then
 	    LINKFORSHARED="-Wl,-E -Wl,+s";;
 #	    LINKFORSHARED="-Wl,-E -Wl,+s -Wl,+b\$(BINLIBDEST)/lib-dynload";;
 	BSD/OS/4*) LINKFORSHARED="-Xlinker -export-dynamic";;
-	Linux*|GNU*) LINKFORSHARED="-Xlinker -export-dynamic";;
+	Linux*|GNU*)
+		case $cc_family in
+			gnu) LINKFORSHARED="-Xlinker -export-dynamic";;
+			ibm) LINKFORSHARED="-qmkshrobj -qnostaticlink";;
+			*)   LINKFORSHARED="";;
+		esac;;
 	# -u libsys_s pulls in all symbols in libsys
 	Darwin/*)
 		# -u _PyMac_Error is needed to pull in the mac toolbox glue,
@@ -13678,13 +14065,14 @@ then
 		then
 			LINKFORSHARED="-Wl,--export-dynamic"
 		fi;;
-	SunOS/5*) case $CC in
-		  *gcc*)
-		    if $CC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
-		    then
-			LINKFORSHARED="-Xlinker --export-dynamic"
-		    fi;;
-		  esac;;
+	SunOS/5*)
+		case $CC in
+			gnu)
+				if $CC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
+				then
+					LINKFORSHARED="-Xlinker --export-dynamic"
+				fi;;
+		esac;;
 	CYGWIN*)
 		if test $enable_shared = "no"
 		then
@@ -13703,7 +14091,6 @@ fi
 $as_echo "$LINKFORSHARED" >&6; }
 
 
-
 { $as_echo "$as_me:$LINENO: checking CFLAGSFORSHARED" >&5
 $as_echo_n "checking CFLAGSFORSHARED... " >&6; }
 if test ! "$LIBRARY" = "$LDLIBRARY"
@@ -13719,6 +14106,210 @@ then
 fi
 { $as_echo "$as_me:$LINENO: result: $CFLAGSFORSHARED" >&5
 $as_echo "$CFLAGSFORSHARED" >&6; }
+
+#
+# MPI-enabled shared lib and modules
+#
+
+
+
+
+
+
+{ $as_echo "$as_me:$LINENO: checking MPILD_SHARED" >&5
+$as_echo_n "checking MPILD_SHARED... " >&6; }
+if test -z "$MPILD_SHARED"
+then
+	MPILD_SHARED="$MPILD -shared"
+fi
+{ $as_echo "$as_me:$LINENO: result: $MPILD_SHARED" >&5
+$as_echo "$MPILD_SHARED" >&6; }
+
+{ $as_echo "$as_me:$LINENO: checking MPILD_SHARED_MODULE" >&5
+$as_echo_n "checking MPILD_SHARED_MODULE... " >&6; }
+if test -z "$MPILD_SHARED_MODULE"
+then
+	MPILD_SHARED="$MPILD_SHARED"
+fi
+{ $as_echo "$as_me:$LINENO: result: $MPILD_SHARED_MODULE" >&5
+$as_echo "$MPILD_SHARED_MODULE" >&6; }
+
+#
+## MPI-enabled shared libraries
+#AC_MSG_CHECKING([for the linker command for MPI-enabled shared libs])
+#if test -z "$MPILD_SHARED"
+#then
+#	if test -z "$MPI_LDSHARED"
+#	then
+#		AC_MSG_NOTICE([These linker commands are used to link non-MPI shared
+#					   libraries:],
+#					  [LDSHARED=$LDSHARED], [BLDSHARED=$BLDSHARED],
+#					  [To set corresponding commands for MPI-enabled shared
+#					   libraries, use the option --with-mpild-shared to define
+#					   the options, e.g. --with-mpild-shared="-shared", or use
+#					   options --with-mpi-ldshared and --with-mpi-bldshared
+#					   to explicitly define the commands.])
+#	fi
+#	MPILD_SHARED="$MPILD -shared"
+#else
+#	MPILD_SHARED="$MPILD $MPILD_SHARED"
+#fi
+#AC_MSG_RESULT($MPILD_SHARED)
+#
+#AC_MSG_CHECKING(MPI_LDSHARED)
+#if test -z "$MPI_LDSHARED"
+#then
+#	MPI_LDSHARED="$MPILD_SHARED"
+#fi
+#AC_MSG_RESULT($MPI_LDSHARED)
+#
+#AC_MSG_CHECKING(MPI_BLDSHARED)
+#if test -z "$MPI_BLDSHARED"
+#	MPI_BLDSHARED="$MPI_LDSHARED"
+#fi
+#AC_MSG_RESULT($MPI_BLDSHARED)
+#
+
+# C *flags* used to create objects to go into a MPI-enabled shared
+# library (module) -- this is only needed for a few systems
+{ $as_echo "$as_me:$LINENO: checking MPI_CFLAGS_SHARED_MODULE" >&5
+$as_echo_n "checking MPI_CFLAGS_SHARED_MODULE... " >&6; }
+if test -z "$MPI_CFLAGS_SHARED_MODULE"
+then
+	case $ac_sys_system/$ac_sys_release in
+		SunOS*)
+			if test "$mpicc_family" == "gnu";
+			then MPI_CFLAGS_SHARED_MODULE="-fPIC";
+			elif test `uname -p` = sparc;
+			then MPI_CFLAGS_SHARED_MODULE="-xcode=pic32";
+			else MPI_CFLAGS_SHARED_MODULE="-Kpic";
+			fi;;
+		hp*|HP*)
+			if test "$mpicc_family" == "gnu";
+			then MPI_CFLAGS_SHARED_MODULE="-fPIC";
+			else MPI_CFLAGS_SHARED_MODULE="+z";
+			fi;;
+		Linux*|GNU*)
+			case "$mpicc_family" in
+				gnu) MPI_CFLAGS_SHARED_MODULE="-fPIC";;
+				ibm) MPI_CFLAGS_SHARED_MODULE="-qpic";;
+				*)   MPI_CFLAGS_SHARED_MODULE="";;
+			esac;;
+		BSD/OS*/4*)
+			MPI_CFLAGS_SHARED_MODULE="-fpic";;
+		FreeBSD*|NetBSD*|OpenBSD*|DragonFly*)
+			MPI_CFLAGS_SHARED_MODULE="-fPIC";;
+		OpenUNIX*|UnixWare*)
+			if test "$mpicc_family" == "gnu";
+			then MPI_CFLAGS_SHARED_MODULE="-fPIC"
+			else MPI_CFLAGS_SHARED_MODULE="-KPIC"
+			fi;;
+		SCO_SV*)
+			if test "$mpicc_family" == "gnu";
+			then MPI_CFLAGS_SHARED_MODULE="-fPIC"
+			else MPI_CFLAGS_SHARED_MODULE="-Kpic -belf"
+			fi;;
+		Monterey*)
+			MPI_CFLAGS_SHARED_MODULE="-G";;
+		IRIX*/6*)
+			case "$mpicc_family" in
+				gnu) MPI_CFLAGS_SHARED_MODULE="-shared";;
+				*)   MPI_CFLAGS_SHARED_MODULE="";;
+			esac;;
+		atheos*)
+			MPI_CFLAGS_SHARED_MODULE="-fPIC";;
+	esac
+fi
+{ $as_echo "$as_me:$LINENO: result: $MPI_CFLAGS_SHARED_MODULE" >&5
+$as_echo "$MPI_CFLAGS_SHARED_MODULE" >&6; }
+
+# linker flags used to build the python executable using the shared
+# libraries -- this is only needed for a few systems
+{ $as_echo "$as_me:$LINENO: checking MPI_LDFLAGS_SHARED" >&5
+$as_echo_n "checking MPI_LDFLAGS_SHARED... " >&6; }
+if test -z "$MPI_LDFLAGS_SHARED"
+then
+	case $ac_sys_system/$ac_sys_release in
+		AIX*)
+			MPI_LDFLAGS_SHARED='-Wl,-bE:Modules/python.exp -lld';;
+		hp*|HP*)
+			MPI_LDFLAGS_SHARED="-Wl,-E -Wl,+s";;
+		BSD/OS/4*)
+			MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
+		Linux*|GNU*)
+			case "$mpicc_family" in
+				gnu) MPI_LDFLAGS_SHARED="-Xlinker -export-dynamic";;
+				ibm) MPI_LDFLAGS_SHARED="-qmkshrobj -qnostaticlink";;
+				*)   MPI_LDFLAGS_SHARED="";;
+			esac;;
+		# -u libsys_s pulls in all symbols in libsys
+		Darwin/*)
+			# -u _PyMac_Error is needed to pull in the mac toolbox glue,
+			# which is
+			# not used by the core itself but which needs to be in the core so
+			# that dynamically loaded extension modules have access to it.
+			# -prebind is no longer used, because it actually seems to give a
+			# slowdown in stead of a speedup, maybe due to the large number of
+			# dynamic loads Python does.
+
+			MPI_LDFLAGS_SHARED="$extra_undefs"
+			if test "$enable_framework"
+			then
+				MPI_LDFLAGS_SHARED="$MPI_LDFLAGS_SHARED "'$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/$(PYTHONFRAMEWORK)'
+			fi
+			MPI_LDFLAGS_SHARED="$MPI_LDFLAGS_SHARED";;
+		OpenUNIX*|UnixWare*)
+			MPI_LDFLAGS_SHARED="-Wl,-Bexport";;
+		SCO_SV*)
+			MPI_LDFLAGS_SHARED="-Wl,-Bexport";;
+		ReliantUNIX*)
+			MPI_LDFLAGS_SHARED="-W1 -Blargedynsym";;
+		FreeBSD*|NetBSD*|OpenBSD*|DragonFly*)
+			if [ "`$MPICC -dM -E - </dev/null | grep __ELF__`" != "" ]
+			then
+				MPI_LDFLAGS_SHARED="-Wl,--export-dynamic"
+			fi;;
+		SunOS/5*)
+			case "$mpicc_family" in
+				gnu)
+					if $MPICC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
+					then
+						MPI_LDFLAGS_SHARED="-Xlinker --export-dynamic"
+					fi;;
+			esac;;
+		CYGWIN*)
+			if test $enable_shared = "no"
+			then
+				MPI_LDFLAGS_SHARED='-Wl,--out-implib=$(MPI_LDLIBRARY)'
+			fi;;
+		QNX*)
+			# -Wl,-E causes the symbols to be added to the dynamic
+			# symbol table so that they can be found when a module
+			# is loaded.  -N 2048K causes the stack size to be set
+			# to 2048 kilobytes so that the stack doesn't overflow
+			# when running test_compile.py.
+			MPI_LDFLAGS_SHARED='-Wl,-E -N 2048K';;
+	esac
+fi
+{ $as_echo "$as_me:$LINENO: result: $MPI_LDFLAGS_SHARED" >&5
+$as_echo "$MPI_LDFLAGS_SHARED" >&6; }
+
+
+{ $as_echo "$as_me:$LINENO: checking MPI_CFLAGS_SHARED" >&5
+$as_echo_n "checking MPI_CFLAGS_SHARED... " >&6; }
+if test ! "$MPI_LIBRARY" = "$MPI_LDLIBRARY"
+then
+	case $ac_sys_system in
+	CYGWIN*)
+		# Cygwin needs MPI_CFLAGS_SHARED_MODULE when building extension DLLs
+		# but not when building the interpreter DLL.
+		MPI_CFLAGS_SHARED='';;
+	*)
+		MPI_CFLAGS_SHARED='$(MPI_CFLAGS_SHARED_MODULE)'
+	esac
+fi
+{ $as_echo "$as_me:$LINENO: result: $MPI_CFLAGS_SHARED" >&5
+$as_echo "$MPI_CFLAGS_SHARED" >&6; }
 
 # SHLIBS are libraries (except -lc and -lm) to link to the python shared
 # library (with --enable-shared).
@@ -13737,6 +14328,16 @@ case "$ac_sys_system" in
 esac
 { $as_echo "$as_me:$LINENO: result: $SHLIBS" >&5
 $as_echo "$SHLIBS" >&6; }
+
+
+{ $as_echo "$as_me:$LINENO: checking MPI_SHLIBS" >&5
+$as_echo_n "checking MPI_SHLIBS... " >&6; }
+case "$ac_sys_system" in
+	*)
+		MPI_SHLIBS='$(MPI_LIBS)';;
+esac
+{ $as_echo "$as_me:$LINENO: result: $MPI_SHLIBS" >&5
+$as_echo "$MPI_SHLIBS" >&6; }
 
 
 # checks for libraries
@@ -23703,191 +24304,6 @@ _ACEOF
 $as_echo "$PY_UNICODE_TYPE" >&6; }
 fi
 
-# enable MPI?
-{ $as_echo "$as_me:$LINENO: checking if --enable-mpi is specified" >&5
-$as_echo_n "checking if --enable-mpi is specified... " >&6; }
-# Check whether --enable-mpi was given.
-if test "${enable_mpi+set}" = set; then
-  enableval=$enable_mpi;
-else
-  enable_mpi=no
-fi
-
-{ $as_echo "$as_me:$LINENO: result: $enable_mpi" >&5
-$as_echo "$enable_mpi" >&6; }
-{ $as_echo "$as_me:$LINENO: checking if --enable-debug-mpi is specified" >&5
-$as_echo_n "checking if --enable-debug-mpi is specified... " >&6; }
-# Check whether --enable-debug-mpi was given.
-if test "${enable_debug_mpi+set}" = set; then
-  enableval=$enable_debug_mpi;
-else
-  enable_debug_mpi=no
-fi
-
-{ $as_echo "$as_me:$LINENO: result: $enable_debug_mpi" >&5
-$as_echo "$enable_debug_mpi" >&6; }
-if test "x$enable_debug_mpi" != "xno"
-then
-	DEBUG_MPI_FLAG="-DDEBUG_MPI"
-else
-	DEBUG_MPI_FLAG=
-fi
-
-
-if test "x$enable_mpi" != "xno"
-then
-
-cat >>confdefs.h <<\_ACEOF
-#define ENABLE_MPI 1
-_ACEOF
-
-
-{ $as_echo "$as_me:$LINENO: checking for MPI_Init in -lmpi" >&5
-$as_echo_n "checking for MPI_Init in -lmpi... " >&6; }
-if test "${ac_cv_lib_mpi_MPI_Init+set}" = set; then
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lmpi  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char MPI_Init ();
-int
-main ()
-{
-return MPI_Init ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext && {
-	 test "$cross_compiling" = yes ||
-	 $as_test_x conftest$ac_exeext
-       }; then
-  ac_cv_lib_mpi_MPI_Init=yes
-else
-  $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	ac_cv_lib_mpi_MPI_Init=no
-fi
-
-rm -rf conftest.dSYM
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_mpi_MPI_Init" >&5
-$as_echo "$ac_cv_lib_mpi_MPI_Init" >&6; }
-if test "x$ac_cv_lib_mpi_MPI_Init" = x""yes; then
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBMPI 1
-_ACEOF
-
-  LIBS="-lmpi $LIBS"
-
-fi
-
-#	AC_CHECK_HEADER(mpi.h, , [AC_CHECK_LIB(mpi, MPI_Init)])
-#	LIBS="-lmpi $LIBS"
-	PARALLEL_OBJS="Python/parallel_stdio.o"
-	OPT="$OPT -DENABLE_MPI $DEBUG_MPI_FLAG"
-	# Extract the first word of "mpicc", so it can be a program name with args.
-set dummy mpicc; ac_word=$2
-{ $as_echo "$as_me:$LINENO: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if test "${ac_cv_prog_MPICC+set}" = set; then
-  $as_echo_n "(cached) " >&6
-else
-  if test -n "$MPICC"; then
-  ac_cv_prog_MPICC="$MPICC" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_prog_MPICC="mpicc"
-    $as_echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_prog_MPICC" && ac_cv_prog_MPICC="cc"
-fi
-fi
-MPICC=$ac_cv_prog_MPICC
-if test -n "$MPICC"; then
-  { $as_echo "$as_me:$LINENO: result: $MPICC" >&5
-$as_echo "$MPICC" >&6; }
-else
-  { $as_echo "$as_me:$LINENO: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-
-else
-	PARALLEL_OBJS=
-fi
-
-# use external python for install?
-{ $as_echo "$as_me:$LINENO: checking for an external python" >&5
-$as_echo_n "checking for an external python... " >&6; }
-
-# Check whether --with-external-python was given.
-if test "${with_external_python+set}" = set; then
-  withval=$with_external_python; case $withval in
-			 	no)  external_python=no;;
-				yes) external_python=python;;
-				*)   external_python=$withval;;
-			esac
-else
-  external_python=no
-fi
-
-{ $as_echo "$as_me:$LINENO: result: $external_python" >&5
-$as_echo "$external_python" >&6; }
-
-if test "x$external_python" != "xno"
-then
-	RUNPYTHON="$external_python"
-else
-	RUNPYTHON="\$(BUILDPYTHON)"
-fi
-
 # check for endianness
 
  { $as_echo "$as_me:$LINENO: checking whether byte ordering is bigendian" >&5
@@ -26196,7 +26612,91 @@ then
 	LIBS="$LIBS -framework CoreFoundation"
 fi
 
+if test -z "$MPI_LIBS"
+then
+	libs="$LIBS"
 
+{ $as_echo "$as_me:$LINENO: checking for MPI_Init in -lmpi" >&5
+$as_echo_n "checking for MPI_Init in -lmpi... " >&6; }
+if test "${ac_cv_lib_mpi_MPI_Init+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmpi  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char MPI_Init ();
+int
+main ()
+{
+return MPI_Init ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  ac_cv_lib_mpi_MPI_Init=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_lib_mpi_MPI_Init=no
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_mpi_MPI_Init" >&5
+$as_echo "$ac_cv_lib_mpi_MPI_Init" >&6; }
+if test "x$ac_cv_lib_mpi_MPI_Init" = x""yes; then
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBMPI 1
+_ACEOF
+
+  LIBS="-lmpi $LIBS"
+
+fi
+
+	MPI_LIBS="$LIBS"
+	LIBS="$libs"
+fi
+{ $as_echo "$as_me:$LINENO: checking MPI_LIBS" >&5
+$as_echo_n "checking MPI_LIBS... " >&6; }
+{ $as_echo "$as_me:$LINENO: result: $MPI_LIBS" >&5
+$as_echo "$MPI_LIBS" >&6; }
 
 
 SRCDIRS="Parser Grammar Objects Python Modules Mac"
