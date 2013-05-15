@@ -30,7 +30,7 @@ VPATH=		@srcdir@
 
 CC=		@CC@
 MPICC= 	@MPICC@
-PCC= 	@CC@
+PCC= 	gcc
 CXX=		@CXX@
 MAINCC=		@MAINCC@
 LINKCC=		@LINKCC@
@@ -296,10 +296,8 @@ PYTHON_OBJS=	\
 		Python/pyfpe.o \
 		Python/pymath.o \
 		Python/pystate.o \
-		Python/pythonrun.o \
 		Python/structmember.o \
 		Python/symtable.o \
-		Python/sysmodule.o \
 		Python/traceback.o \
 		Python/getopt.o \
 		Python/pystrcmp.o \
