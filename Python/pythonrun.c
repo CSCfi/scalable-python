@@ -1220,7 +1220,12 @@ PyErr_Display(PyObject *exception, PyObject *value, PyObject *tb)
             PyErr_Clear();
         fflush(stdout);
         if (tb && tb != Py_None)
-            err = PyTraceBack_Print(tb, f);
+            {
+            #ifdef ENABLE_MPI
+              disable_io_wrappers();
+            #endif
+              err = PyTraceBack_Print(tb, f);
+            }
         if (err == 0 &&
             PyObject_HasAttrString(value, "print_file_and_line"))
         {
