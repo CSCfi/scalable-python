@@ -23,8 +23,9 @@ main(int argc, char **argv)
 #ifdef ENABLE_MPI
         MPI_Init(&argc, &argv); 
 #endif
-	return Py_Main(argc, argv);
+	int status = Py_Main(argc, argv);
 #ifdef ENABLE_MPI
         MPI_Finalize();
+        return status;
 #endif
 }
