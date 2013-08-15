@@ -31,7 +31,8 @@ void init_io_wrappers(void)
     MPI_Comm_rank(io_comm, &rank);
     for (i=0; i < MAX_FILES; i++)
       parallel_fps[i] = (FILE*) -1;
-    fp_dummy = stdin;
+    // fp_dummy = stderr;
+    fp_dummy = fopen("/dev/null", "r");
     enabled = 1;
     initialized = 1;
   }
@@ -45,6 +46,7 @@ void finalize_io_wrappers(void)
       MPI_Comm_free(&io_comm);
       initialized = 0;
       enabled = 0;
+      fclose(fp_dummy);
     }
 }
 
