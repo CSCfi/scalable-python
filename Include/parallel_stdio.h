@@ -1,3 +1,4 @@
+#ifdef ENABLE_MPI
 #define fopen  __wrap_fopen
 #define fclose  __wrap_fclose
 #define setbuf  __wrap_setbuf
@@ -22,9 +23,6 @@
 #define fstat __wrap_fstat
 #define stat(path, buf) __wrap_stat(path, buf)
 
-void init_io_wrappers(void);
-void finalize_io_wrappers(void);
-
 FILE* __wrap_fopen(const char *filename, const char *modes);
 int  __wrap_fclose(FILE *fp);
 void  __wrap_setbuf(FILE *fp, char *buf);
@@ -48,3 +46,10 @@ char *__wrap_fgets(char *str, int num, FILE* fp);
 int __wrap_fgetc ( FILE * fp );
 int __wrap_fstat(int fildes, struct stat *buf);
 int __wrap_stat(const char *path, struct stat *buf);
+
+void init_io_wrappers(void);
+void finalize_io_wrappers(void);
+#endif
+
+void enable_io_wrappers(void);
+void disable_io_wrappers(void);

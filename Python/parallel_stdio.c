@@ -1,7 +1,9 @@
 /*  Copyright (C) 2010       CSC - IT Center for Science Ltd.
 */
 
+#ifdef ENABLE_MPI
 #include <mpi.h>
+#endif
 /* In BG/P sys/stat.h does not seem to work properly
  * is there a different define in Python.h? */
 #include "Python.h"
@@ -15,6 +17,7 @@ static int rank = MASTER;
 static int enabled = 0;
 static int initialized = 0;
 
+#ifdef ENABLE_MPI
 static MPI_Comm io_comm;
 static FILE *parallel_fps[MAX_FILES];
 static int current_fp = 0;
@@ -59,6 +62,7 @@ void finalize_io_wrappers(void)
       enabled = 0;
     }
 }
+#endif
 
 // switching wrapping on and off
 void enable_io_wrappers(void)
@@ -79,6 +83,7 @@ void disable_io_wrappers(void)
   enabled = 0;
 }
 
+#ifdef ENABLE_MPI
 // Utility function to check if the file pointer is "parallel"
 int check_fp(FILE *fp)
 {
@@ -640,5 +645,6 @@ size_t __wrap_fwrite ( const void * ptr, size_t size, size_t count, FILE * fp )
   return x;
 }
 */
+#endif
 
 /* vim: set et tw=80 ts=2 sw=2: */

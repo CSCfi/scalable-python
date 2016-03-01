@@ -362,6 +362,7 @@ SERIAL_OBJS=	\
 		Python/getmtime.o \
 		Python/import.o \
 		Python/marshal.o \
+		Python/parallel_stdio.o \
 		Python/pythonrun.o \
 		Python/sysmodule.o \
 		Modules/zipimport.o \
@@ -376,7 +377,7 @@ MPI_OBJS=	\
 		Python/getmtime_mpi.o \
 		Python/import_mpi.o \
 		Python/marshal_mpi.o \
-		Python/parallel_stdio.o \
+		Python/parallel_stdio_mpi.o \
 		Python/pythonrun_mpi.o \
 		Python/sysmodule_mpi.o \
 		Modules/zipimport_mpi.o \
@@ -636,6 +637,9 @@ Modules/python_mpi.o: $(srcdir)/Modules/python.c
 	$(MPICC) -c $(MPI_PY_CFLAGS) -o $@ $(srcdir)/Modules/python.c
 
 Python/parallel_stdio.o: $(srcdir)/Python/parallel_stdio.c
+	$(MAINCC) -c $(PY_CFLAGS) -o $@ $(srcdir)/Python/parallel_stdio.c
+
+Python/parallel_stdio_mpi.o: $(srcdir)/Python/parallel_stdio.c
 	$(MPICC) -c $(MPI_PY_CFLAGS) -o $@ $(srcdir)/Python/parallel_stdio.c
 
 $(GRAMMAR_H) $(GRAMMAR_C): $(PGEN) $(GRAMMAR_INPUT)
@@ -757,6 +761,7 @@ PYTHON_HEADERS= \
 		Include/objimpl.h \
 		Include/opcode.h \
 		Include/osdefs.h \
+		Include/parallel_stdio.h \
 		Include/parsetok.h \
 		Include/patchlevel.h \
 		Include/pgen.h \
@@ -792,7 +797,7 @@ PYTHON_HEADERS= \
 		$(PARSER_HEADERS)
 
 $(LIBRARY_OBJS) $(MODOBJS) Modules/python.o: $(PYTHON_HEADERS)
-$(MPI_OBJS) Modules/getbuildinfo_mpi.o: $(PYTHON_HEADERS) Include/parallel_stdio.h
+$(MPI_OBJS) Modules/getbuildinfo_mpi.o: $(PYTHON_HEADERS)
 
 
 ######################################################################

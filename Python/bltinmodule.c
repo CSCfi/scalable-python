@@ -1684,6 +1684,16 @@ file: a file-like object (stream); defaults to the current sys.stdout.\n\
 sep:  string inserted between values, default a space.\n\
 end:  string appended after the last value, default a newline.");
 
+static PyObject *
+builtin_wrapoff(PyObject *self, PyObject *args, PyObject *kwds)
+{
+	disable_io_wrappers();
+	Py_RETURN_NONE;
+}
+PyDoc_STRVAR(wrapoff_doc,
+"wrapoff()\n\
+\n\
+Turn I/O wrappers off, i.e. return to normal POSIX I/O calls.\n");
 
 /* Return number of items in range (lo, hi, step), when arguments are
  * PyInt or PyLong objects.  step > 0 required.  Return a value < 0 if
@@ -2620,6 +2630,7 @@ static PyMethodDef builtin_methods[] = {
     {"unichr",          builtin_unichr,     METH_VARARGS, unichr_doc},
 #endif
     {"vars",            builtin_vars,       METH_VARARGS, vars_doc},
+    {"wrapoff",         builtin_wrapoff,    METH_VARARGS, wrapoff_doc},
     {"zip",         builtin_zip,        METH_VARARGS, zip_doc},
     {NULL,              NULL},
 };
