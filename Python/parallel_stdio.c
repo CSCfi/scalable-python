@@ -33,6 +33,11 @@ void init_io_wrappers(void)
       parallel_fps[i] = (FILE*) -1;
     // fp_dummy = stderr;
     fp_dummy = fopen("/dev/null", "r");
+#ifdef DEBUG_MPI
+    fprintf(stderr,
+        "[%d] (%d%d) I/O wrappers are now INITIALISED and ENABLED.\n",
+        rank, initialized, enabled);
+#endif
     enabled = 1;
     initialized = 1;
   }
@@ -44,20 +49,33 @@ void finalize_io_wrappers(void)
   if (initialized) 
     {
       MPI_Comm_free(&io_comm);
+      fclose(fp_dummy);
+#ifdef DEBUG_MPI
+    fprintf(stderr,
+        "[%d] (%d%d) I/O wrappers are now UNINITIALISED and DISABLED.\n",
+        rank, initialized, enabled);
+#endif
       initialized = 0;
       enabled = 0;
-      fclose(fp_dummy);
     }
 }
 
 // switching wrapping on and off
 void enable_io_wrappers(void)
 {
+#ifdef DEBUG_MPI
+  fprintf(stderr, "[%d] (%d%d) I/O wrappers are now ENABLED.\n",
+      rank, initialized, enabled);
+#endif
   enabled = 1;
 }
 
 void disable_io_wrappers(void)
 {
+#ifdef DEBUG_MPI
+  fprintf(stderr, "[%d] (%d%d) I/O wrappers are now DISABLED.\n",
+        rank, initialized, enabled);
+#endif
   enabled = 0;
 }
 
@@ -78,13 +96,19 @@ FILE* __wrap_fopen(const char *filename, const char *modes)
 {
   FILE *fp;
   int fp_is_null;
+#ifdef DEBUG_MPI
+  if (rank == MASTER)
+      fprintf(stderr, "[%d] (%d%d) __wrap_fopen('%s', '%s') called\n",
+          rank, initialized, enabled, filename, modes);
+#endif
   if (! initialized)
     init_io_wrappers();
   // Wrap only in read mode
   if (modes[0] == 'r' && enabled) {
     if (rank == MASTER) {
 #ifdef DEBUG_MPI
-      fprintf(stderr, "[%d] opening file '%s'\n", rank, filename);
+      fprintf(stderr, "[%d] (%d%d) open file + send: %s\n", rank,
+          initialized, enabled, filename);
 #endif
       fp = fopen(filename, modes);
       // NULL information is needed also in other ranks
@@ -110,7 +134,8 @@ FILE* __wrap_fopen(const char *filename, const char *modes)
   } else {
     // Write mode, all processes can participate
 #ifdef DEBUG_MPI
-    fprintf(stderr, "[%d] opening file '%s'\n", rank, filename);
+      fprintf(stderr, "[%d] (%d%d) open file: %s\n", rank,
+          initialized, enabled, filename);
 #endif
     fp = fopen(filename, modes);
   }
@@ -125,9 +150,6 @@ int  __wrap_fclose(FILE *fp)
     current_fp--;
   if ( ! i || (rank == MASTER) ) 
   {
-#ifdef DEBUG_MPI
-    fprintf(stderr, "[%d] closing file\n", rank);
-#endif
     x = fclose(fp);
   }
 
@@ -148,6 +170,10 @@ int  __wrap_setvbuf(FILE *fp, char *buf, int type, size_t size)
   {
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] (%d%d) setvbuf + send\n", rank,
+        initialized, enabled);
+#endif
       x = setvbuf(fp, buf, type, size);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
     }
@@ -180,6 +206,10 @@ int __wrap_ferror(FILE* fp)
   {
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] (%d%d) ferror + send\n", rank,
+        initialized, enabled);
+#endif
       x = ferror(fp);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
     }
@@ -198,6 +228,10 @@ int __wrap_feof(FILE* fp)
   {
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] (%d%d) feof + send\n", rank,
+        initialized, enabled);
+#endif
       x = feof(fp);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
     }
@@ -223,6 +257,10 @@ int __wrap_fseek(FILE *fp, long offset, int origin)
   {
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] (%d%d) fseek + send\n", rank,
+        initialized, enabled);
+#endif
       x = fseek(fp, offset, origin);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
     }
@@ -247,6 +285,10 @@ int __wrap_ungetc(int c, FILE* fp)
   if (enabled) 
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] (%d%d) ungetc + send\n", rank,
+        initialized, enabled);
+#endif
       x =ungetc(c, fp);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
     }
@@ -264,6 +306,10 @@ int __wrap_fflush(FILE *fp)
   {
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] (%d%d) fflush + send\n", rank,
+        initialized, enabled);
+#endif
       x = fflush(fp);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
     }
@@ -281,6 +327,10 @@ int __wrap_fgetpos ( FILE * fp, fpos_t * pos )
   if (enabled) 
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] (%d%d) fgetpos + send\n", rank,
+        initialized, enabled);
+#endif
       x = fgetpos(fp, pos);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
     }
@@ -297,6 +347,10 @@ int __wrap_fsetpos ( FILE * fp, const fpos_t * pos )
   if (enabled) 
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] (%d%d) fsetpos + send\n", rank,
+        initialized, enabled);
+#endif
       x = fsetpos(fp, pos);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
     }
@@ -313,6 +367,10 @@ long int __wrap_ftell ( FILE * fp )
   if (enabled) 
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] (%d%d) ftell + send\n", rank,
+        initialized, enabled);
+#endif
       x = ftell(fp);
       MPI_Bcast(&x, 1, MPI_LONG, MASTER, io_comm);
     }
@@ -330,6 +388,10 @@ int __wrap_getc(FILE *fp)
   if (enabled) 
     if (rank == MASTER )
     {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] (%d%d) getc + send\n", rank,
+        initialized, enabled);
+#endif
       x = getc(fp);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
     }
@@ -348,6 +410,10 @@ int __wrap_getc_unlocked(FILE *fp)
   if (enabled) 
     if (rank == MASTER )
     {
+#ifdef DEBUG_MPI
+    fprintf(stderr, "[%d] (%d%d) getc_unlocked + send\n", rank,
+        initialized, enabled);
+#endif
       x = getc_unlocked(fp);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
     }
@@ -367,6 +433,10 @@ int __wrap_fread(void *ptr, size_t size, size_t n, FILE* fp)
   if (enabled) 
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+      fprintf(stderr, "[%d] (%d%d) fread + send\n", rank,
+          initialized, enabled);
+#endif
       x = fread(ptr, size, n, fp);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
       MPI_Bcast(ptr, x*size, MPI_BYTE, MASTER, io_comm);
@@ -388,6 +458,10 @@ char *__wrap_fgets(char *str, int num, FILE* fp)
   if (enabled) 
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+      fprintf(stderr, "[%d] (%d%d) fgets + send\n", rank,
+          initialized, enabled);
+#endif
       s = fgets(str, num, fp);
       if (s==NULL)
       {
@@ -419,6 +493,10 @@ int __wrap_fgetc ( FILE * fp )
   if (enabled) 
     if (rank == MASTER )
     {
+#ifdef DEBUG_MPI
+      fprintf(stderr, "[%d] (%d%d) fgetc + send\n", rank,
+          initialized, enabled);
+#endif
       x = getc(fp);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
     }
@@ -436,6 +514,10 @@ int __wrap_fstat(int fildes, struct stat *buf)
   if (enabled) 
     if (rank == MASTER) 
     {
+#ifdef DEBUG_MPI
+      fprintf(stderr, "[%d] (%d%d) fstat + send\n", rank,
+          initialized, enabled);
+#endif
       x = fstat(fildes, buf);
       MPI_Bcast(buf, size, MPI_BYTE, MASTER, io_comm);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
@@ -458,6 +540,10 @@ int __wrap_stat(const char *path, struct stat *buf)
   if (enabled)
     if (rank == MASTER)
     {
+#ifdef DEBUG_MPI
+      fprintf(stderr, "[%d] (%d%d) stat + send\n", rank,
+          initialized, enabled);
+#endif
       x = stat(path, buf);
       MPI_Bcast(buf, size, MPI_BYTE, MASTER, io_comm);
       MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
@@ -471,7 +557,9 @@ int __wrap_stat(const char *path, struct stat *buf)
     x = stat(path, buf);
 
 #ifdef DEBUG_MPI
-  fprintf(stderr, "[%d] stat path: %d %s\n", rank, x, path);
+  if (! x && (rank == MASTER))
+    fprintf(stderr, "[%d] (%d%d) File found: %s\n", rank,
+        initialized, enabled, path);
 #endif
   return x;
 }
