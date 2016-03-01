@@ -83,6 +83,8 @@ MPI_LINKFORSHARED= @MPI_LINKFORSHARED@
 MPI_CFLAGSFORSHARED= @MPI_CFLAGSFORSHARED@
 MPI_PY_CFLAGS= $(MPI_CFLAGS) $(MPI_CPPFLAGS) $(MPI_CFLAGSFORSHARED) -DPy_BUILD_CORE
 
+# C-extension include paths
+CEXT_INCLUDE= @CEXT_INCLUDE@
 
 # Machine-dependent subdirectories
 MACHDEP=	@MACHDEP@
@@ -411,7 +413,7 @@ MPI_LIBRARY_OBJS=	\
 all:		build_all
 mpi:		build_mpi
 build_all:	$(BUILDPYTHON) oldsharedmods sharedmods
-build_mpi:  $(MPI_BUILDPYTHON) sharedmods
+build_mpi:  $(MPI_BUILDPYTHON) sharedmods Modules/iowrapper.so
 
 # Compile a binary with gcc profile guided optimization.
 profile-opt:
@@ -700,6 +702,10 @@ Python/formatter_unicode.o: $(srcdir)/Python/formatter_unicode.c \
 Python/formatter_string.o: $(srcdir)/Python/formatter_string.c \
 				$(STRINGLIB_HEADERS)
 
+# Shared library for stopping iowrapping
+Modules/iowrapper.so: Modules/iowrapper.c
+	$(MPICC) -shared -o $@ $(CEXT_INCLUDE) $(srcdir)/Modules/iowrapper.c
+
 # MPI-enabled objects
 %_mpi.o: %.c
 	$(MPICC) $(MPI_PY_CFLAGS) -c -o $@ $<
@@ -864,7 +870,7 @@ altinstall:	@FRAMEWORKALTINSTALLFIRST@ altbininstall libinstall inclinstall liba
                 sharedinstall oldsharedinstall @FRAMEWORKALTINSTALLLAST@
 
 # Install MPI-enabled libs and interpreter
-install-mpi:	altbininstall_mpi libainstall_mpi bininstall_mpi
+install-mpi:	altbininstall_mpi libainstall_mpi bininstall_mpi install-iowrapper
 
 # Install shared libraries enabled by Setup
 DESTDIRS=	$(exec_prefix) $(LIBDIR) $(BINLIBDEST) $(DESTSHARED)
@@ -1196,6 +1202,10 @@ sharedinstall:
 		--install-scripts=$(BINDIR) \
 		--install-platlib=$(DESTSHARED) \
 		--root=/$(DESTDIR)
+
+# Install the C-extension for stopping io_wrapping
+install-iowrapper:
+	$(INSTALL_DATA) Modules/iowrapper.so $(DESTDIR)$(LIBP)
 
 # Here are a couple of targets for MacOSX again, to install a full
 # framework-based Python. frameworkinstall installs everything, the

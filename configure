@@ -681,6 +681,7 @@ MPI_LDFLAGS
 MPI_CFLAGS
 MPILD
 MPICC
+CEXT_INCLUDE
 LIBTOOL_CRUFT
 OTHER_LIBTOOL_OPT
 UNIVERSAL_ARCH_FLAGS
@@ -829,6 +830,7 @@ MPI_LDFLAGS
 MPI_LIBS
 MPI_CPP
 MPI_CPPFLAGS
+CEXT_INCLUDE
 MPILD_SHARED
 MPILD_SHARED_MODULE
 MPI_CFLAGSFORSHARED
@@ -13762,6 +13764,16 @@ then
 else
 	RUNPYTHON="./\$(BUILDPYTHON)"
 fi
+
+# C-extension include paths for the compiler
+{ $as_echo "$as_me:$LINENO: checking CEXT_INCLUDE" >&5
+$as_echo_n "checking CEXT_INCLUDE... " >&6; }
+if test -z "$CEXT_INCLUDE"
+then
+	CEXT_INCLUDE=./Include
+fi
+{ $as_echo "$as_me:$LINENO: result: $CEXT_INCLUDE" >&5
+$as_echo "$CEXT_INCLUDE" >&6; }
 
 # FIXME: add test for xlc
 { $as_echo "$as_me:$LINENO: checking for the compiler family of CC" >&5
