@@ -95,7 +95,6 @@ int check_fp(FILE *fp)
   return 0;
 }
 
-
 // File open, close, lock, etc.
 FILE* __wrap_fopen(const char *filename, const char *modes)
 {
@@ -568,83 +567,6 @@ int __wrap_stat(const char *path, struct stat *buf)
 #endif
   return x;
 }
-
-
-/*
-// fileno is not actually needed
-int __wrap_fileno( FILE *fp )
-{
-  int x;
-  if (check_fp(fp))
-  {
-    if (rank == MASTER)
-    {
-      x = fileno(fp);
-      MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
-    }
-    else
-      MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
-  }
-  else
-    x = fileno(fp);
-  return x;
-}
-
-// Write functions
-int __wrap_fputc ( int character, FILE * fp )
-{
-  int x;
-  if (rank == MASTER)
-  {
-    x =  fputc(character, fp);
-    MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
-  }
-  else
-    MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
-
-  return x;
-}
-
-int __wrap_fputs ( const char * str, FILE * fp )
-{
-  int x;
-  if (rank == MASTER)
-  {
-    x = fputs(str, fp);
-    MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
-  }
-  else
-    MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
-
-  return x;
-}
-
-int __wrap__IO_putc ( int character, FILE * fp )
-{
-  int x;
-  if (rank == MASTER)
-  {
-    x = _IO_putc(character, fp);
-    MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
-  }
-  else
-    MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
-  return x;
-}
-
-size_t __wrap_fwrite ( const void * ptr, size_t size, size_t count, FILE * fp )
-{
-  int x;
-  if (rank == MASTER)
-  {
-    x = fwrite(ptr, size, count, fp);
-    MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
-  }
-  else
-    MPI_Bcast(&x, 1, MPI_INT, MASTER, io_comm);
-  return x;
-}
-*/
 #endif
 
 /* vim: set et tw=80 ts=2 sw=2: */
