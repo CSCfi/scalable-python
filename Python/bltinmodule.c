@@ -1685,7 +1685,7 @@ sep:  string inserted between values, default a space.\n\
 end:  string appended after the last value, default a newline.");
 
 static PyObject *
-builtin_wrapoff(PyObject *self, PyObject *args, PyObject *kwds)
+builtin_wrapoff(PyObject *self)
 {
 	disable_io_wrappers();
 	Py_RETURN_NONE;
@@ -1693,7 +1693,21 @@ builtin_wrapoff(PyObject *self, PyObject *args, PyObject *kwds)
 PyDoc_STRVAR(wrapoff_doc,
 "wrapoff()\n\
 \n\
-Turn I/O wrappers off, i.e. return to normal POSIX I/O calls.\n");
+Turn I/O wrappers OFF, i.e. return to normal POSIX I/O calls.\n");
+
+static PyObject *
+builtin_wrapon(PyObject *self)
+{
+	enable_io_wrappers();
+	Py_RETURN_NONE;
+}
+PyDoc_STRVAR(wrapon_doc,
+"wrapon()\n\
+\n\
+Turn I/O wrappers ON, i.e. replace normal POSIX I/O calls with file\n\
+operations where a single MPI tasks performs the operation and then uses\n\
+MPI to broadcast the results to other MPI tasks. By default I/O wrappers\n\
+are turned ON.\n");
 
 /* Return number of items in range (lo, hi, step), when arguments are
  * PyInt or PyLong objects.  step > 0 required.  Return a value < 0 if
@@ -2630,7 +2644,8 @@ static PyMethodDef builtin_methods[] = {
     {"unichr",          builtin_unichr,     METH_VARARGS, unichr_doc},
 #endif
     {"vars",            builtin_vars,       METH_VARARGS, vars_doc},
-    {"wrapoff",         builtin_wrapoff,    METH_VARARGS, wrapoff_doc},
+    {"wrapoff",         builtin_wrapoff,    METH_NOARGS, wrapoff_doc},
+    {"wrapon",          builtin_wrapon,     METH_NOARGS, wrapon_doc},
     {"zip",         builtin_zip,        METH_VARARGS, zip_doc},
     {NULL,              NULL},
 };
