@@ -1,4 +1,4 @@
-.TH PYTHON "1" "$Date: 2010-01-31 11:09:16 -0500 (Sun, 31 Jan 2010) $"
+.TH PYTHON "1" "$Date$"
 
 .\" To view this file while editing, run it through groff:
 .\"   groff -Tascii -man python.man | less

@@ -4,7 +4,7 @@ Implements the Distutils 'build_scripts' command."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: build_scripts.py 69599 2009-02-13 23:02:44Z tarek.ziade $"
+__revision__ = "$Id$"
 
 import os, re
 from stat import ST_MODE

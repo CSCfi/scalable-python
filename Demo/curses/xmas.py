@@ -1,7 +1,7 @@
 # asciixmas
 # December 1989             Larry Bartz           Indianapolis, IN
 #
-# $Id: xmas.py 46623 2006-06-03 22:59:23Z andrew.kuchling $
+# $Id$
 #
 # I'm dreaming of an ascii character-based monochrome Christmas,
 # Just like the ones I used to know!

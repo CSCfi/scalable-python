@@ -1,5 +1,5 @@
 # regression test for SAX 2.0            -*- coding: iso-8859-1 -*-
-# $Id: test_sax.py 61997 2008-03-28 07:36:31Z neal.norwitz $
+# $Id$
 
 from xml.sax import make_parser, ContentHandler, \
                     SAXException, SAXReaderNotAvailable, SAXParseException

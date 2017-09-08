@@ -9,7 +9,7 @@ Written by:   Fred L. Drake, Jr.
 Email:        <fdrake@acm.org>
 """
 
-__revision__ = "$Id: sysconfig.py 83688 2010-08-03 21:18:06Z mark.dickinson $"
+__revision__ = "$Id$"
 
 import os
 import re

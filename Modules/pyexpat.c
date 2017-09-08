@@ -1853,7 +1853,7 @@ PyDoc_STRVAR(pyexpat_module_documentation,
 static PyObject *
 get_version_string(void)
 {
-    static char *rcsid = "$Revision: 81031 $";
+    static char *rcsid = "$Revision$";
     char *rev = rcsid;
     int i = 0;
 

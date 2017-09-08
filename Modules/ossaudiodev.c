@@ -16,7 +16,7 @@
  *
  * XXX need a license statement
  *
- * $Id: ossaudiodev.c 64048 2008-06-09 04:58:54Z gregory.p.smith $
+ * $Id$
  */
 
 #include "Python.h"
