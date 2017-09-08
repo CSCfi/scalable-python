@@ -1,4 +1,3 @@
-
 .. _debugger:
 
 :mod:`pdb` --- The Python Debugger
@@ -7,6 +6,9 @@
 .. module:: pdb
    :synopsis: The Python debugger for interactive interpreters.
 
+**Source code:** :source:`Lib/pdb.py`
+
+--------------
 
 .. index:: single: debugging
 
@@ -79,9 +81,9 @@ The typical usage to inspect a crashed program is::
    -> print spam
    (Pdb)
 
+
 The module defines the following functions; each enters the debugger in a
 slightly different way:
-
 
 .. function:: run(statement[, globals[, locals]])
 
@@ -126,7 +128,38 @@ slightly different way:
 
 .. function:: pm()
 
-   Enter post-mortem debugging of the traceback found in ``sys.last_traceback``.
+   Enter post-mortem debugging of the traceback found in
+   :data:`sys.last_traceback`.
+
+
+The ``run*`` functions and :func:`set_trace` are aliases for instantiating the
+:class:`Pdb` class and calling the method of the same name.  If you want to
+access further features, you have to do this yourself:
+
+.. class:: Pdb(completekey='tab', stdin=None, stdout=None, skip=None)
+
+   :class:`Pdb` is the debugger class.
+
+   The *completekey*, *stdin* and *stdout* arguments are passed to the
+   underlying :class:`cmd.Cmd` class; see the description there.
+
+   The *skip* argument, if given, must be an iterable of glob-style module name
+   patterns.  The debugger will not step into frames that originate in a module
+   that matches one of these patterns. [1]_
+
+   Example call to enable tracing with *skip*::
+
+      import pdb; pdb.Pdb(skip=['django.*']).set_trace()
+
+   .. versionadded:: 2.7
+      The *skip* argument.
+
+   .. method:: run(statement[, globals[, locals]])
+               runeval(expression[, globals[, locals]])
+               runcall(function[, argument, ...])
+               set_trace()
+
+      See the documentation for the functions explained above.
 
 
 .. _debugger-commands:
@@ -209,7 +242,8 @@ tbreak [[*filename*:]\ *lineno* | *function*\ [, *condition*]]
    Temporary breakpoint, which is removed automatically when it is first hit.  The
    arguments are the same as break.
 
-cl(ear) [*bpnumber* [*bpnumber ...*]]
+cl(ear) [*filename:lineno* | *bpnumber* [*bpnumber ...*]]
+   With a *filename:lineno* argument, clear all the breakpoints at this line.
    With a space separated list of breakpoint numbers, clear those breakpoints.
    Without argument, clear all breaks (but first ask confirmation).
 
@@ -256,7 +290,7 @@ commands [*bpnumber*]
    return, jump, quit and their abbreviations) terminates the command list (as if
    that command was immediately followed by end). This is because any time you
    resume execution (even with a simple next or step), you may encounter another
-   breakpoint--which could have its own command list, leading to ambiguities about
+   breakpoint—which could have its own command list, leading to ambiguities about
    which list to execute.
 
    If you use the 'silent' command in the command list, the usual message about
@@ -360,3 +394,9 @@ run [*args* ...]
 
 q(uit)
    Quit from the debugger. The program being executed is aborted.
+
+
+.. rubric:: Footnotes
+
+.. [1] Whether a frame is considered to originate in a certain module
+       is determined by the ``__name__`` in the frame globals.

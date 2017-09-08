@@ -16,6 +16,11 @@ write files see :func:`open`, and for accessing the filesystem see the
    :func:`splitunc` and :func:`ismount` do handle them correctly.
 
 
+Unlike a unix shell, Python does not do any *automatic* path expansions.
+Functions such as :func:`expanduser` and :func:`expandvars` can be invoked
+explicitly when an application desires shell-like path expansion.  (See also
+the :mod:`glob` module.)
+
 .. note::
 
    Since different operating systems have different path name conventions, there
@@ -35,15 +40,17 @@ write files see :func:`open`, and for accessing the filesystem see the
 .. function:: abspath(path)
 
    Return a normalized absolutized version of the pathname *path*. On most
-   platforms, this is equivalent to ``normpath(join(os.getcwd(), path))``.
+   platforms, this is equivalent to calling the function :func:`normpath` as
+   follows: ``normpath(join(os.getcwd(), path))``.
 
    .. versionadded:: 1.5.2
 
 
 .. function:: basename(path)
 
-   Return the base name of pathname *path*.  This is the second half of the pair
-   returned by ``split(path)``.  Note that the result of this function is different
+   Return the base name of pathname *path*.  This is the second element of the
+   pair returned by passing *path* to the function :func:`split`.  Note that
+   the result of this function is different
    from the Unix :program:`basename` program; where :program:`basename` for
    ``'/foo/bar/'`` returns ``'bar'``, the :func:`basename` function returns an
    empty string (``''``).
@@ -58,8 +65,8 @@ write files see :func:`open`, and for accessing the filesystem see the
 
 .. function:: dirname(path)
 
-   Return the directory name of pathname *path*.  This is the first half of the
-   pair returned by ``split(path)``.
+   Return the directory name of pathname *path*.  This is the first element of
+   the pair returned by passing *path* to the function :func:`split`.
 
 
 .. function:: exists(path)
@@ -120,7 +127,7 @@ write files see :func:`open`, and for accessing the filesystem see the
    .. versionadded:: 1.5.2
 
    .. versionchanged:: 2.3
-      If :func:`os.stat_float_times` returns True, the result is a floating point
+      If :func:`os.stat_float_times` returns ``True``, the result is a floating point
       number.
 
 
@@ -133,14 +140,14 @@ write files see :func:`open`, and for accessing the filesystem see the
    .. versionadded:: 1.5.2
 
    .. versionchanged:: 2.3
-      If :func:`os.stat_float_times` returns True, the result is a floating point
+      If :func:`os.stat_float_times` returns ``True``, the result is a floating point
       number.
 
 
 .. function:: getctime(path)
 
    Return the system's ctime which, on some systems (like Unix) is the time of the
-   last change, and, on others (like Windows), is the creation time for *path*.
+   last metadata change, and, on others (like Windows), is the creation time for *path*.
    The return value is a number giving the number of seconds since the epoch (see
    the  :mod:`time` module).  Raise :exc:`os.error` if the file does not exist or
    is inaccessible.
@@ -178,7 +185,7 @@ write files see :func:`open`, and for accessing the filesystem see the
 .. function:: islink(path)
 
    Return ``True`` if *path* refers to a directory entry that is a symbolic link.
-   Always ``False`` if symbolic links are not supported.
+   Always ``False`` if symbolic links are not supported by the Python runtime.
 
 
 .. function:: ismount(path)
@@ -190,14 +197,20 @@ write files see :func:`open`, and for accessing the filesystem see the
    device --- this should detect mount points for all Unix and POSIX variants.
 
 
-.. function:: join(path1[, path2[, ...]])
+.. function:: join(path, *paths)
 
-   Join one or more path components intelligently.  If any component is an absolute
-   path, all previous components (on Windows, including the previous drive letter,
-   if there was one) are thrown away, and joining continues.  The return value is
-   the concatenation of *path1*, and optionally *path2*, etc., with exactly one
-   directory separator (``os.sep``) inserted between components, unless *path2* is
-   empty.  Note that on Windows, since there is a current directory for each drive,
+   Join one or more path components intelligently.  The return value is the
+   concatenation of *path* and any members of *\*paths* with exactly one
+   directory separator (``os.sep``) following each non-empty part except the
+   last, meaning that the result will only end in a separator if the last
+   part is empty.  If a component is an absolute path, all previous
+   components are thrown away and joining continues from the absolute path
+   component.
+
+   On Windows, the drive letter is not reset when an absolute path component
+   (e.g., ``r'\foo'``) is encountered.  If a component contains a drive
+   letter, all previous components are thrown away and the drive letter is
+   reset.  Note that since there is a current directory for each drive,
    ``os.path.join("c:", "foo")`` represents a path relative to the current
    directory on drive :file:`C:` (:file:`c:foo`), not :file:`c:\\foo`.
 
@@ -211,13 +224,11 @@ write files see :func:`open`, and for accessing the filesystem see the
 
 .. function:: normpath(path)
 
-   Normalize a pathname.  This collapses redundant separators and up-level
-   references so that ``A//B``, ``A/B/``, ``A/./B`` and ``A/foo/../B`` all become
-   ``A/B``.
-
-   It does not normalize the case (use :func:`normcase` for that).  On Windows, it
-   converts forward slashes to backward slashes. It should be understood that this
-   may change the meaning of the path if it contains symbolic links!
+   Normalize a pathname by collapsing redundant separators and up-level
+   references so that ``A//B``, ``A/B/``, ``A/./B`` and ``A/foo/../B`` all
+   become ``A/B``.  This string manipulation may change the meaning of a path
+   that contains symbolic links.  On Windows, it converts forward slashes to
+   backward slashes. To normalize case, use :func:`normcase`.
 
 
 .. function:: realpath(path)
@@ -230,8 +241,10 @@ write files see :func:`open`, and for accessing the filesystem see the
 
 .. function:: relpath(path[, start])
 
-   Return a relative filepath to *path* either from the current directory or from
-   an optional *start* point.
+   Return a relative filepath to *path* either from the current directory or
+   from an optional *start* directory.  This is a path computation:  the
+   filesystem is not accessed to confirm the existence or nature of *path* or
+   *start*.
 
    *start* defaults to :attr:`os.curdir`.
 
@@ -243,7 +256,7 @@ write files see :func:`open`, and for accessing the filesystem see the
 .. function:: samefile(path1, path2)
 
    Return ``True`` if both pathname arguments refer to the same file or directory
-   (as indicated by device number and i-node number). Raise an exception if a
+   (as indicated by device number and i-node number). Raise an exception if an
    :func:`os.stat` call on either pathname fails.
 
    Availability: Unix.
@@ -259,23 +272,24 @@ write files see :func:`open`, and for accessing the filesystem see the
 .. function:: samestat(stat1, stat2)
 
    Return ``True`` if the stat tuples *stat1* and *stat2* refer to the same file.
-   These structures may have been returned by :func:`fstat`, :func:`lstat`, or
-   :func:`stat`.  This function implements the underlying comparison used by
-   :func:`samefile` and :func:`sameopenfile`.
+   These structures may have been returned by :func:`os.fstat`,
+   :func:`os.lstat`, or :func:`os.stat`.  This function implements the
+   underlying comparison used by :func:`samefile` and :func:`sameopenfile`.
 
    Availability: Unix.
 
 
 .. function:: split(path)
 
-   Split the pathname *path* into a pair, ``(head, tail)`` where *tail* is the last
-   pathname component and *head* is everything leading up to that.  The *tail* part
-   will never contain a slash; if *path* ends in a slash, *tail* will be empty.  If
-   there is no slash in *path*, *head* will be empty.  If *path* is empty, both
-   *head* and *tail* are empty.  Trailing slashes are stripped from *head* unless
-   it is the root (one or more slashes only).  In nearly all cases, ``join(head,
-   tail)`` equals *path* (the only exception being when there were multiple slashes
-   separating *head* from *tail*).
+   Split the pathname *path* into a pair, ``(head, tail)`` where *tail* is the
+   last pathname component and *head* is everything leading up to that.  The
+   *tail* part will never contain a slash; if *path* ends in a slash, *tail*
+   will be empty.  If there is no slash in *path*, *head* will be empty.  If
+   *path* is empty, both *head* and *tail* are empty.  Trailing slashes are
+   stripped from *head* unless it is the root (one or more slashes only).  In
+   all cases, ``join(head, tail)`` returns a path to the same location as *path*
+   (but the strings may differ).  Also see the functions :func:`dirname` and
+   :func:`basename`.
 
 
 .. function:: splitdrive(path)
@@ -330,15 +344,14 @@ write files see :func:`open`, and for accessing the filesystem see the
 
    .. note::
 
-      This function is deprecated and has been removed in 3.0 in favor of
+      This function is deprecated and has been removed in Python 3 in favor of
       :func:`os.walk`.
 
 
 .. data:: supports_unicode_filenames
 
-   True if arbitrary Unicode strings can be used as file names (within limitations
-   imposed by the file system), and if :func:`os.listdir` returns Unicode strings
-   for a Unicode argument.
+   ``True`` if arbitrary Unicode strings can be used as file names (within limitations
+   imposed by the file system).
 
    .. versionadded:: 2.3
 

@@ -9,7 +9,7 @@
 .. index:: single: HTMLParser (class in htmllib)
 
 This module supports two interface definitions, each with multiple
-implementations.  The *formatter* interface is used by the :class:`HTMLParser`
+implementations.  The *formatter* interface is used by the :class:`~HTMLParser.HTMLParser`
 class of the :mod:`htmllib` module, and the *writer* interface is required by
 the formatter interface.
 
@@ -341,10 +341,10 @@ this module.  Most applications will need to derive new writer classes from the
    output.
 
 
-.. class:: DumbWriter([file[, maxcol=72]])
+.. class:: DumbWriter(file=None, maxcol=72)
 
    Simple writer class which writes output on the file object passed in as *file*
-   or, if *file* is omitted, on standard output.  The output is simply word-wrapped
+   or, if *file* is ``None``, on standard output.  The output is simply word-wrapped
    to the number of columns specified by *maxcol*.  This class is suitable for
    reflowing a sequence of paragraphs.
 

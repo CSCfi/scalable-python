@@ -2,7 +2,8 @@
 
 import unittest
 from test.test_support import run_unittest, TESTFN, unlink, have_unicode, \
-                              _check_py3k_warnings
+                              check_py3k_warnings, cpython_only, \
+                              check_free_after_iterating
 
 # Test result of triple loop (too big to inline)
 TRIPLETS = [(0, 0, 0), (0, 0, 1), (0, 0, 2),
@@ -76,7 +77,7 @@ class TestCase(unittest.TestCase):
         seq = range(10)
         it = iter(seq)
         it2 = iter(it)
-        self.assert_(it is it2)
+        self.assertTrue(it is it2)
 
     # Test that for loops over iterators work
     def test_iter_for_loop(self):
@@ -120,6 +121,24 @@ class TestCase(unittest.TestCase):
     # Test iter() on a sequence class without __iter__
     def test_seq_class_iter(self):
         self.check_iterator(iter(SequenceClass(10)), range(10))
+
+    def test_mutating_seq_class_exhausted_iter(self):
+        a = SequenceClass(5)
+        exhit = iter(a)
+        empit = iter(a)
+        for x in exhit:  # exhaust the iterator
+            next(empit)  # not exhausted
+        a.n = 7
+        self.assertEqual(list(exhit), [])
+        self.assertEqual(list(empit), [5, 6])
+        self.assertEqual(list(a), [0, 1, 2, 3, 4, 5, 6])
+
+    # Test a new_style class with __iter__ but no next() method
+    def test_new_style_iter_class(self):
+        class IterClass(object):
+            def __iter__(self):
+                return self
+        self.assertRaises(TypeError, iter, IterClass())
 
     # Test two-argument iter() with callable instance
     def test_iter_callable(self):
@@ -401,7 +420,7 @@ class TestCase(unittest.TestCase):
                     for i in range(5)]
 
         # Deprecated map(None, ...)
-        with _check_py3k_warnings():
+        with check_py3k_warnings():
             self.assertEqual(map(None, SequenceClass(5)), range(5))
             self.assertEqual(map(None, d), d.keys())
             self.assertEqual(map(None, d,
@@ -504,7 +523,7 @@ class TestCase(unittest.TestCase):
 
     # Test reduces()'s use of iterators.
     def test_deprecated_builtin_reduce(self):
-        with _check_py3k_warnings():
+        with check_py3k_warnings():
             self._test_builtin_reduce()
 
     def _test_builtin_reduce(self):
@@ -519,7 +538,7 @@ class TestCase(unittest.TestCase):
         d = {"one": 1, "two": 2, "three": 3}
         self.assertEqual(reduce(add, d), "".join(d.keys()))
 
-    # This test case will be removed if we don't have Unicode
+    @unittest.skipUnless(have_unicode, 'needs unicode support')
     def test_unicode_join_endcase(self):
 
         # This class inserts a Unicode object into its argument's natural
@@ -560,30 +579,28 @@ class TestCase(unittest.TestCase):
                 unlink(TESTFN)
             except OSError:
                 pass
-    if not have_unicode:
-        def test_unicode_join_endcase(self): pass
 
     # Test iterators with 'x in y' and 'x not in y'.
     def test_in_and_not_in(self):
         for sc5 in IteratingSequenceClass(5), SequenceClass(5):
             for i in range(5):
-                self.assert_(i in sc5)
+                self.assertIn(i, sc5)
             for i in "abc", -1, 5, 42.42, (3, 4), [], {1: 1}, 3-12j, sc5:
-                self.assert_(i not in sc5)
+                self.assertNotIn(i, sc5)
 
         self.assertRaises(TypeError, lambda: 3 in 12)
         self.assertRaises(TypeError, lambda: 3 not in map)
 
         d = {"one": 1, "two": 2, "three": 3, 1j: 2j}
         for k in d:
-            self.assert_(k in d)
-            self.assert_(k not in d.itervalues())
+            self.assertIn(k, d)
+            self.assertNotIn(k, d.itervalues())
         for v in d.values():
-            self.assert_(v in d.itervalues())
-            self.assert_(v not in d)
+            self.assertIn(v, d.itervalues())
+            self.assertNotIn(v, d)
         for k, v in d.iteritems():
-            self.assert_((k, v) in d.iteritems())
-            self.assert_((v, k) not in d.iteritems())
+            self.assertIn((k, v), d.iteritems())
+            self.assertNotIn((v, k), d.iteritems())
 
         f = open(TESTFN, "w")
         try:
@@ -594,9 +611,9 @@ class TestCase(unittest.TestCase):
         try:
             for chunk in "abc":
                 f.seek(0, 0)
-                self.assert_(chunk not in f)
+                self.assertNotIn(chunk, f)
                 f.seek(0, 0)
-                self.assert_((chunk + "\n") in f)
+                self.assertIn((chunk + "\n"), f)
         finally:
             f.close()
             try:
@@ -786,8 +803,9 @@ class TestCase(unittest.TestCase):
         (a, b), (c,) = IteratingSequenceClass(2), {42: 24}
         self.assertEqual((a, b, c), (0, 1, 42))
 
-        # Test reference count behavior
 
+    @cpython_only
+    def test_ref_counting_behavior(self):
         class C(object):
             count = 0
             def __new__(cls):
@@ -884,6 +902,39 @@ class TestCase(unittest.TestCase):
         b = iter(e)
         self.assertEqual(list(b), zip(range(5), range(5)))
         self.assertEqual(list(b), [])
+
+    def test_3720(self):
+        # Avoid a crash, when an iterator deletes its next() method.
+        class BadIterator(object):
+            def __iter__(self):
+                return self
+            def next(self):
+                del BadIterator.next
+                return 1
+
+        try:
+            for i in BadIterator() :
+                pass
+        except TypeError:
+            pass
+
+    def test_extending_list_with_iterator_does_not_segfault(self):
+        # The code to extend a list with an iterator has a fair
+        # amount of nontrivial logic in terms of guessing how
+        # much memory to allocate in advance, "stealing" refs,
+        # and then shrinking at the end.  This is a basic smoke
+        # test for that scenario.
+        def gen():
+            for i in range(500):
+                yield i
+        lst = [0] * 500
+        for i in range(240):
+            lst.pop(0)
+        lst.extend(gen())
+        self.assertEqual(len(lst), 760)
+
+    def test_free_after_iterating(self):
+        check_free_after_iterating(self, iter, SequenceClass, (0,))
 
 
 def test_main():

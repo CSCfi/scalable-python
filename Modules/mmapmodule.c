@@ -23,6 +23,9 @@
 
 #ifndef MS_WINDOWS
 #define UNIX
+# ifdef HAVE_FCNTL_H
+#  include <fcntl.h>
+# endif /* HAVE_FCNTL_H */
 #endif
 
 #ifdef MS_WINDOWS
@@ -88,9 +91,13 @@ typedef enum
 typedef struct {
     PyObject_HEAD
     char *      data;
-    size_t      size;
-    size_t      pos;    /* relative to offset */
-    size_t      offset;
+    Py_ssize_t  size;
+    Py_ssize_t  pos;    /* relative to offset */
+#ifdef MS_WINDOWS
+    PY_LONG_LONG offset;
+#else
+    off_t       offset;
+#endif
 
 #ifdef MS_WINDOWS
     HANDLE      map_handle;
@@ -124,7 +131,8 @@ mmap_object_dealloc(mmap_object *m_obj)
     if (m_obj->fd >= 0)
         (void) close(m_obj->fd);
     if (m_obj->data!=NULL) {
-        msync(m_obj->data, m_obj->size, MS_SYNC);
+        if (m_obj->access != ACCESS_READ && m_obj->access != ACCESS_COPY)
+            msync(m_obj->data, m_obj->size, MS_SYNC);
         munmap(m_obj->data, m_obj->size);
     }
 #endif /* UNIX */
@@ -196,33 +204,32 @@ mmap_read_byte_method(mmap_object *self,
                       PyObject *unused)
 {
     CHECK_VALID(NULL);
-    if (self->pos < self->size) {
-        char value = self->data[self->pos];
-        self->pos += 1;
-        return Py_BuildValue("c", value);
-    } else {
+    if (self->pos >= self->size) {
         PyErr_SetString(PyExc_ValueError, "read byte out of range");
         return NULL;
     }
+    return PyString_FromStringAndSize(&self->data[self->pos++], 1);
 }
 
 static PyObject *
 mmap_read_line_method(mmap_object *self,
                       PyObject *unused)
 {
-    char *start = self->data+self->pos;
-    char *eof = self->data+self->size;
-    char *eol;
+    Py_ssize_t remaining;
+    char *start, *eol;
     PyObject *result;
 
     CHECK_VALID(NULL);
 
-    eol = memchr(start, '\n', self->size - self->pos);
+    remaining = (self->pos < self->size) ? self->size - self->pos : 0;
+    if (!remaining)
+        return PyString_FromString("");
+    start = self->data + self->pos;
+    eol = memchr(start, '\n', remaining);
     if (!eol)
-        eol = eof;
+        eol = self->data + self->size;
     else
-        ++eol;                  /* we're interested in the position after the
-                           newline. */
+        ++eol; /* advance past newline */
     result = PyString_FromStringAndSize(start, (eol - start));
     self->pos += (eol - start);
     return result;
@@ -232,28 +239,18 @@ static PyObject *
 mmap_read_method(mmap_object *self,
                  PyObject *args)
 {
-    Py_ssize_t num_bytes, n;
+    Py_ssize_t num_bytes, remaining;
     PyObject *result;
 
     CHECK_VALID(NULL);
     if (!PyArg_ParseTuple(args, "n:read", &num_bytes))
-        return(NULL);
+        return NULL;
 
     /* silently 'adjust' out-of-range requests */
-    assert(self->size >= self->pos);
-    n = self->size - self->pos;
-    /* The difference can overflow, only if self->size is greater than
-     * PY_SSIZE_T_MAX.  But then the operation cannot possibly succeed,
-     * because the mapped area and the returned string each need more
-     * than half of the addressable memory.  So we clip the size, and let
-     * the code below raise MemoryError.
-     */
-    if (n < 0)
-        n = PY_SSIZE_T_MAX;
-    if (num_bytes < 0 || num_bytes > n) {
-        num_bytes = n;
-    }
-    result = Py_BuildValue("s#", self->data+self->pos, num_bytes);
+    remaining = (self->pos < self->size) ? self->size - self->pos : 0;
+    if (num_bytes < 0 || num_bytes > remaining)
+        num_bytes = remaining;
+    result = PyString_FromStringAndSize(&self->data[self->pos], num_bytes);
     self->pos += num_bytes;
     return result;
 }
@@ -280,14 +277,14 @@ mmap_gfind(mmap_object *self,
             start += self->size;
         if (start < 0)
             start = 0;
-        else if ((size_t)start > self->size)
+        else if (start > self->size)
             start = self->size;
 
         if (end < 0)
             end += self->size;
         if (end < 0)
             end = 0;
-        else if ((size_t)end > self->size)
+        else if (end > self->size)
             end = self->size;
 
         start_p = self->data + start;
@@ -354,12 +351,12 @@ mmap_write_method(mmap_object *self,
     if (!is_writeable(self))
         return NULL;
 
-    if ((self->pos + length) > self->size) {
+    if (self->pos > self->size || self->size - self->pos < length) {
         PyErr_SetString(PyExc_ValueError, "data out of range");
         return NULL;
     }
-    memcpy(self->data+self->pos, data, length);
-    self->pos = self->pos+length;
+    memcpy(&self->data[self->pos], data, length);
+    self->pos += length;
     Py_INCREF(Py_None);
     return Py_None;
 }
@@ -378,8 +375,7 @@ mmap_write_byte_method(mmap_object *self,
         return NULL;
 
     if (self->pos < self->size) {
-        *(self->data+self->pos) = value;
-        self->pos += 1;
+        self->data[self->pos++] = value;
         Py_INCREF(Py_None);
         return Py_None;
     }
@@ -423,7 +419,11 @@ mmap_size_method(mmap_object *self,
             PyErr_SetFromErrno(mmap_module_error);
             return NULL;
         }
-        return PyInt_FromSsize_t(buf.st_size);
+#ifdef HAVE_LARGEFILE_SUPPORT
+        return PyLong_FromLongLong(buf.st_size);
+#else
+        return PyInt_FromLong(buf.st_size);
+#endif
     }
 #endif /* UNIX */
 }
@@ -446,8 +446,14 @@ mmap_resize_method(mmap_object *self,
     if (!PyArg_ParseTuple(args, "n:resize", &new_size) ||
         !is_resizeable(self)) {
         return NULL;
+    }
+    if (new_size < 0 || PY_SSIZE_T_MAX - new_size < self->offset) {
+        PyErr_SetString(PyExc_ValueError, "new size out of range");
+        return NULL;
+    }
+
+    {
 #ifdef MS_WINDOWS
-    } else {
         DWORD dwErrCode = 0;
         DWORD off_hi, off_lo, newSizeLow, newSizeHigh;
         /* First, unmap the file view */
@@ -457,17 +463,10 @@ mmap_resize_method(mmap_object *self,
         CloseHandle(self->map_handle);
         self->map_handle = NULL;
         /* Move to the desired EOF position */
-#if SIZEOF_SIZE_T > 4
         newSizeHigh = (DWORD)((self->offset + new_size) >> 32);
         newSizeLow = (DWORD)((self->offset + new_size) & 0xFFFFFFFF);
         off_hi = (DWORD)(self->offset >> 32);
         off_lo = (DWORD)(self->offset & 0xFFFFFFFF);
-#else
-        newSizeHigh = 0;
-        newSizeLow = (DWORD)(self->offset + new_size);
-        off_hi = 0;
-        off_lo = (DWORD)self->offset;
-#endif
         SetFilePointer(self->file_handle,
                        newSizeLow, &newSizeHigh, FILE_BEGIN);
         /* Change the size of the file */
@@ -504,15 +503,13 @@ mmap_resize_method(mmap_object *self,
 
 #ifdef UNIX
 #ifndef HAVE_MREMAP
-    } else {
         PyErr_SetString(PyExc_SystemError,
                         "mmap: resizing not available--no mremap()");
         return NULL;
 #else
-    } else {
         void *newmap;
 
-        if (ftruncate(self->fd, self->offset + new_size) == -1) {
+        if (self->fd != -1 && ftruncate(self->fd, self->offset + new_size) == -1) {
             PyErr_SetFromErrno(mmap_module_error);
             return NULL;
         }
@@ -520,11 +517,11 @@ mmap_resize_method(mmap_object *self,
 #ifdef MREMAP_MAYMOVE
         newmap = mremap(self->data, self->size, new_size, MREMAP_MAYMOVE);
 #else
-        #if defined(__NetBSD__)
-            newmap = mremap(self->data, self->size, self->data, new_size, 0);
-        #else
-            newmap = mremap(self->data, self->size, new_size, 0);
-        #endif /* __NetBSD__ */
+#if defined(__NetBSD__)
+        newmap = mremap(self->data, self->size, self->data, new_size, 0);
+#else
+        newmap = mremap(self->data, self->size, new_size, 0);
+#endif /* __NetBSD__ */
 #endif
         if (newmap == (void *)-1)
         {
@@ -555,10 +552,14 @@ mmap_flush_method(mmap_object *self, PyObject *args)
     CHECK_VALID(NULL);
     if (!PyArg_ParseTuple(args, "|nn:flush", &offset, &size))
         return NULL;
-    if ((size_t)(offset + size) > self->size) {
+    if (size < 0 || offset < 0 || self->size - offset < size) {
         PyErr_SetString(PyExc_ValueError, "flush values out of range");
         return NULL;
     }
+
+    if (self->access == ACCESS_READ || self->access == ACCESS_COPY)
+        return PyLong_FromLong(0);
+
 #ifdef MS_WINDOWS
     return PyInt_FromLong((long) FlushViewOfFile(self->data+offset, size));
 #elif defined(UNIX)
@@ -584,20 +585,18 @@ mmap_seek_method(mmap_object *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "n|i:seek", &dist, &how))
         return NULL;
     else {
-        size_t where;
+        Py_ssize_t where;
         switch (how) {
         case 0: /* relative to start */
-            if (dist < 0)
-                goto onoutofrange;
             where = dist;
             break;
         case 1: /* relative to current position */
-            if ((Py_ssize_t)self->pos + dist < 0)
+            if (PY_SSIZE_T_MAX - self->pos < dist)
                 goto onoutofrange;
             where = self->pos + dist;
             break;
         case 2: /* relative to end */
-            if ((Py_ssize_t)self->size + dist < 0)
+            if (PY_SSIZE_T_MAX - self->size < dist)
                 goto onoutofrange;
             where = self->size + dist;
             break;
@@ -605,7 +604,7 @@ mmap_seek_method(mmap_object *self, PyObject *args)
             PyErr_SetString(PyExc_ValueError, "unknown seek type");
             return NULL;
         }
-        if (where > self->size)
+        if (where > self->size || where < 0)
             goto onoutofrange;
         self->pos = where;
         Py_INCREF(Py_None);
@@ -620,25 +619,42 @@ mmap_seek_method(mmap_object *self, PyObject *args)
 static PyObject *
 mmap_move_method(mmap_object *self, PyObject *args)
 {
-    unsigned long dest, src, count;
+    Py_ssize_t dest, src, cnt;
     CHECK_VALID(NULL);
-    if (!PyArg_ParseTuple(args, "kkk:move", &dest, &src, &count) ||
+    if (!PyArg_ParseTuple(args, "nnn:move", &dest, &src, &cnt) ||
         !is_writeable(self)) {
         return NULL;
     } else {
         /* bounds check the values */
-        unsigned long pos = src > dest ? src : dest;
-        if (self->size < pos || count > self->size - pos) {
-            PyErr_SetString(PyExc_ValueError,
-                            "source or destination out of range");
-            return NULL;
-        } else {
-            memmove(self->data+dest, self->data+src, count);
-            Py_INCREF(Py_None);
-            return Py_None;
-        }
+        if (dest < 0 || src < 0 || cnt < 0)
+            goto bounds;
+        if (self->size - dest < cnt || self->size - src < cnt)
+            goto bounds;
+
+        memmove(&self->data[dest], &self->data[src], cnt);
+
+        Py_INCREF(Py_None);
+        return Py_None;
+
+      bounds:
+        PyErr_SetString(PyExc_ValueError,
+                        "source, destination, or count out of range");
+        return NULL;
     }
 }
+
+#ifdef MS_WINDOWS
+static PyObject *
+mmap__sizeof__method(mmap_object *self, void *unused)
+{
+    Py_ssize_t res;
+
+    res = _PyObject_SIZE(Py_TYPE(self));
+    if (self->tagname)
+        res += strlen(self->tagname) + 1;
+    return PyLong_FromSsize_t(res);
+}
+#endif
 
 static struct PyMethodDef mmap_object_methods[] = {
     {"close",           (PyCFunction) mmap_close_method,        METH_NOARGS},
@@ -655,6 +671,9 @@ static struct PyMethodDef mmap_object_methods[] = {
     {"tell",            (PyCFunction) mmap_tell_method,         METH_NOARGS},
     {"write",           (PyCFunction) mmap_write_method,        METH_VARARGS},
     {"write_byte",      (PyCFunction) mmap_write_byte_method,   METH_VARARGS},
+#ifdef MS_WINDOWS
+    {"__sizeof__",      (PyCFunction) mmap__sizeof__method,     METH_NOARGS},
+#endif
     {NULL,         NULL}       /* sentinel */
 };
 
@@ -720,7 +739,7 @@ static PyObject *
 mmap_item(mmap_object *self, Py_ssize_t i)
 {
     CHECK_VALID(NULL);
-    if (i < 0 || (size_t)i >= self->size) {
+    if (i < 0 || i >= self->size) {
         PyErr_SetString(PyExc_IndexError, "mmap index out of range");
         return NULL;
     }
@@ -733,13 +752,13 @@ mmap_slice(mmap_object *self, Py_ssize_t ilow, Py_ssize_t ihigh)
     CHECK_VALID(NULL);
     if (ilow < 0)
         ilow = 0;
-    else if ((size_t)ilow > self->size)
+    else if (ilow > self->size)
         ilow = self->size;
     if (ihigh < 0)
         ihigh = 0;
     if (ihigh < ilow)
         ihigh = ilow;
-    else if ((size_t)ihigh > self->size)
+    else if (ihigh > self->size)
         ihigh = self->size;
 
     return PyString_FromStringAndSize(self->data + ilow, ihigh-ilow);
@@ -755,7 +774,7 @@ mmap_subscript(mmap_object *self, PyObject *item)
             return NULL;
         if (i < 0)
             i += self->size;
-        if (i < 0 || (size_t)i >= self->size) {
+        if (i < 0 || i >= self->size) {
             PyErr_SetString(PyExc_IndexError,
                 "mmap index out of range");
             return NULL;
@@ -825,13 +844,13 @@ mmap_ass_slice(mmap_object *self, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v
     CHECK_VALID(-1);
     if (ilow < 0)
         ilow = 0;
-    else if ((size_t)ilow > self->size)
+    else if (ilow > self->size)
         ilow = self->size;
     if (ihigh < 0)
         ihigh = 0;
     if (ihigh < ilow)
         ihigh = ilow;
-    else if ((size_t)ihigh > self->size)
+    else if (ihigh > self->size)
         ihigh = self->size;
 
     if (v == NULL) {
@@ -862,7 +881,7 @@ mmap_ass_item(mmap_object *self, Py_ssize_t i, PyObject *v)
     const char *buf;
 
     CHECK_VALID(-1);
-    if (i < 0 || (size_t)i >= self->size) {
+    if (i < 0 || i >= self->size) {
         PyErr_SetString(PyExc_IndexError, "mmap index out of range");
         return -1;
     }
@@ -896,7 +915,7 @@ mmap_ass_subscript(mmap_object *self, PyObject *item, PyObject *value)
             return -1;
         if (i < 0)
             i += self->size;
-        if (i < 0 || (size_t)i >= self->size) {
+        if (i < 0 || i >= self->size) {
             PyErr_SetString(PyExc_IndexError,
                 "mmap index out of range");
             return -1;
@@ -1067,33 +1086,13 @@ static PyTypeObject mmap_object_type = {
 };
 
 
-/* extract the map size from the given PyObject
-
-   Returns -1 on error, with an appropriate Python exception raised. On
-   success, the map size is returned. */
-static Py_ssize_t
-_GetMapSize(PyObject *o, const char* param)
-{
-    if (o == NULL)
-        return 0;
-    if (PyIndex_Check(o)) {
-        Py_ssize_t i = PyNumber_AsSsize_t(o, PyExc_OverflowError);
-        if (i==-1 && PyErr_Occurred())
-            return -1;
-        if (i < 0) {
-            PyErr_Format(PyExc_OverflowError,
-                            "memory mapped %s must be positive",
-                            param);
-            return -1;
-        }
-        return i;
-    }
-
-    PyErr_SetString(PyExc_TypeError, "map size must be an integral value");
-    return -1;
-}
-
 #ifdef UNIX
+#ifdef HAVE_LARGEFILE_SUPPORT
+#define _Py_PARSE_OFF_T "L"
+#else
+#define _Py_PARSE_OFF_T "l"
+#endif
+
 static PyObject *
 new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
 {
@@ -1101,8 +1100,8 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
     struct stat st;
 #endif
     mmap_object *m_obj;
-    PyObject *map_size_obj = NULL, *offset_obj = NULL;
-    Py_ssize_t map_size, offset;
+    Py_ssize_t map_size;
+    off_t offset = 0;
     int fd, flags = MAP_SHARED, prot = PROT_WRITE | PROT_READ;
     int devzero = -1;
     int access = (int)ACCESS_DEFAULT;
@@ -1110,16 +1109,20 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
                                      "flags", "prot",
                                      "access", "offset", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "iO|iiiO", keywords,
-                                     &fd, &map_size_obj, &flags, &prot,
-                                     &access, &offset_obj))
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "in|iii" _Py_PARSE_OFF_T, keywords,
+                                     &fd, &map_size, &flags, &prot,
+                                     &access, &offset))
         return NULL;
-    map_size = _GetMapSize(map_size_obj, "size");
-    if (map_size < 0)
+    if (map_size < 0) {
+        PyErr_SetString(PyExc_OverflowError,
+                        "memory mapped length must be postiive");
         return NULL;
-    offset = _GetMapSize(offset_obj, "offset");
-    if (offset < 0)
+    }
+    if (offset < 0) {
+        PyErr_SetString(PyExc_OverflowError,
+            "memory mapped offset must be positive");
         return NULL;
+    }
 
     if ((access != (int)ACCESS_DEFAULT) &&
         ((flags != MAP_SHARED) || (prot != (PROT_WRITE | PROT_READ))))
@@ -1139,17 +1142,28 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
         prot = PROT_READ | PROT_WRITE;
         break;
     case ACCESS_DEFAULT:
-        /* use the specified or default values of flags and prot */
+        /* map prot to access type */
+        if ((prot & PROT_READ) && (prot & PROT_WRITE)) {
+            /* ACCESS_DEFAULT */
+        }
+        else if (prot & PROT_WRITE) {
+            access = ACCESS_WRITE;
+        }
+        else {
+            access = ACCESS_READ;
+        }
         break;
     default:
         return PyErr_Format(PyExc_ValueError,
                             "mmap invalid access parameter.");
     }
 
-    if (prot == PROT_READ) {
-    access = ACCESS_READ;
-    }
-
+#ifdef __APPLE__
+    /* Issue #11277: fsync(2) is not enough on OS X - a special, OS X specific
+       fcntl(2) is necessary to force DISKSYNC and get around mmap(2) bug */
+    if (fd != -1)
+        (void)fcntl(fd, F_FULLFSYNC);
+#endif
 #ifdef HAVE_FSTAT
 #  ifdef __VMS
     /* on OpenVMS we must ensure that all bytes are written to the file */
@@ -1159,8 +1173,23 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
 #  endif
     if (fd != -1 && fstat(fd, &st) == 0 && S_ISREG(st.st_mode)) {
         if (map_size == 0) {
-            map_size = st.st_size;
-        } else if ((size_t)offset + (size_t)map_size > st.st_size) {
+            if (st.st_size == 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "cannot mmap an empty file");
+                return NULL;
+            }
+            if (offset >= st.st_size) {
+                PyErr_SetString(PyExc_ValueError,
+                                "mmap offset is greater than file size");
+                return NULL;
+            }
+            if (st.st_size - offset > PY_SSIZE_T_MAX) {
+                PyErr_SetString(PyExc_ValueError,
+                                 "mmap length is too large");
+                return NULL;
+            }
+            map_size = (Py_ssize_t) (st.st_size - offset);
+        } else if (offset > st.st_size || st.st_size - offset < map_size) {
             PyErr_SetString(PyExc_ValueError,
                             "mmap length is greater than file size");
             return NULL;
@@ -1170,8 +1199,8 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
     m_obj = (mmap_object *)type->tp_alloc(type, 0);
     if (m_obj == NULL) {return NULL;}
     m_obj->data = NULL;
-    m_obj->size = (size_t) map_size;
-    m_obj->pos = (size_t) 0;
+    m_obj->size = map_size;
+    m_obj->pos = 0;
     m_obj->offset = offset;
     if (fd == -1) {
         m_obj->fd = -1;
@@ -1220,12 +1249,18 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
 #endif /* UNIX */
 
 #ifdef MS_WINDOWS
+
+/* A note on sizes and offsets: while the actual map size must hold in a
+   Py_ssize_t, both the total file size and the start offset can be longer
+   than a Py_ssize_t, so we use PY_LONG_LONG which is always 64-bit.
+*/
+
 static PyObject *
 new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
 {
     mmap_object *m_obj;
-    PyObject *map_size_obj = NULL, *offset_obj = NULL;
-    Py_ssize_t map_size, offset;
+    Py_ssize_t map_size;
+    PY_LONG_LONG offset = 0, size;
     DWORD off_hi;       /* upper 32 bits of offset */
     DWORD off_lo;       /* lower 32 bits of offset */
     DWORD size_hi;      /* upper 32 bits of size */
@@ -1240,9 +1275,9 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
                                       "tagname",
                                       "access", "offset", NULL };
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "iO|ziO", keywords,
-                                     &fileno, &map_size_obj,
-                                     &tagname, &access, &offset_obj)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwdict, "in|ziL", keywords,
+                                     &fileno, &map_size,
+                                     &tagname, &access, &offset)) {
         return NULL;
     }
 
@@ -1264,12 +1299,16 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
                             "mmap invalid access parameter.");
     }
 
-    map_size = _GetMapSize(map_size_obj, "size");
-    if (map_size < 0)
+    if (map_size < 0) {
+        PyErr_SetString(PyExc_OverflowError,
+                        "memory mapped length must be postiive");
         return NULL;
-    offset = _GetMapSize(offset_obj, "offset");
-    if (offset < 0)
+    }
+    if (offset < 0) {
+        PyErr_SetString(PyExc_OverflowError,
+            "memory mapped offset must be positive");
         return NULL;
+    }
 
     /* assume -1 and 0 both mean invalid filedescriptor
        to 'anonymously' map memory.
@@ -1280,6 +1319,11 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
                    "don't use 0 for anonymous memory");
      */
     if (fileno != -1 && fileno != 0) {
+        /* Ensure that fileno is within the CRT's valid range */
+        if (_PyVerify_fd(fileno) == 0) {
+            PyErr_SetFromErrno(mmap_module_error);
+            return NULL;
+        }
         fh = (HANDLE)_get_osfhandle(fileno);
         if (fh==(HANDLE)-1) {
             PyErr_SetFromErrno(mmap_module_error);
@@ -1327,21 +1371,34 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
                 return PyErr_SetFromWindowsErr(dwErr);
             }
 
-#if SIZEOF_SIZE_T > 4
-            m_obj->size = (((size_t)high)<<32) + low;
-#else
-            if (high)
-                /* File is too large to map completely */
-                m_obj->size = (size_t)-1;
-            else
-                m_obj->size = low;
-#endif
+            size = (((PY_LONG_LONG) high) << 32) + low;
+            if (size == 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "cannot mmap an empty file");
+                Py_DECREF(m_obj);
+                return NULL;
+            }
+            if (offset >= size) {
+                PyErr_SetString(PyExc_ValueError,
+                                "mmap offset is greater than file size");
+                Py_DECREF(m_obj);
+                return NULL;
+            }
+            if (size - offset > PY_SSIZE_T_MAX) {
+                PyErr_SetString(PyExc_ValueError,
+                                "mmap length is too large");
+                Py_DECREF(m_obj);
+                return NULL;
+            }
+            m_obj->size = (Py_ssize_t) (size - offset);
         } else {
             m_obj->size = map_size;
+            size = offset + map_size;
         }
     }
     else {
         m_obj->size = map_size;
+        size = offset + map_size;
     }
 
     /* set the initial position */
@@ -1361,22 +1418,10 @@ new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)
         m_obj->tagname = NULL;
 
     m_obj->access = (access_mode)access;
-    /* DWORD is a 4-byte int.  If we're on a box where size_t consumes
-     * more than 4 bytes, we need to break it apart.  Else (size_t
-     * consumes 4 bytes), C doesn't define what happens if we shift
-     * right by 32, so we need different code.
-     */
-#if SIZEOF_SIZE_T > 4
-    size_hi = (DWORD)((offset + m_obj->size) >> 32);
-    size_lo = (DWORD)((offset + m_obj->size) & 0xFFFFFFFF);
+    size_hi = (DWORD)(size >> 32);
+    size_lo = (DWORD)(size & 0xFFFFFFFF);
     off_hi = (DWORD)(offset >> 32);
     off_lo = (DWORD)(offset & 0xFFFFFFFF);
-#else
-    size_hi = 0;
-    size_lo = (DWORD)(offset + m_obj->size);
-    off_hi = 0;
-    off_lo = (DWORD)offset;
-#endif
     /* For files, it would be sufficient to pass 0 as size.
        For anonymous maps, we have to pass the size explicitly. */
     m_obj->map_handle = CreateFileMapping(m_obj->file_handle,

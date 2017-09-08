@@ -593,7 +593,7 @@ strop_expandtabs(PyObject *self, PyObject *args)
     char* e;
     char* p;
     char* q;
-    Py_ssize_t i, j, old_j;
+    Py_ssize_t i, j;
     PyObject* out;
     char* string;
     Py_ssize_t stringlen;
@@ -610,30 +610,29 @@ strop_expandtabs(PyObject *self, PyObject *args)
     }
 
     /* First pass: determine size of output string */
-    i = j = old_j = 0; /* j: current column; i: total of previous lines */
+    i = j = 0; /* j: current column; i: total of previous lines */
     e = string + stringlen;
     for (p = string; p < e; p++) {
         if (*p == '\t') {
-            j += tabsize - (j%tabsize);
-            if (old_j > j) {
-                PyErr_SetString(PyExc_OverflowError,
-                                "new string is too long");
-                return NULL;
-            }
-            old_j = j;
+            Py_ssize_t incr = tabsize - (j%tabsize);
+            if (j > PY_SSIZE_T_MAX - incr)
+                goto overflow;
+            j += incr;
         } else {
+            if (j > PY_SSIZE_T_MAX - 1)
+                goto overflow;
             j++;
             if (*p == '\n') {
+                if (i > PY_SSIZE_T_MAX - j)
+                    goto overflow;
                 i += j;
                 j = 0;
             }
         }
     }
 
-    if ((i + j) < 0) {
-        PyErr_SetString(PyExc_OverflowError, "new string is too long");
-        return NULL;
-    }
+    if (i > PY_SSIZE_T_MAX - j)
+        goto overflow;
 
     /* Second pass: create output string and fill it */
     out = PyString_FromStringAndSize(NULL, i+j);
@@ -658,6 +657,9 @@ strop_expandtabs(PyObject *self, PyObject *args)
     }
 
     return out;
+  overflow:
+    PyErr_SetString(PyExc_OverflowError, "result is too long");
+    return NULL;
 }
 
 
@@ -879,21 +881,17 @@ strop_atof(PyObject *self, PyObject *args)
         PyErr_SetString(PyExc_ValueError, "empty string for atof()");
         return NULL;
     }
-    errno = 0;
+
     PyFPE_START_PROTECT("strop_atof", return 0)
-    x = PyOS_ascii_strtod(s, &end);
+    x = PyOS_string_to_double(s, &end, PyExc_OverflowError);
     PyFPE_END_PROTECT(x)
+    if (x == -1 && PyErr_Occurred())
+        return NULL;
     while (*end && isspace(Py_CHARMASK(*end)))
         end++;
     if (*end != '\0') {
         PyOS_snprintf(buffer, sizeof(buffer),
                       "invalid literal for atof(): %.200s", s);
-        PyErr_SetString(PyExc_ValueError, buffer);
-        return NULL;
-    }
-    else if (errno != 0) {
-        PyOS_snprintf(buffer, sizeof(buffer),
-                      "atof() literal too large: %.200s", s);
         PyErr_SetString(PyExc_ValueError, buffer);
         return NULL;
     }
@@ -1096,7 +1094,7 @@ mymemreplace(const char *str, Py_ssize_t len,           /* input string */
 {
     char *out_s;
     char *new_s;
-    Py_ssize_t nfound, offset, new_len;
+    Py_ssize_t nfound, offset, new_len, delta_len, abs_delta;
 
     if (len == 0 || pat_len > len)
         goto return_same;
@@ -1110,7 +1108,14 @@ mymemreplace(const char *str, Py_ssize_t len,           /* input string */
     if (nfound == 0)
         goto return_same;
 
-    new_len = len + nfound*(sub_len - pat_len);
+    delta_len = sub_len - pat_len;
+    abs_delta = (delta_len < 0) ? -delta_len : delta_len;
+    if (PY_SSIZE_T_MAX/nfound < abs_delta)
+        return NULL;
+    delta_len *= nfound;
+    if (PY_SSIZE_T_MAX - len < delta_len)
+        return NULL;
+    new_len = len + delta_len;
     if (new_len == 0) {
         /* Have to allocate something for the caller to free(). */
         out_s = (char *)PyMem_MALLOC(1);

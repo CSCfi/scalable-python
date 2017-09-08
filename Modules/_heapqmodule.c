@@ -2,7 +2,7 @@
 
 C implementation derived directly from heapq.py in Py2.3
 which was written by Kevin O'Connor, augmented by Tim Peters,
-annotated by François Pinard, and converted to C by Raymond Hettinger.
+annotated by FranÃ§ois Pinard, and converted to C by Raymond Hettinger.
 
 */
 
@@ -11,7 +11,7 @@ annotated by François Pinard, and converted to C by Raymond Hettinger.
 /* Older implementations of heapq used Py_LE for comparisons.  Now, it uses
    Py_LT so it will match min(), sorted(), and bisect().  Unfortunately, some
    client code (Twisted for example) relied on Py_LE, so this little function
-   restores compatability by trying both.
+   restores compatibility by trying both.
 */
 static int
 cmp_lt(PyObject *x, PyObject *y)
@@ -36,45 +36,47 @@ static int
 _siftdown(PyListObject *heap, Py_ssize_t startpos, Py_ssize_t pos)
 {
     PyObject *newitem, *parent;
+    Py_ssize_t parentpos, size;
     int cmp;
-    Py_ssize_t parentpos;
 
     assert(PyList_Check(heap));
-    if (pos >= PyList_GET_SIZE(heap)) {
+    size = PyList_GET_SIZE(heap);
+    if (pos >= size) {
         PyErr_SetString(PyExc_IndexError, "index out of range");
         return -1;
     }
 
-    newitem = PyList_GET_ITEM(heap, pos);
-    Py_INCREF(newitem);
     /* Follow the path to the root, moving parents down until finding
        a place newitem fits. */
-    while (pos > startpos){
+    newitem = PyList_GET_ITEM(heap, pos);
+    while (pos > startpos) {
         parentpos = (pos - 1) >> 1;
         parent = PyList_GET_ITEM(heap, parentpos);
         cmp = cmp_lt(newitem, parent);
-        if (cmp == -1) {
-            Py_DECREF(newitem);
+        if (cmp == -1)
+            return -1;
+        if (size != PyList_GET_SIZE(heap)) {
+            PyErr_SetString(PyExc_RuntimeError,
+                            "list changed size during iteration");
             return -1;
         }
         if (cmp == 0)
             break;
-        Py_INCREF(parent);
-        Py_DECREF(PyList_GET_ITEM(heap, pos));
+        parent = PyList_GET_ITEM(heap, parentpos);
+        newitem = PyList_GET_ITEM(heap, pos);
+        PyList_SET_ITEM(heap, parentpos, newitem);
         PyList_SET_ITEM(heap, pos, parent);
         pos = parentpos;
     }
-    Py_DECREF(PyList_GET_ITEM(heap, pos));
-    PyList_SET_ITEM(heap, pos, newitem);
     return 0;
 }
 
 static int
 _siftup(PyListObject *heap, Py_ssize_t pos)
 {
-    Py_ssize_t startpos, endpos, childpos, rightpos;
+    Py_ssize_t startpos, endpos, childpos, rightpos, limit;
+    PyObject *tmp1, *tmp2;
     int cmp;
-    PyObject *newitem, *tmp;
 
     assert(PyList_Check(heap));
     endpos = PyList_GET_SIZE(heap);
@@ -83,38 +85,35 @@ _siftup(PyListObject *heap, Py_ssize_t pos)
         PyErr_SetString(PyExc_IndexError, "index out of range");
         return -1;
     }
-    newitem = PyList_GET_ITEM(heap, pos);
-    Py_INCREF(newitem);
 
     /* Bubble up the smaller child until hitting a leaf. */
-    childpos = 2*pos + 1;    /* leftmost child position  */
-    while (childpos < endpos) {
+    limit = endpos / 2;          /* smallest pos that has no child */
+    while (pos < limit) {
         /* Set childpos to index of smaller child.   */
+        childpos = 2*pos + 1;    /* leftmost child position  */
         rightpos = childpos + 1;
         if (rightpos < endpos) {
             cmp = cmp_lt(
                 PyList_GET_ITEM(heap, childpos),
                 PyList_GET_ITEM(heap, rightpos));
-            if (cmp == -1) {
-                Py_DECREF(newitem);
+            if (cmp == -1)
                 return -1;
-            }
             if (cmp == 0)
                 childpos = rightpos;
+            if (endpos != PyList_GET_SIZE(heap)) {
+                PyErr_SetString(PyExc_RuntimeError,
+                                "list changed size during iteration");
+                return -1;
+            }
         }
         /* Move the smaller child up. */
-        tmp = PyList_GET_ITEM(heap, childpos);
-        Py_INCREF(tmp);
-        Py_DECREF(PyList_GET_ITEM(heap, pos));
-        PyList_SET_ITEM(heap, pos, tmp);
+        tmp1 = PyList_GET_ITEM(heap, childpos);
+        tmp2 = PyList_GET_ITEM(heap, pos);
+        PyList_SET_ITEM(heap, childpos, tmp2);
+        PyList_SET_ITEM(heap, pos, tmp1);
         pos = childpos;
-        childpos = 2*pos + 1;
     }
-
-    /* The leaf at pos is empty now.  Put newitem there, and and bubble
-       it up to its final resting place (by sifting its parents down). */
-    Py_DECREF(PyList_GET_ITEM(heap, pos));
-    PyList_SET_ITEM(heap, pos, newitem);
+    /* Bubble it up to its final resting place (by sifting its parents down). */
     return _siftdown(heap, startpos, pos);
 }
 
@@ -141,7 +140,7 @@ heappush(PyObject *self, PyObject *args)
 }
 
 PyDoc_STRVAR(heappush_doc,
-"Push item onto heap, maintaining the heap invariant.");
+"heappush(heap, item) -> None. Push item onto heap, maintaining the heap invariant.");
 
 static PyObject *
 heappop(PyObject *self, PyObject *heap)
@@ -209,7 +208,7 @@ heapreplace(PyObject *self, PyObject *args)
 }
 
 PyDoc_STRVAR(heapreplace_doc,
-"Pop and return the current smallest value, and add the new item.\n\
+"heapreplace(heap, item) -> value. Pop and return the current smallest value, and add the new item.\n\
 \n\
 This is more efficient than heappop() followed by heappush(), and can be\n\
 more appropriate when using a fixed-size heap.  Note that the value\n\
@@ -245,6 +244,11 @@ heappushpop(PyObject *self, PyObject *args)
         return item;
     }
 
+    if (PyList_GET_SIZE(heap) == 0) {
+        PyErr_SetString(PyExc_IndexError, "index out of range");
+        return NULL;
+    }
+
     returnitem = PyList_GET_ITEM(heap, 0);
     Py_INCREF(item);
     PyList_SET_ITEM(heap, 0, item);
@@ -256,7 +260,7 @@ heappushpop(PyObject *self, PyObject *args)
 }
 
 PyDoc_STRVAR(heappushpop_doc,
-"Push item on the heap, then pop and return the smallest item\n\
+"heappushpop(heap, item) -> value. Push item on the heap, then pop and return the smallest item\n\
 from the heap. The combined action runs more efficiently than\n\
 heappush() followed by a separate call to heappop().");
 
@@ -411,7 +415,7 @@ _siftdownmax(PyListObject *heap, Py_ssize_t startpos, Py_ssize_t pos)
 static int
 _siftupmax(PyListObject *heap, Py_ssize_t pos)
 {
-    Py_ssize_t startpos, endpos, childpos, rightpos;
+    Py_ssize_t startpos, endpos, childpos, rightpos, limit;
     int cmp;
     PyObject *newitem, *tmp;
 
@@ -426,9 +430,10 @@ _siftupmax(PyListObject *heap, Py_ssize_t pos)
     Py_INCREF(newitem);
 
     /* Bubble up the smaller child until hitting a leaf. */
-    childpos = 2*pos + 1;    /* leftmost child position  */
-    while (childpos < endpos) {
+    limit = endpos / 2;          /* smallest pos that has no child */
+    while (pos < limit) {
         /* Set childpos to index of smaller child.   */
+        childpos = 2*pos + 1;    /* leftmost child position  */
         rightpos = childpos + 1;
         if (rightpos < endpos) {
             cmp = cmp_lt(
@@ -447,10 +452,9 @@ _siftupmax(PyListObject *heap, Py_ssize_t pos)
         Py_DECREF(PyList_GET_ITEM(heap, pos));
         PyList_SET_ITEM(heap, pos, tmp);
         pos = childpos;
-        childpos = 2*pos + 1;
     }
 
-    /* The leaf at pos is empty now.  Put newitem there, and and bubble
+    /* The leaf at pos is empty now.  Put newitem there, and bubble
        it up to its final resting place (by sifting its parents down). */
     Py_DECREF(PyList_GET_ITEM(heap, pos));
     PyList_SET_ITEM(heap, pos, newitem);
@@ -615,7 +619,7 @@ representation for a tournament.  The numbers below are `k', not a[k]:\n\
 \n\
 \n\
 In the tree above, each cell `k' is topping `2*k+1' and `2*k+2'.  In\n\
-an usual binary tournament we see in sports, each cell is the winner\n\
+a usual binary tournament we see in sports, each cell is the winner\n\
 over the two cells it tops, and we can trace the winner down the tree\n\
 to see all opponents s/he had.  However, in many computer applications\n\
 of such tournaments, we do not need to trace the history of a winner.\n\

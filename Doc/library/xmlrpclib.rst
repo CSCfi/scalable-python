@@ -8,8 +8,8 @@
 
 .. note::
    The :mod:`xmlrpclib` module has been renamed to :mod:`xmlrpc.client` in
-   Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
+   Python 3.  The :term:`2to3` tool will automatically adapt imports when
+   converting your sources to Python 3.
 
 
 .. XXX Not everything is documented yet.  It might be good to describe
@@ -17,14 +17,29 @@
 
 .. versionadded:: 2.2
 
-XML-RPC is a Remote Procedure Call method that uses XML passed via HTTP as a
+**Source code:** :source:`Lib/xmlrpclib.py`
+
+--------------
+
+XML-RPC is a Remote Procedure Call method that uses XML passed via HTTP(S) as a
 transport.  With it, a client can call methods with parameters on a remote
 server (the server is named by a URI) and get back structured data.  This module
 supports writing XML-RPC client code; it handles all the details of translating
 between conformable Python objects and XML on the wire.
 
 
-.. class:: ServerProxy(uri[, transport[, encoding[, verbose[,  allow_none[, use_datetime]]]]])
+.. warning::
+
+   The :mod:`xmlrpclib` module is not secure against maliciously
+   constructed data.  If you need to parse untrusted or unauthenticated data see
+   :ref:`xml-vulnerabilities`.
+
+.. versionchanged:: 2.7.9
+
+   For HTTPS URIs, :mod:`xmlrpclib` now performs all the necessary certificate
+   and hostname checks by default.
+
+.. class:: ServerProxy(uri[, transport[, encoding[, verbose[, allow_none[, use_datetime[, context]]]]]])
 
    A :class:`ServerProxy` instance is an object that manages communication with a
    remote XML-RPC server.  The required first argument is a URI (Uniform Resource
@@ -33,20 +48,26 @@ between conformable Python objects and XML on the wire.
    :class:`SafeTransport` instance for https: URLs and an internal HTTP
    :class:`Transport` instance otherwise.  The optional third argument is an
    encoding, by default UTF-8. The optional fourth argument is a debugging flag.
+
+   The following parameters govern the use of the returned proxy instance.
    If *allow_none* is true,  the Python constant ``None`` will be translated into
    XML; the default behaviour is for ``None`` to raise a :exc:`TypeError`. This is
    a commonly-used extension to the XML-RPC specification, but isn't supported by
-   all clients and servers; see http://ontosys.com/xml-rpc/extensions.php for a
-   description.  The *use_datetime* flag can be used to cause date/time values to
+   all clients and servers; see `http://ontosys.com/xml-rpc/extensions.php
+   <https://web.archive.org/web/20130120074804/http://ontosys.com/xml-rpc/extensions.php>`_
+   for a description.
+   The *use_datetime* flag can be used to cause date/time values to
    be presented as :class:`datetime.datetime` objects; this is false by default.
    :class:`datetime.datetime` objects may be passed to calls.
 
    Both the HTTP and HTTPS transports support the URL syntax extension for HTTP
-   Basic Authentication: ``http://user:pass@host:port/path``.  The  ``user:pass``
+   Basic Authentication: ``http://user:pass@host:port/path``.  The ``user:pass``
    portion will be base64-encoded as an HTTP 'Authorization' header, and sent to
    the remote server as part of the connection process when invoking an XML-RPC
    method.  You only need to use this if the remote server requires a Basic
-   Authentication user and password.
+   Authentication user and password. If an HTTPS URL is provided, *context* may
+   be :class:`ssl.SSLContext` and configures the SSL settings of the underlying
+   HTTPS connection.
 
    The returned instance is a proxy object with methods that can be used to invoke
    corresponding RPC calls on the remote server.  If the remote server supports the
@@ -54,40 +75,42 @@ between conformable Python objects and XML on the wire.
    methods it supports (service discovery) and fetch other server-associated
    metadata.
 
-   :class:`ServerProxy` instance methods take Python basic types and objects as
-   arguments and return Python basic types and classes.  Types that are conformable
-   (e.g. that can be marshalled through XML), include the following (and except
-   where noted, they are unmarshalled as the same Python type):
+   Types that are conformable (e.g. that can be marshalled through XML),
+   include the following (and except where noted, they are unmarshalled
+   as the same Python type):
 
-   +---------------------------------+---------------------------------------------+
-   | Name                            | Meaning                                     |
-   +=================================+=============================================+
-   | :const:`boolean`                | The :const:`True` and :const:`False`        |
-   |                                 | constants                                   |
-   +---------------------------------+---------------------------------------------+
-   | :const:`integers`               | Pass in directly                            |
-   +---------------------------------+---------------------------------------------+
-   | :const:`floating-point numbers` | Pass in directly                            |
-   +---------------------------------+---------------------------------------------+
-   | :const:`strings`                | Pass in directly                            |
-   +---------------------------------+---------------------------------------------+
-   | :const:`arrays`                 | Any Python sequence type containing         |
-   |                                 | conformable elements. Arrays are returned   |
-   |                                 | as lists                                    |
-   +---------------------------------+---------------------------------------------+
-   | :const:`structures`             | A Python dictionary. Keys must be strings,  |
-   |                                 | values may be any conformable type. Objects |
-   |                                 | of user-defined classes can be passed in;   |
-   |                                 | only their *__dict__* attribute is          |
-   |                                 | transmitted.                                |
-   +---------------------------------+---------------------------------------------+
-   | :const:`dates`                  | in seconds since the epoch (pass in an      |
-   |                                 | instance of the :class:`DateTime` class) or |
-   |                                 | a :class:`datetime.datetime` instance.      |
-   +---------------------------------+---------------------------------------------+
-   | :const:`binary data`            | pass in an instance of the :class:`Binary`  |
-   |                                 | wrapper class                               |
-   +---------------------------------+---------------------------------------------+
+   .. tabularcolumns:: |l|L|
+
+   +----------------------+-------------------------------------------------------+
+   | XML-RPC type         | Python type                                           |
+   +======================+=======================================================+
+   | ``boolean``          | :class:`bool`                                         |
+   +----------------------+-------------------------------------------------------+
+   | ``int`` or ``i4``    | :class:`int` or :class:`long` in range from           |
+   |                      | -2147483648 to 2147483647.                            |
+   +----------------------+-------------------------------------------------------+
+   | ``double``           | :class:`float`                                        |
+   +----------------------+-------------------------------------------------------+
+   | ``string``           | :class:`str` or :class:`unicode`                      |
+   +----------------------+-------------------------------------------------------+
+   | ``array``            | :class:`list` or :class:`tuple` containing            |
+   |                      | conformable elements.  Arrays are returned as         |
+   |                      | :class:`lists <list>`.                                |
+   +----------------------+-------------------------------------------------------+
+   | ``struct``           | :class:`dict`.  Keys must be strings, values may be   |
+   |                      | any conformable type.  Objects of user-defined        |
+   |                      | classes can be passed in; only their                  |
+   |                      | :attr:`~object.__dict__` attribute is transmitted.    |
+   +----------------------+-------------------------------------------------------+
+   | ``dateTime.iso8601`` | :class:`DateTime` or :class:`datetime.datetime`.      |
+   |                      | Returned type depends on values of the *use_datetime* |
+   |                      | flags.                                                |
+   +----------------------+-------------------------------------------------------+
+   | ``base64``           | :class:`Binary`                                       |
+   +----------------------+-------------------------------------------------------+
+   | ``nil``              | The ``None`` constant.  Passing is allowed only if    |
+   |                      | *allow_none* is true.                                 |
+   +----------------------+-------------------------------------------------------+
 
    This is the full set of data types supported by XML-RPC.  Method calls may also
    raise a special :exc:`Fault` instance, used to signal XML-RPC server errors, or
@@ -115,6 +138,9 @@ between conformable Python objects and XML on the wire.
       Instances of :term:`new-style class`\es can be passed in if they have an
       *__dict__* attribute and don't have a base class that is marshalled in a
       special way.
+
+   .. versionchanged:: 2.7.9
+      Added the *context* argument.
 
 
 .. seealso::
@@ -148,7 +174,7 @@ returning a value, which may be either returned data in a conformant type or a
 :class:`Fault` or :class:`ProtocolError` object indicating an error.
 
 Servers that support the XML introspection API support some common methods
-grouped under the reserved :attr:`system` member:
+grouped under the reserved :attr:`~ServerProxy.system` attribute:
 
 
 .. method:: ServerProxy.system.listMethods()
@@ -209,7 +235,7 @@ A working example follows. The server code::
    from SimpleXMLRPCServer import SimpleXMLRPCServer
 
    def is_even(n):
-       return n%2 == 0
+       return n % 2 == 0
 
    server = SimpleXMLRPCServer(("localhost", 8000))
    print "Listening on port 8000..."
@@ -229,24 +255,26 @@ The client code for the preceding server::
 DateTime Objects
 ----------------
 
-This class may be initialized with seconds since the epoch, a time
-tuple, an ISO 8601 time/date string, or a :class:`datetime.datetime`
-instance.  It has the following methods, supported mainly for internal
-use by the marshalling/unmarshalling code:
+.. class:: DateTime
+
+   This class may be initialized with seconds since the epoch, a time
+   tuple, an ISO 8601 time/date string, or a :class:`datetime.datetime`
+   instance.  It has the following methods, supported mainly for internal
+   use by the marshalling/unmarshalling code:
 
 
-.. method:: DateTime.decode(string)
+   .. method:: decode(string)
 
-   Accept a string as the instance's new time value.
+      Accept a string as the instance's new time value.
 
 
-.. method:: DateTime.encode(out)
+   .. method:: encode(out)
 
-   Write the XML-RPC encoding of this :class:`DateTime` item to the *out* stream
-   object.
+      Write the XML-RPC encoding of this :class:`DateTime` item to the *out* stream
+      object.
 
-It also supports certain of Python's built-in operators through  :meth:`__cmp__`
-and :meth:`__repr__` methods.
+   It also supports certain of Python's built-in operators through :meth:`__cmp__`
+   and :meth:`__repr__` methods.
 
 A working example follows. The server code::
 
@@ -280,36 +308,38 @@ The client code for the preceding server::
 Binary Objects
 --------------
 
-This class may be initialized from string data (which may include NULs). The
-primary access to the content of a :class:`Binary` object is provided by an
-attribute:
+.. class:: Binary
+
+   This class may be initialized from string data (which may include NULs). The
+   primary access to the content of a :class:`Binary` object is provided by an
+   attribute:
 
 
-.. attribute:: Binary.data
+   .. attribute:: data
 
-   The binary data encapsulated by the :class:`Binary` instance.  The data is
-   provided as an 8-bit string.
+      The binary data encapsulated by the :class:`Binary` instance.  The data is
+      provided as an 8-bit string.
 
-:class:`Binary` objects have the following methods, supported mainly for
-internal use by the marshalling/unmarshalling code:
-
-
-.. method:: Binary.decode(string)
-
-   Accept a base64 string and decode it as the instance's new data.
+   :class:`Binary` objects have the following methods, supported mainly for
+   internal use by the marshalling/unmarshalling code:
 
 
-.. method:: Binary.encode(out)
+   .. method:: decode(string)
 
-   Write the XML-RPC base 64 encoding of this binary item to the out stream object.
+      Accept a base64 string and decode it as the instance's new data.
 
-   The encoded data will have newlines every 76 characters as per
-   `RFC 2045 section 6.8 <http://tools.ietf.org/html/rfc2045#section-6.8>`_,
-   which was the de facto standard base64 specification when the
-   XML-RPC spec was written.
 
-It also supports certain of Python's built-in operators through a
-:meth:`__cmp__` method.
+   .. method:: encode(out)
+
+      Write the XML-RPC base 64 encoding of this binary item to the *out* stream object.
+
+      The encoded data will have newlines every 76 characters as per
+      `RFC 2045 section 6.8 <https://tools.ietf.org/html/rfc2045#section-6.8>`_,
+      which was the de facto standard base64 specification when the
+      XML-RPC spec was written.
+
+   It also supports certain of Python's built-in operators through a
+   :meth:`__cmp__` method.
 
 Example usage of the binary objects.  We're going to transfer an image over
 XMLRPC::
@@ -340,18 +370,20 @@ The client gets the image and saves it to a file::
 Fault Objects
 -------------
 
-A :class:`Fault` object encapsulates the content of an XML-RPC fault tag. Fault
-objects have the following members:
+.. class:: Fault
+
+   A :class:`Fault` object encapsulates the content of an XML-RPC fault tag. Fault
+   objects have the following attributes:
 
 
-.. attribute:: Fault.faultCode
+   .. attribute:: faultCode
 
-   A string indicating the fault type.
+      A string indicating the fault type.
 
 
-.. attribute:: Fault.faultString
+   .. attribute:: faultString
 
-   A string containing a diagnostic message associated with the fault.
+      A string containing a diagnostic message associated with the fault.
 
 In the following example we're going to intentionally cause a :exc:`Fault` by
 returning a complex type object.  The server code::
@@ -360,7 +392,7 @@ returning a complex type object.  The server code::
 
    # A marshalling error is going to occur because we're returning a
    # complex number
-   def add(x,y):
+   def add(x, y):
        return x+y+0j
 
    server = SimpleXMLRPCServer(("localhost", 8000))
@@ -376,7 +408,7 @@ The client code for the preceding server::
    proxy = xmlrpclib.ServerProxy("http://localhost:8000/")
    try:
        proxy.add(2, 5)
-   except xmlrpclib.Fault, err:
+   except xmlrpclib.Fault as err:
        print "A fault occurred"
        print "Fault code: %d" % err.faultCode
        print "Fault string: %s" % err.faultString
@@ -388,42 +420,44 @@ The client code for the preceding server::
 ProtocolError Objects
 ---------------------
 
-A :class:`ProtocolError` object describes a protocol error in the underlying
-transport layer (such as a 404 'not found' error if the server named by the URI
-does not exist).  It has the following members:
+.. class:: ProtocolError
+
+   A :class:`ProtocolError` object describes a protocol error in the underlying
+   transport layer (such as a 404 'not found' error if the server named by the URI
+   does not exist).  It has the following attributes:
 
 
-.. attribute:: ProtocolError.url
+   .. attribute:: url
 
-   The URI or URL that triggered the error.
-
-
-.. attribute:: ProtocolError.errcode
-
-   The error code.
+      The URI or URL that triggered the error.
 
 
-.. attribute:: ProtocolError.errmsg
+   .. attribute:: errcode
 
-   The error message or diagnostic string.
+      The error code.
 
 
-.. attribute:: ProtocolError.headers
+   .. attribute:: errmsg
 
-   A string containing the headers of the HTTP/HTTPS request that triggered the
-   error.
+      The error message or diagnostic string.
+
+
+   .. attribute:: headers
+
+      A string containing the headers of the HTTP/HTTPS request that triggered the
+      error.
 
 In the following example we're going to intentionally cause a :exc:`ProtocolError`
-by providing an URI that doesn't point to an XMLRPC server::
+by providing a URI that doesn't point to an XMLRPC server::
 
    import xmlrpclib
 
-   # create a ServerProxy with an URI that doesn't respond to XMLRPC requests
+   # create a ServerProxy with a URI that doesn't respond to XMLRPC requests
    proxy = xmlrpclib.ServerProxy("http://www.google.com/")
 
    try:
        proxy.some_method()
-   except xmlrpclib.ProtocolError, err:
+   except xmlrpclib.ProtocolError as err:
        print "A protocol error occurred"
        print "URL: %s" % err.url
        print "HTTP/HTTPS headers: %s" % err.headers
@@ -435,8 +469,8 @@ MultiCall Objects
 
 .. versionadded:: 2.4
 
-In http://www.xmlrpc.com/discuss/msgReader%241208, an approach is presented to
-encapsulate multiple calls to a remote server into a single request.
+The :class:`MultiCall` object provides a way to encapsulate multiple calls to a
+remote server into a single request [#]_.
 
 
 .. class:: MultiCall(server)
@@ -541,10 +575,10 @@ Example of Client Usage
 
    try:
        print server.examples.getStateName(41)
-   except Error, v:
+   except Error as v:
        print "ERROR", v
 
-To access an XML-RPC server through a proxy, you need to define  a custom
+To access an XML-RPC server through a HTTP proxy, you need to define a custom
 transport.  The following example shows how:
 
 .. Example taken from http://lowlife.jp/nobonobo/wiki/xmlrpcwithproxy.html
@@ -556,18 +590,21 @@ transport.  The following example shows how:
    class ProxiedTransport(xmlrpclib.Transport):
        def set_proxy(self, proxy):
            self.proxy = proxy
+
        def make_connection(self, host):
            self.realhost = host
-           h = httplib.HTTP(self.proxy)
+           h = httplib.HTTPConnection(self.proxy)
            return h
+
        def send_request(self, connection, handler, request_body):
            connection.putrequest("POST", 'http://%s%s' % (self.realhost, handler))
+
        def send_host(self, connection, host):
            connection.putheader('Host', self.realhost)
 
    p = ProxiedTransport()
    p.set_proxy('proxy-server:8080')
-   server = xmlrpclib.Server('http://time.xmlrpc.com/RPC2', transport=p)
+   server = xmlrpclib.ServerProxy('http://time.xmlrpc.com/RPC2', transport=p)
    print server.currentTime.getCurrentTime()
 
 
@@ -577,3 +614,10 @@ Example of Client and Server Usage
 See :ref:`simplexmlrpcserver-example`.
 
 
+.. rubric:: Footnotes
+
+.. [#] This approach has been first presented in `a discussion on xmlrpc.com
+   <https://web.archive.org/web/20060624230303/http://www.xmlrpc.com/discuss/msgReader$1208?mode=topic>`_.
+.. the link now points to webarchive since the one at
+.. http://www.xmlrpc.com/discuss/msgReader%241208 is broken (and webadmin
+.. doesn't reply)

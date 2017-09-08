@@ -65,7 +65,26 @@ used for special methods; variants without leading and trailing\n\
   if(! PyArg_UnpackTuple(a,#OP,2,2,&a1,&a2)) return NULL; \
   return PyObject_RichCompare(a1,a2,A); }
 
-spami(isCallable       , PyCallable_Check)
+/* Deprecated operators that need warnings. */
+static int
+op_isCallable(PyObject *x)
+{
+    if (PyErr_WarnPy3k("operator.isCallable() is not supported in 3.x. "
+                       "Use hasattr(obj, '__call__').", 1) < 0)
+        return -1;
+    return PyCallable_Check(x);
+}
+
+static int
+op_sequenceIncludes(PyObject *seq, PyObject* ob)
+{
+    if (PyErr_WarnPy3k("operator.sequenceIncludes() is not supported "
+                       "in 3.x. Use operator.contains().", 1) < 0)
+        return -1;
+    return PySequence_Contains(seq, ob);
+}
+
+spami(isCallable       , op_isCallable)
 spami(isNumberType     , PyNumber_Check)
 spami(truth            , PyObject_IsTrue)
 spam2(op_add           , PyNumber_Add)
@@ -104,7 +123,7 @@ spamoi(op_repeat       , PySequence_Repeat)
 spam2(op_iconcat       , PySequence_InPlaceConcat)
 spamoi(op_irepeat      , PySequence_InPlaceRepeat)
 spami2b(op_contains     , PySequence_Contains)
-spami2b(sequenceIncludes, PySequence_Contains)
+spami2b(sequenceIncludes, op_sequenceIncludes)
 spamn2(indexOf         , PySequence_Index)
 spamn2(countOf         , PySequence_Count)
 spami(isMappingType    , PyMapping_Check)
@@ -216,6 +235,132 @@ op_delslice(PyObject *s, PyObject *a)
 #define spam2o(OP,ALTOP,DOC) {#OP, op_##OP, METH_O, PyDoc_STR(DOC)}, \
                            {#ALTOP, op_##OP, METH_O, PyDoc_STR(DOC)},
 
+
+
+/* compare_digest **********************************************************/
+
+/*
+ * timing safe compare
+ *
+ * Returns 1 of the strings are equal.
+ * In case of len(a) != len(b) the function tries to keep the timing
+ * dependent on the length of b. CPU cache locally may still alter timing
+ * a bit.
+ */
+static int
+_tscmp(const unsigned char *a, const unsigned char *b,
+        Py_ssize_t len_a, Py_ssize_t len_b)
+{
+    /* The volatile type declarations make sure that the compiler has no
+     * chance to optimize and fold the code in any way that may change
+     * the timing.
+     */
+    volatile Py_ssize_t length;
+    volatile const unsigned char *left;
+    volatile const unsigned char *right;
+    Py_ssize_t i;
+    unsigned char result;
+
+    /* loop count depends on length of b */
+    length = len_b;
+    left = NULL;
+    right = b;
+
+    /* don't use else here to keep the amount of CPU instructions constant,
+     * volatile forces re-evaluation
+     *  */
+    if (len_a == length) {
+        left = *((volatile const unsigned char**)&a);
+        result = 0;
+    }
+    if (len_a != length) {
+        left = b;
+        result = 1;
+    }
+
+    for (i=0; i < length; i++) {
+        result |= *left++ ^ *right++;
+    }
+
+    return (result == 0);
+}
+
+PyDoc_STRVAR(compare_digest__doc__,
+"compare_digest(a, b) -> bool\n"
+"\n"
+"Return 'a == b'.  This function uses an approach designed to prevent\n"
+"timing analysis, making it appropriate for cryptography.\n"
+"a and b must both be of the same type: either str (ASCII only),\n"
+"or any type that supports the buffer protocol (e.g. bytes).\n"
+"\n"
+"Note: If a and b are of different lengths, or if an error occurs,\n"
+"a timing attack could theoretically reveal information about the\n"
+"types and lengths of a and b--but not their values.\n");
+
+static PyObject*
+compare_digest(PyObject *self, PyObject *args)
+{
+    PyObject *a, *b;
+    int rc;
+
+    if (!PyArg_ParseTuple(args, "OO:compare_digest", &a, &b)) {
+        return NULL;
+    }
+
+    /* Unicode string */
+    if (PyUnicode_Check(a) && PyUnicode_Check(b)) {
+        rc = _tscmp((const unsigned char *)PyUnicode_AS_DATA(a),
+                    (const unsigned char *)PyUnicode_AS_DATA(b),
+                    PyUnicode_GET_DATA_SIZE(a),
+                    PyUnicode_GET_DATA_SIZE(b));
+    }
+    /* fallback to buffer interface for bytes, bytesarray and other */
+    else {
+        Py_buffer view_a;
+        Py_buffer view_b;
+
+        if (PyObject_CheckBuffer(a) == 0 && PyObject_CheckBuffer(b) == 0) {
+            PyErr_Format(PyExc_TypeError,
+                         "unsupported operand types(s) or combination of types: "
+                         "'%.100s' and '%.100s'",
+                         Py_TYPE(a)->tp_name, Py_TYPE(b)->tp_name);
+            return NULL;
+        }
+
+        if (PyObject_GetBuffer(a, &view_a, PyBUF_SIMPLE) == -1) {
+            return NULL;
+        }
+        if (view_a.ndim > 1) {
+            PyErr_SetString(PyExc_BufferError,
+                            "Buffer must be single dimension");
+            PyBuffer_Release(&view_a);
+            return NULL;
+        }
+
+        if (PyObject_GetBuffer(b, &view_b, PyBUF_SIMPLE) == -1) {
+            PyBuffer_Release(&view_a);
+            return NULL;
+        }
+        if (view_b.ndim > 1) {
+            PyErr_SetString(PyExc_BufferError,
+                            "Buffer must be single dimension");
+            PyBuffer_Release(&view_a);
+            PyBuffer_Release(&view_b);
+            return NULL;
+        }
+
+        rc = _tscmp((const unsigned char*)view_a.buf,
+                    (const unsigned char*)view_b.buf,
+                    view_a.len,
+                    view_b.len);
+
+        PyBuffer_Release(&view_a);
+        PyBuffer_Release(&view_b);
+    }
+
+    return PyBool_FromLong(rc);
+}
+
 static struct PyMethodDef operator_methods[] = {
 
 spam1o(isCallable,
@@ -299,6 +444,8 @@ spam2(ne,__ne__, "ne(a, b) -- Same as a!=b.")
 spam2(gt,__gt__, "gt(a, b) -- Same as a>b.")
 spam2(ge,__ge__, "ge(a, b) -- Same as a>=b.")
 
+    {"_compare_digest", (PyCFunction)compare_digest, METH_VARARGS,
+     compare_digest__doc__},
     {NULL,              NULL}           /* sentinel */
 
 };
@@ -364,6 +511,8 @@ itemgetter_call(itemgetterobject *ig, PyObject *args, PyObject *kw)
     PyObject *obj, *result;
     Py_ssize_t i, nitems=ig->nitems;
 
+    if (kw != NULL && !_PyArg_NoKeywords("itemgetter", kw))
+        return NULL;
     if (!PyArg_UnpackTuple(args, "itemgetter", 1, 1, &obj))
         return NULL;
     if (nitems == 1)
@@ -393,8 +542,8 @@ PyDoc_STRVAR(itemgetter_doc,
 "itemgetter(item, ...) --> itemgetter object\n\
 \n\
 Return a callable object that fetches the given item(s) from its operand.\n\
-After, f=itemgetter(2), the call f(r) returns r[2].\n\
-After, g=itemgetter(2,5,3), the call g(r) returns (r[2], r[5], r[3])");
+After f = itemgetter(2), the call f(r) returns r[2].\n\
+After g = itemgetter(2, 5, 3), the call g(r) returns (r[2], r[5], r[3])");
 
 static PyTypeObject itemgetter_type = {
     PyVarObject_HEAD_INIT(NULL, 0)
@@ -544,6 +693,8 @@ attrgetter_call(attrgetterobject *ag, PyObject *args, PyObject *kw)
     PyObject *obj, *result;
     Py_ssize_t i, nattrs=ag->nattrs;
 
+    if (kw != NULL && !_PyArg_NoKeywords("attrgetter", kw))
+        return NULL;
     if (!PyArg_UnpackTuple(args, "attrgetter", 1, 1, &obj))
         return NULL;
     if (ag->nattrs == 1)
@@ -573,9 +724,9 @@ PyDoc_STRVAR(attrgetter_doc,
 "attrgetter(attr, ...) --> attrgetter object\n\
 \n\
 Return a callable object that fetches the given attribute(s) from its operand.\n\
-After, f=attrgetter('name'), the call f(r) returns r.name.\n\
-After, g=attrgetter('name', 'date'), the call g(r) returns (r.name, r.date).\n\
-After, h=attrgetter('name.first', 'name.last'), the call h(r) returns\n\
+After f = attrgetter('name'), the call f(r) returns r.name.\n\
+After g = attrgetter('name', 'date'), the call g(r) returns (r.name, r.date).\n\
+After h = attrgetter('name.first', 'name.last'), the call h(r) returns\n\
 (r.name.first, r.name.last).");
 
 static PyTypeObject attrgetter_type = {
@@ -637,7 +788,7 @@ static PyObject *
 methodcaller_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     methodcallerobject *mc;
-    PyObject *name, *newargs;
+    PyObject *name;
 
     if (PyTuple_GET_SIZE(args) < 1) {
         PyErr_SetString(PyExc_TypeError, "methodcaller needs at least "
@@ -650,19 +801,18 @@ methodcaller_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     if (mc == NULL)
         return NULL;
 
-    newargs = PyTuple_GetSlice(args, 1, PyTuple_GET_SIZE(args));
-    if (newargs == NULL) {
-        Py_DECREF(mc);
-        return NULL;
-    }
-    mc->args = newargs;
-
     name = PyTuple_GET_ITEM(args, 0);
     Py_INCREF(name);
     mc->name = name;
 
     Py_XINCREF(kwds);
     mc->kwds = kwds;
+
+    mc->args = PyTuple_GetSlice(args, 1, PyTuple_GET_SIZE(args));
+    if (mc->args == NULL) {
+        Py_DECREF(mc);
+        return NULL;
+    }
 
     PyObject_GC_Track(mc);
     return (PyObject *)mc;
@@ -691,6 +841,8 @@ methodcaller_call(methodcallerobject *mc, PyObject *args, PyObject *kw)
 {
     PyObject *method, *obj, *result;
 
+    if (kw != NULL && !_PyArg_NoKeywords("methodcaller", kw))
+        return NULL;
     if (!PyArg_UnpackTuple(args, "methodcaller", 1, 1, &obj))
         return NULL;
     method = PyObject_GetAttr(obj, mc->name);
@@ -705,8 +857,8 @@ PyDoc_STRVAR(methodcaller_doc,
 "methodcaller(name, ...) --> methodcaller object\n\
 \n\
 Return a callable object that calls the given method on its operand.\n\
-After, f = methodcaller('name'), the call f(r) returns r.name().\n\
-After, g = methodcaller('name', 'date', foo=1), the call g(r) returns\n\
+After f = methodcaller('name'), the call f(r) returns r.name().\n\
+After g = methodcaller('name', 'date', foo=1), the call g(r) returns\n\
 r.name('date', foo=1).");
 
 static PyTypeObject methodcaller_type = {

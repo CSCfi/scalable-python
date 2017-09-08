@@ -1,4 +1,3 @@
-
 :mod:`webbrowser` --- Convenient Web-browser controller
 =======================================================
 
@@ -7,6 +6,9 @@
 .. moduleauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 
+**Source code:** :source:`Lib/webbrowser.py`
+
+--------------
 
 The :mod:`webbrowser` module provides a high-level interface to allow displaying
 Web-based documents to users. Under most circumstances, simply calling the
@@ -18,7 +20,7 @@ available.  If text-mode browsers are used, the calling process will block until
 the user exits the browser.
 
 If the environment variable :envvar:`BROWSER` exists, it is interpreted to
-override the platform default list of browsers, as a :data:`os.pathsep`-separated
+override the platform default list of browsers, as an :data:`os.pathsep`-separated
 list of browsers to try in order.  When the value of a list part contains the
 string ``%s``, then it is  interpreted as a literal browser command line to be
 used with the argument URL substituted for ``%s``; if the part does not contain
@@ -31,10 +33,12 @@ browsers are not available on Unix, the controlling process will launch a new
 browser and wait.
 
 The script :program:`webbrowser` can be used as a command-line interface for the
-module. It accepts an URL as the argument. It accepts the following optional
-parameters: :option:`-n` opens the URL in a new browser window, if possible;
-:option:`-t` opens the URL in a new browser page ("tab"). The options are,
-naturally, mutually exclusive.
+module. It accepts a URL as the argument. It accepts the following optional
+parameters: ``-n`` opens the URL in a new browser window, if possible;
+``-t`` opens the URL in a new browser page ("tab"). The options are,
+naturally, mutually exclusive.  Usage example::
+
+   python -m webbrowser -t "http://www.python.org"
 
 The following exception is defined:
 
@@ -46,7 +50,7 @@ The following exception is defined:
 The following functions are defined:
 
 
-.. function:: open(url[, new=0[, autoraise=True]])
+.. function:: open(url, new=0, autoraise=True)
 
    Display *url* using the default browser. If *new* is 0, the *url* is opened
    in the same browser window if possible.  If *new* is 1, a new browser window
@@ -67,7 +71,6 @@ The following functions are defined:
 
    Open *url* in a new window of the default browser, if possible, otherwise, open
    *url* in the only browser window.
-
 
 .. function:: open_new_tab(url)
 
@@ -137,9 +140,17 @@ for the controller classes, all defined in this module.
 +-----------------------+-----------------------------------------+-------+
 | ``'windows-default'`` | :class:`WindowsDefault`                 | \(2)  |
 +-----------------------+-----------------------------------------+-------+
-| ``'internet-config'`` | :class:`InternetConfig`                 | \(3)  |
+| ``'macosx'``          | :class:`MacOSX('default')`              | \(3)  |
 +-----------------------+-----------------------------------------+-------+
-| ``'macosx'``          | :class:`MacOSX('default')`              | \(4)  |
+| ``'safari'``          | :class:`MacOSX('safari')`               | \(3)  |
++-----------------------+-----------------------------------------+-------+
+| ``'google-chrome'``   | :class:`Chrome('google-chrome')`        | \(4)  |
++-----------------------+-----------------------------------------+-------+
+| ``'chrome'``          | :class:`Chrome('chrome')`               | \(4)  |
++-----------------------+-----------------------------------------+-------+
+| ``'chromium'``        | :class:`Chromium('chromium')`           | \(4)  |
++-----------------------+-----------------------------------------+-------+
+| ``'chromium-browser'``| :class:`Chromium('chromium-browser')`   | \(4)  |
 +-----------------------+-----------------------------------------+-------+
 
 Notes:
@@ -155,10 +166,10 @@ Notes:
    Only on Windows platforms.
 
 (3)
-   Only on Mac OS platforms; requires the standard MacPython :mod:`ic` module.
+   Only on Mac OS X platform.
 
 (4)
-   Only on Mac OS X platform.
+   Support for Chrome/Chromium has been added in version 2.7.5.
 
 Here are some simple examples::
 
@@ -180,7 +191,7 @@ Browser controllers provide these methods which parallel three of the
 module-level convenience functions:
 
 
-.. method:: controller.open(url[, new=0[, autoraise=True]])
+.. method:: controller.open(url, new=0, autoraise=True)
 
    Display *url* using the browser handled by this controller. If *new* is 1, a new
    browser window is opened if possible. If *new* is 2, a new browser page ("tab")

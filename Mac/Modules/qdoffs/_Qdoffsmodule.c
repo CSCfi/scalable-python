@@ -4,19 +4,19 @@
 #include "Python.h"
 
 
-#ifndef __LP64__
+#include <Carbon/Carbon.h>
+#if !defined(__LP64__) && !defined(MAC_OS_X_VERSION_10_7)
 
 #include "pymactoolbox.h"
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-    PyErr_SetString(PyExc_NotImplementedError, \
-    "Not available in this shared library/OS version"); \
-    return NULL; \
+        PyErr_SetString(PyExc_NotImplementedError, \
+            "Not available in this shared library/OS version"); \
+        return NULL; \
     }} while(0)
 
 
-#include <Carbon/Carbon.h>
 
 #ifdef USE_TOOLBOX_OBJECT_GLUE
 extern PyObject *_GWorldObj_New(GWorldPtr);
@@ -634,7 +634,7 @@ static PyObject *Qdoffs_PutPixMapBytes(PyObject *_self, PyObject *_args)
 #endif /* __LP64__ */
 
 static PyMethodDef Qdoffs_methods[] = {
-#ifndef __LP64__
+#if !defined(__LP64__) && !defined(MAC_OS_X_VERSION_10_7)
     {"NewGWorld", (PyCFunction)Qdoffs_NewGWorld, 1,
      PyDoc_STR("(short PixelDepth, Rect boundsRect, CTabHandle cTable, GDHandle aGDevice, GWorldFlags flags) -> (GWorldPtr offscreenGWorld)")},
     {"LockPixels", (PyCFunction)Qdoffs_LockPixels, 1,
@@ -691,7 +691,7 @@ static PyMethodDef Qdoffs_methods[] = {
 void init_Qdoffs(void)
 {
     PyObject *m;
-#ifndef __LP64__
+#if !defined(__LP64__) && !defined(MAC_OS_X_VERSION_10_7)
     PyObject *d;
 
 
@@ -702,7 +702,7 @@ void init_Qdoffs(void)
 #endif /* __LP64__ */
 
     m = Py_InitModule("_Qdoffs", Qdoffs_methods);
-#ifndef __LP64__
+#if !defined(__LP64__) && !defined(MAC_OS_X_VERSION_10_7)
     d = PyModule_GetDict(m);
     Qdoffs_Error = PyMac_GetOSErrException();
     if (Qdoffs_Error == NULL ||

@@ -8,15 +8,19 @@
 
 .. note::
    The :mod:`SimpleXMLRPCServer` module has been merged into
-   :mod:`xmlrpc.server` in Python 3.0.  The :term:`2to3` tool will automatically
-   adapt imports when converting your sources to 3.0.
+   :mod:`xmlrpc.server` in Python 3.  The :term:`2to3` tool will automatically
+   adapt imports when converting your sources to Python 3.
 
 
 .. versionadded:: 2.2
 
+**Source code:** :source:`Lib/SimpleXMLRPCServer.py`
+
+--------------
+
 The :mod:`SimpleXMLRPCServer` module provides a basic server framework for
 XML-RPC servers written in Python.  Servers can either be free standing, using
-:class:`SimpleXMLRPCServer`, or embedded in a CGI environment, using
+:class:`~SimpleXMLRPCServer.SimpleXMLRPCServer`, or embedded in a CGI environment, using
 :class:`CGIXMLRPCRequestHandler`.
 
 
@@ -58,7 +62,7 @@ XML-RPC servers written in Python.  Servers can either be free standing, using
 
    Create a new request handler instance.  This request handler supports ``POST``
    requests and modifies logging so that the *logRequests* parameter to the
-   :class:`SimpleXMLRPCServer` constructor parameter is honored.
+   :class:`~SimpleXMLRPCServer.SimpleXMLRPCServer` constructor parameter is honored.
 
 
 .. _simple-xmlrpc-servers:
@@ -66,7 +70,7 @@ XML-RPC servers written in Python.  Servers can either be free standing, using
 SimpleXMLRPCServer Objects
 --------------------------
 
-The :class:`SimpleXMLRPCServer` class is based on
+The :class:`~SimpleXMLRPCServer.SimpleXMLRPCServer` class is based on
 :class:`SocketServer.TCPServer` and provides a means of creating simple, stand
 alone XML-RPC servers.
 
@@ -133,6 +137,15 @@ alone XML-RPC servers.
 
    .. versionadded:: 2.5
 
+.. attribute:: SimpleXMLRPCRequestHandler.encode_threshold
+
+   If this attribute is not ``None``, responses larger than this value
+   will be encoded using the *gzip* transfer encoding, if permitted by
+   the client.  The default is ``1400`` which corresponds roughly
+   to a single TCP packet.
+
+   .. versionadded:: 2.7
+
 .. _simplexmlrpcserver-example:
 
 SimpleXMLRPCServer Example
@@ -184,6 +197,38 @@ server::
    # Print list of available methods
    print s.system.listMethods()
 
+The following :class:`~SimpleXMLRPCServer.SimpleXMLRPCServer` example is included in the module
+`Lib/SimpleXMLRPCServer.py`::
+
+    server = SimpleXMLRPCServer(("localhost", 8000))
+    server.register_function(pow)
+    server.register_function(lambda x,y: x+y, 'add')
+    server.register_multicall_functions()
+    server.serve_forever()
+
+This demo server can be run from the command line as::
+
+    python -m SimpleXMLRPCServer
+
+Example client code which talks to the above server is included with
+`Lib/xmlrpclib.py`::
+
+    server = ServerProxy("http://localhost:8000")
+    print server
+    multi = MultiCall(server)
+    multi.pow(2, 9)
+    multi.add(5, 1)
+    multi.add(24, 11)
+    try:
+        for response in multi():
+            print response
+    except Error, v:
+        print "ERROR", v
+
+And the client can be invoked directly using the following command::
+
+    python -m xmlrpclib
+
 
 CGIXMLRPCRequestHandler
 -----------------------
@@ -228,13 +273,13 @@ requests sent to Python CGI scripts.
 
 .. method:: CGIXMLRPCRequestHandler.handle_request([request_text = None])
 
-   Handle a XML-RPC request. If *request_text* is given, it  should be the POST
+   Handle an XML-RPC request. If *request_text* is given, it should be the POST
    data provided by the HTTP server,  otherwise the contents of stdin will be used.
 
 Example::
 
    class MyFuncs:
-       def div(self, x, y) : return x // y
+       def div(self, x, y): return x // y
 
 
    handler = CGIXMLRPCRequestHandler()

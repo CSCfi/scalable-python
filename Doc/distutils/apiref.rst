@@ -26,13 +26,16 @@ setup script). Indirectly provides the  :class:`distutils.dist.Distribution` and
    The setup function takes a large number of arguments. These are laid out in the
    following table.
 
+   .. tabularcolumns:: |l|L|L|
+
    +--------------------+--------------------------------+-------------------------------------------------------------+
    | argument name      | value                          | type                                                        |
    +====================+================================+=============================================================+
    | *name*             | The name of the package        | a string                                                    |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *version*          | The version number of the      | See :mod:`distutils.version`                                |
-   |                    | package                        |                                                             |
+   | *version*          | The version number of the      | a string                                                    |
+   |                    | package; see                   |                                                             |
+   |                    | :mod:`distutils.version`       |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
    | *description*      | A single line describing the   | a string                                                    |
    |                    | package                        |                                                             |
@@ -47,16 +50,19 @@ setup script). Indirectly provides the  :class:`distutils.dist.Distribution` and
    +--------------------+--------------------------------+-------------------------------------------------------------+
    | *maintainer*       | The name of the current        | a string                                                    |
    |                    | maintainer, if different from  |                                                             |
-   |                    | the author                     |                                                             |
+   |                    | the author. Note that if       |                                                             |
+   |                    | the maintainer is provided,    |                                                             |
+   |                    | distutils will use it as the   |                                                             |
+   |                    | author in :file:`PKG-INFO`     |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *maintainer_email* | The email address of the       |                                                             |
+   | *maintainer_email* | The email address of the       | a string                                                    |
    |                    | current maintainer, if         |                                                             |
    |                    | different from the author      |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *url*              | A URL for the package          | a URL                                                       |
+   | *url*              | A URL for the package          | a string                                                    |
    |                    | (homepage)                     |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *download_url*     | A URL to download the package  | a URL                                                       |
+   | *download_url*     | A URL to download the package  | a string                                                    |
    +--------------------+--------------------------------+-------------------------------------------------------------+
    | *packages*         | A list of Python packages that | a list of strings                                           |
    |                    | distutils will manipulate      |                                                             |
@@ -68,14 +74,13 @@ setup script). Indirectly provides the  :class:`distutils.dist.Distribution` and
    |                    | files to be built and          |                                                             |
    |                    | installed                      |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *ext_modules*      | A list of Python extensions to | A list of  instances of                                     |
+   | *ext_modules*      | A list of Python extensions to | a list of instances of                                      |
    |                    | be built                       | :class:`distutils.core.Extension`                           |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *classifiers*      | A list of categories for the   | The list of available                                       |
-   |                    | package                        | categorizations is at                                       |
-   |                    |                                | http://pypi.python.org/pypi?:action=list_classifiers.       |
+   | *classifiers*      | A list of categories for the   | a list of strings; valid classifiers are listed on `PyPI    |
+   |                    | package                        | <https://pypi.python.org/pypi?:action=list_classifiers>`_.  |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *distclass*        | the :class:`Distribution`      | A subclass of                                               |
+   | *distclass*        | the :class:`Distribution`      | a subclass of                                               |
    |                    | class to use                   | :class:`distutils.core.Distribution`                        |
    +--------------------+--------------------------------+-------------------------------------------------------------+
    | *script_name*      | The name of the setup.py       | a string                                                    |
@@ -85,15 +90,15 @@ setup script). Indirectly provides the  :class:`distutils.dist.Distribution` and
    | *script_args*      | Arguments to supply to the     | a list of strings                                           |
    |                    | setup script                   |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *options*          | default options for the setup  | a string                                                    |
+   | *options*          | default options for the setup  | a dictionary                                                |
    |                    | script                         |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
    | *license*          | The license for the package    | a string                                                    |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *keywords*         | Descriptive meta-data, see     |                                                             |
+   | *keywords*         | Descriptive meta-data, see     | a list of strings or a comma-separated string               |
    |                    | :pep:`314`                     |                                                             |
    +--------------------+--------------------------------+-------------------------------------------------------------+
-   | *platforms*        |                                |                                                             |
+   | *platforms*        |                                | a list of strings or a comma-separated string               |
    +--------------------+--------------------------------+-------------------------------------------------------------+
    | *cmdclass*         | A mapping of command names to  | a dictionary                                                |
    |                    | :class:`Command` subclasses    |                                                             |
@@ -122,6 +127,8 @@ setup script). Indirectly provides the  :class:`distutils.dist.Distribution` and
 
    *stop_after* tells :func:`setup` when to stop processing; possible  values:
 
+   .. tabularcolumns:: |l|L|
+
    +---------------+---------------------------------------------+
    | value         | description                                 |
    +===============+=============================================+
@@ -147,11 +154,11 @@ setup script). Indirectly provides the  :class:`distutils.dist.Distribution` and
 In addition, the :mod:`distutils.core` module exposed a number of  classes that
 live elsewhere.
 
-* :class:`Extension` from :mod:`distutils.extension`
+* :class:`~distutils.extension.Extension` from :mod:`distutils.extension`
 
-* :class:`Command` from :mod:`distutils.cmd`
+* :class:`~distutils.cmd.Command` from :mod:`distutils.cmd`
 
-* :class:`Distribution` from :mod:`distutils.dist`
+* :class:`~distutils.dist.Distribution` from :mod:`distutils.dist`
 
 A short description of each of these follows, but see the relevant module for
 the full reference.
@@ -159,19 +166,21 @@ the full reference.
 
 .. class:: Extension
 
-   The Extension class describes a single C or C++extension module in a setup
+   The Extension class describes a single C or C++ extension module in a setup
    script. It accepts the following keyword arguments in its constructor
+
+   .. tabularcolumns:: |l|L|l|
 
    +------------------------+--------------------------------+---------------------------+
    | argument name          | value                          | type                      |
    +========================+================================+===========================+
-   | *name*                 | the full name of the           | string                    |
+   | *name*                 | the full name of the           | a string                  |
    |                        | extension, including any       |                           |
    |                        | packages --- ie. *not* a       |                           |
    |                        | filename or pathname, but      |                           |
    |                        | Python dotted name             |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *sources*              | list of source filenames,      | string                    |
+   | *sources*              | list of source filenames,      | a list of strings         |
    |                        | relative to the distribution   |                           |
    |                        | root (where the setup script   |                           |
    |                        | lives), in Unix form (slash-   |                           |
@@ -184,47 +193,47 @@ the full reference.
    |                        | as source for a Python         |                           |
    |                        | extension.                     |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *include_dirs*         | list of directories to search  | string                    |
+   | *include_dirs*         | list of directories to search  | a list of strings         |
    |                        | for C/C++ header files (in     |                           |
    |                        | Unix form for portability)     |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *define_macros*        | list of macros to define; each | (string, string) tuple or |
-   |                        | macro is defined using a       | (name, ``None``)          |
+   | *define_macros*        | list of macros to define; each | a list of tuples          |
+   |                        | macro is defined using a       |                           |
    |                        | 2-tuple ``(name, value)``,     |                           |
    |                        | where *value* is               |                           |
    |                        | either the string to define it |                           |
    |                        | to or ``None`` to define it    |                           |
    |                        | without a particular value     |                           |
    |                        | (equivalent of ``#define FOO`` |                           |
-   |                        | in source or :option:`-DFOO`   |                           |
+   |                        | in source or :option:`!-DFOO`  |                           |
    |                        | on Unix C compiler command     |                           |
    |                        | line)                          |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *undef_macros*         | list of macros to undefine     | string                    |
+   | *undef_macros*         | list of macros to undefine     | a list of strings         |
    |                        | explicitly                     |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *library_dirs*         | list of directories to search  | string                    |
+   | *library_dirs*         | list of directories to search  | a list of strings         |
    |                        | for C/C++ libraries at link    |                           |
    |                        | time                           |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *libraries*            | list of library names (not     | string                    |
+   | *libraries*            | list of library names (not     | a list of strings         |
    |                        | filenames or paths) to link    |                           |
    |                        | against                        |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *runtime_library_dirs* | list of directories to search  | string                    |
+   | *runtime_library_dirs* | list of directories to search  | a list of strings         |
    |                        | for C/C++ libraries at run     |                           |
    |                        | time (for shared extensions,   |                           |
    |                        | this is when the extension is  |                           |
    |                        | loaded)                        |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *extra_objects*        | list of extra files to link    | string                    |
+   | *extra_objects*        | list of extra files to link    | a list of strings         |
    |                        | with (eg. object files not     |                           |
    |                        | implied by 'sources', static   |                           |
    |                        | library that must be           |                           |
    |                        | explicitly specified, binary   |                           |
    |                        | resource files, etc.)          |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *extra_compile_args*   | any extra platform- and        | string                    |
+   | *extra_compile_args*   | any extra platform- and        | a list of strings         |
    |                        | compiler-specific information  |                           |
    |                        | to use when compiling the      |                           |
    |                        | source files in 'sources'. For |                           |
@@ -235,7 +244,7 @@ the full reference.
    |                        | for other platforms it could   |                           |
    |                        | be anything.                   |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *extra_link_args*      | any extra platform- and        | string                    |
+   | *extra_link_args*      | any extra platform- and        | a list of strings         |
    |                        | compiler-specific information  |                           |
    |                        | to use when linking object     |                           |
    |                        | files together to create the   |                           |
@@ -244,7 +253,7 @@ the full reference.
    |                        | Similar interpretation as for  |                           |
    |                        | 'extra_compile_args'.          |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *export_symbols*       | list of symbols to be exported | string                    |
+   | *export_symbols*       | list of symbols to be exported | a list of strings         |
    |                        | from a shared extension. Not   |                           |
    |                        | used on all platforms, and not |                           |
    |                        | generally necessary for Python |                           |
@@ -252,10 +261,10 @@ the full reference.
    |                        | export exactly one symbol:     |                           |
    |                        | ``init`` + extension_name.     |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *depends*              | list of files that the         | string                    |
+   | *depends*              | list of files that the         | a list of strings         |
    |                        | extension depends on           |                           |
    +------------------------+--------------------------------+---------------------------+
-   | *language*             | extension language (i.e.       | string                    |
+   | *language*             | extension language (i.e.       | a string                  |
    |                        | ``'c'``, ``'c++'``,            |                           |
    |                        | ``'objc'``). Will be detected  |                           |
    |                        | from the source extensions if  |                           |
@@ -305,12 +314,12 @@ This module provides the following functions.
 
 .. function:: gen_preprocess_options(macros, include_dirs)
 
-   Generate C pre-processor options (:option:`-D`, :option:`-U`, :option:`-I`) as
+   Generate C pre-processor options (:option:`!-D`, :option:`!-U`, :option:`!-I`) as
    used by at least two types of compilers: the typical Unix compiler and Visual
    C++. *macros* is the usual thing, a list of 1- or 2-tuples, where ``(name,)``
-   means undefine (:option:`-U`) macro *name*, and ``(name, value)`` means define
-   (:option:`-D`) macro *name* to *value*.  *include_dirs* is just a list of
-   directory names to be added to the header file search path (:option:`-I`).
+   means undefine (:option:`!-U`) macro *name*, and ``(name, value)`` means define
+   (:option:`!-D`) macro *name* to *value*.  *include_dirs* is just a list of
+   directory names to be added to the header file search path (:option:`!-I`).
    Returns a list of command-line options suitable for either Unix compilers or
    Visual C++.
 
@@ -345,7 +354,7 @@ This module provides the following functions.
 
 .. function:: show_compilers()
 
-   Print list of available compilers (used by the :option:`--help-compiler` options
+   Print list of available compilers (used by the :option:`!--help-compiler` options
    to :command:`build`, :command:`build_ext`, :command:`build_clib`).
 
 
@@ -444,7 +453,9 @@ This module provides the following functions.
       Define a preprocessor macro for all compilations driven by this compiler object.
       The optional parameter *value* should be a string; if it is not supplied, then
       the macro will be defined without an explicit value and the exact outcome
-      depends on the compiler used (XXX true? does ANSI say anything about this?)
+      depends on the compiler used.
+
+      .. XXX true? does ANSI say anything about this?
 
 
    .. method:: CCompiler.undefine_macro(name)
@@ -505,7 +516,7 @@ This module provides the following functions.
 
    .. method:: CCompiler.library_option(lib)
 
-      Return the compiler option to add *dir* to the list of libraries linked into the
+      Return the compiler option to add *lib* to the list of libraries linked into the
       shared library or executable.
 
 
@@ -598,7 +609,9 @@ This module provides the following functions.
 
       *output_libname* should be a library name, not a filename; the filename will be
       inferred from the library name.  *output_dir* is the directory where the library
-      file will be put. XXX defaults to what?
+      file will be put.
+
+      .. XXX defaults to what?
 
       *debug* is a boolean; if true, debugging information will be included in the
       library (note that on most platforms, it is the compile step where this matters:
@@ -716,32 +729,31 @@ This module provides the following functions.
 
    .. method:: CCompiler.execute(func, args[, msg=None, level=1])
 
-      Invokes :func:`distutils.util.execute` This method invokes a  Python function
+      Invokes :func:`distutils.util.execute`. This method invokes a  Python function
       *func* with the given arguments *args*, after  logging and taking into account
-      the *dry_run* flag. XXX see also.
+      the *dry_run* flag.
 
 
    .. method:: CCompiler.spawn(cmd)
 
       Invokes :func:`distutils.util.spawn`. This invokes an external  process to run
-      the given command. XXX see also.
+      the given command.
 
 
    .. method:: CCompiler.mkpath(name[, mode=511])
 
       Invokes :func:`distutils.dir_util.mkpath`. This creates a directory  and any
-      missing ancestor directories. XXX see also.
+      missing ancestor directories.
 
 
    .. method:: CCompiler.move_file(src, dst)
 
-      Invokes :meth:`distutils.file_util.move_file`. Renames *src* to  *dst*.  XXX see
-      also.
+      Invokes :meth:`distutils.file_util.move_file`. Renames *src* to  *dst*.
 
 
    .. method:: CCompiler.announce(msg[, level=1])
 
-      Write a message using :func:`distutils.log.debug`. XXX see also.
+      Write a message using :func:`distutils.log.debug`.
 
 
    .. method:: CCompiler.warn(msg)
@@ -772,23 +784,23 @@ This module provides the following functions.
 This module provides the :class:`UnixCCompiler` class, a subclass of
 :class:`CCompiler` that handles the typical Unix-style command-line  C compiler:
 
-* macros defined with :option:`-Dname[=value]`
+* macros defined with :option:`!-Dname[=value]`
 
-* macros undefined with :option:`-Uname`
+* macros undefined with :option:`!-Uname`
 
-* include search directories specified with :option:`-Idir`
+* include search directories specified with :option:`!-Idir`
 
-* libraries specified with :option:`-llib`
+* libraries specified with :option:`!-llib`
 
-* library search directories specified with :option:`-Ldir`
+* library search directories specified with :option:`!-Ldir`
 
-* compile handled by :program:`cc` (or similar) executable with :option:`-c`
+* compile handled by :program:`cc` (or similar) executable with :option:`!-c`
   option: compiles :file:`.c` to :file:`.o`
 
 * link static library handled by :program:`ar` command (possibly with
   :program:`ranlib`)
 
-* link shared library handled by :program:`cc` :option:`-shared`
+* link shared library handled by :program:`cc` :option:`!-shared`
 
 
 :mod:`distutils.msvccompiler` --- Microsoft Compiler
@@ -820,7 +832,7 @@ selection by :class:`MSVCCompiler`.
 .. module:: distutils.bcppcompiler
 
 
-This module provides :class:`BorlandCCompiler`, an subclass of the abstract
+This module provides :class:`BorlandCCompiler`, a subclass of the abstract
 :class:`CCompiler` class for the Borland C++ compiler.
 
 
@@ -847,23 +859,6 @@ This module provides the EMXCCompiler class, a subclass of
 :class:`UnixCCompiler` that handles the EMX port of the GNU C compiler to OS/2.
 
 
-:mod:`distutils.mwerkscompiler` --- Metrowerks CodeWarrior support
-==================================================================
-
-.. module:: distutils.mwerkscompiler
-   :synopsis: Metrowerks CodeWarrior support
-
-
-Contains :class:`MWerksCompiler`, an implementation of the abstract
-:class:`CCompiler` class for MetroWerks CodeWarrior on the pre-Mac OS X
-Macintosh. Needs work to support CW on Windows or Mac OS X.
-
-.. % \subsection{Utility modules}
-.. %
-.. % The following modules all provide general utility functions. They haven't
-.. % all been documented yet.
-
-
 :mod:`distutils.archive_util` ---  Archiving utilities
 ======================================================
 
@@ -886,8 +881,6 @@ tarballs or zipfiles.
    prefix of all files and directories in the archive.  *root_dir* and *base_dir*
    both default to the current directory.  Returns the name of the archive file.
 
-   .. XXX This should be changed to support bz2 files.
-
 
 .. function:: make_tarball(base_name, base_dir[, compress='gzip', verbose=0, dry_run=0])
 
@@ -899,13 +892,11 @@ tarballs or zipfiles.
    possibly plus the appropriate compression extension (:file:`.gz`, :file:`.bz2`
    or :file:`.Z`).  Return the output filename.
 
-   .. XXX This should be replaced with calls to the :mod:`tarfile` module.
-
 
 .. function:: make_zipfile(base_name, base_dir[, verbose=0, dry_run=0])
 
    Create a zip file from all files in and under *base_dir*.  The output zip file
-   will be named *base_dir* + :file:`.zip`.  Uses either the  :mod:`zipfile` Python
+   will be named *base_name* + :file:`.zip`.  Uses either the  :mod:`zipfile` Python
    module (if available) or the InfoZIP :file:`zip`  utility (if installed and
    found on the default search path).  If neither  tool is available, raises
    :exc:`DistutilsExecError`.   Returns the name of the output zip file.
@@ -935,7 +926,7 @@ timestamp dependency analysis.
 
    Walk two filename lists in parallel, testing if each source is newer than its
    corresponding target.  Return a pair of lists (*sources*, *targets*) where
-   source is newer than target, according to the semantics of :func:`newer`
+   source is newer than target, according to the semantics of :func:`newer`.
 
    .. % % equivalent to a listcomp...
 
@@ -979,7 +970,7 @@ directories.
 .. function:: create_tree(base_dir, files[, mode=0777, verbose=0, dry_run=0])
 
    Create all the empty directories under *base_dir* needed to put *files* there.
-   *base_dir* is just the a name of a directory which doesn't necessarily exist
+   *base_dir* is just the name of a directory which doesn't necessarily exist
    yet; *files* is a list of filenames to be interpreted relative to *base_dir*.
    *base_dir* + the directory portion of every file in *files* will be created if
    it doesn't already exist.  *mode*, *verbose* and *dry_run* flags  are as for
@@ -991,19 +982,27 @@ directories.
    Copy an entire directory tree *src* to a new location *dst*.  Both *src* and
    *dst* must be directory names.  If *src* is not a directory, raise
    :exc:`DistutilsFileError`.  If *dst* does  not exist, it is created with
-   :func:`mkpath`.  The end result of the  copy is that every file in *src* is
-   copied to *dst*, and  directories under *src* are recursively copied to *dst*.
+   :func:`mkpath`.  The end result of the copy is that every file in *src* is
+   copied to *dst*, and directories under *src* are recursively copied to *dst*.
    Return the list of files that were copied or might have been copied, using their
    output name. The return value is unaffected by *update* or *dry_run*: it is
    simply the list of all files under *src*, with the names changed to be under
    *dst*.
 
-   *preserve_mode* and *preserve_times* are the same as for :func:`copy_file` in
-   :mod:`distutils.file_util`; note that they only apply to regular files, not to
+   *preserve_mode* and *preserve_times* are the same as for
+   :func:`distutils.file_util.copy_file`; note that they only apply to
+   regular files, not to
    directories.  If *preserve_symlinks* is true, symlinks will be copied as
    symlinks (on platforms that support them!); otherwise (the default), the
    destination of the symlink will be copied.  *update* and *verbose* are the same
    as for :func:`copy_file`.
+
+   Files in *src* that begin with :file:`.nfs` are skipped (more information on
+   these files is available in answer D2 of the `NFS FAQ page
+   <http://nfs.sourceforge.net/#section_d>`_.
+
+   .. versionchanged:: 2.7.4
+      NFS files are ignored.
 
 
 .. function:: remove_tree(directory[, verbose=0, dry_run=0])
@@ -1011,8 +1010,6 @@ directories.
    Recursively remove *directory* and all files and directories underneath it. Any
    errors are ignored (apart from being reported to ``sys.stdout`` if *verbose* is
    true).
-
-.. XXX Some of this could be replaced with the shutil module?
 
 
 :mod:`distutils.file_util` --- Single file operations
@@ -1109,13 +1106,13 @@ other utility module.
    during the build of Python), not the OS version of the current system.
 
    For universal binary builds on Mac OS X the architecture value reflects
-   the univeral binary status instead of the architecture of the current
+   the universal binary status instead of the architecture of the current
    processor. For 32-bit universal binaries the architecture is ``fat``,
    for 64-bit universal binaries the architecture is ``fat64``, and
    for 4-way universal binaries the architecture is ``universal``. Starting
    from Python 2.7 and Python 3.2 the architecture ``fat3`` is used for
    a 3-way universal build (ppc, i386, x86_64) and ``intel`` is used for
-   a univeral build with the i386 and x86_64 architectures
+   a universal build with the i386 and x86_64 architectures
 
    Examples of returned values on Mac OS X:
 
@@ -1126,8 +1123,6 @@ other utility module.
    * ``macosx-10.5-universal``
 
    * ``macosx-10.6-intel``
-
-   .. % XXX isn't this also provided by some other non-distutils module?
 
 
 .. function:: convert_path(pathname)
@@ -1171,15 +1166,6 @@ other utility module.
    ``$variable`` can consist only of upper and lower case letters, numbers and an
    underscore. No { } or ( ) style quoting is available.
 
-
-.. function:: grok_environment_error(exc[, prefix='error: '])
-
-   Generate a useful error message from an :exc:`EnvironmentError`  (:exc:`IOError`
-   or :exc:`OSError`) exception object.   Handles Python 1.5.1 and later styles,
-   and does what it can to deal with  exception objects that don't have a filename
-   (which happens when the error  is due to a two-file operation, such as
-   :func:`rename` or  :func:`link`).  Returns the error message as a string
-   prefixed  with *prefix*.
 
 
 .. function:: split_quoted(s)
@@ -1263,8 +1249,8 @@ other utility module.
               built/installed/distributed
 
 
-This module provides the :class:`Distribution` class, which represents the
-module distribution being built/installed/distributed.
+This module provides the :class:`~distutils.core.Distribution` class, which
+represents the module distribution being built/installed/distributed.
 
 
 :mod:`distutils.extension` --- The Extension class
@@ -1324,11 +1310,9 @@ provides the following additional features:
 
 * options set attributes of a passed-in object
 
-* boolean options can have "negative aliases" --- eg. if :option:`--quiet` is
-  the "negative alias" of :option:`--verbose`, then :option:`--quiet` on the
+* boolean options can have "negative aliases" --- eg. if :option:`!--quiet` is
+  the "negative alias" of :option:`!--verbose`, then :option:`!--quiet` on the
   command line sets *verbose* to false.
-
-.. XXX Should be replaced with :mod:`optparse`.
 
 
 .. function:: fancy_getopt(options, negative_opt, object, args)
@@ -1346,8 +1330,6 @@ provides the following additional features:
 
    Wraps *text* to less than *width* wide.
 
-   .. XXX Should be replaced with :mod:`textwrap` (which is available in Python
-      2.3 and later).
 
 
 .. class:: FancyGetopt([option_table=None])
@@ -1409,10 +1391,6 @@ filesystem and building lists of files.
 
 .. module:: distutils.log
    :synopsis: A simple logging mechanism, 282-style
-
-
-.. XXX Should be replaced with standard :mod:`logging` module.
-
 
 
 :mod:`distutils.spawn` --- Spawn a sub-process
@@ -1576,6 +1554,8 @@ lines, and joining lines with backslashes.
 
    The options are all boolean, and affect the values returned by :meth:`readline`
 
+   .. tabularcolumns:: |l|L|l|
+
    +------------------+--------------------------------+---------+
    | option name      | description                    | default |
    +==================+================================+=========+
@@ -1696,8 +1676,8 @@ lines, and joining lines with backslashes.
 ===================================================================
 
 .. module:: distutils.cmd
-   :synopsis: This module provides the abstract base class Command. This class is subclassed
-              by the modules in the distutils.command  subpackage.
+   :synopsis: This module provides the abstract base class Command. This class
+              is subclassed by the modules in the distutils.command subpackage.
 
 
 This module supplies the abstract base class :class:`Command`.
@@ -1707,18 +1687,82 @@ This module supplies the abstract base class :class:`Command`.
 
    Abstract base class for defining command classes, the "worker bees" of the
    Distutils.  A useful analogy for command classes is to think of them as
-   subroutines with local variables called *options*.  The options are declared in
-   :meth:`initialize_options` and defined (given their final values) in
-   :meth:`finalize_options`, both of which must be defined by every command class.
-   The distinction between the two is necessary because option values might come
-   from the outside world (command line, config file, ...), and any options
-   dependent on other options must be computed after these outside influences have
-   been processed --- hence :meth:`finalize_options`.  The body of the subroutine,
-   where it does all its work based on the values of its options, is the
-   :meth:`run` method, which must also be implemented by every command class.
+   subroutines with local variables called *options*.  The options are declared
+   in :meth:`initialize_options` and defined (given their final values) in
+   :meth:`finalize_options`, both of which must be defined by every command
+   class.  The distinction between the two is necessary because option values
+   might come from the outside world (command line, config file, ...), and any
+   options dependent on other options must be computed after these outside
+   influences have been processed --- hence :meth:`finalize_options`.  The body
+   of the subroutine, where it does all its work based on the values of its
+   options, is the :meth:`run` method, which must also be implemented by every
+   command class.
 
-   The class constructor takes a single argument *dist*, a  :class:`Distribution`
-   instance.
+   The class constructor takes a single argument *dist*, a
+   :class:`~distutils.core.Distribution` instance.
+
+
+Creating a new Distutils command
+================================
+
+This section outlines the steps to create a new Distutils command.
+
+A new command lives in a module in the :mod:`distutils.command` package. There
+is a sample template in that directory called :file:`command_template`.  Copy
+this file to a new module with the same name as the new command you're
+implementing.  This module should implement a class with the same name as the
+module (and the command).  So, for instance, to create the command
+``peel_banana`` (so that users can run ``setup.py peel_banana``), you'd copy
+:file:`command_template` to :file:`distutils/command/peel_banana.py`, then edit
+it so that it's implementing the class :class:`peel_banana`, a subclass of
+:class:`distutils.cmd.Command`.
+
+Subclasses of :class:`Command` must define the following methods.
+
+.. method:: Command.initialize_options()
+
+   Set default values for all the options that this command supports.  Note that
+   these defaults may be overridden by other commands, by the setup script, by
+   config files, or by the command-line.  Thus, this is not the place to code
+   dependencies between options; generally, :meth:`initialize_options`
+   implementations are just a bunch of ``self.foo = None`` assignments.
+
+
+.. method:: Command.finalize_options()
+
+   Set final values for all the options that this command supports. This is
+   always called as late as possible, ie.  after any option assignments from the
+   command-line or from other commands have been done.  Thus, this is the place
+   to code option dependencies: if *foo* depends on *bar*, then it is safe to
+   set *foo* from *bar* as long as *foo* still has the same value it was
+   assigned in :meth:`initialize_options`.
+
+
+.. method:: Command.run()
+
+   A command's raison d'etre: carry out the action it exists to perform, controlled
+   by the options initialized in :meth:`initialize_options`, customized by other
+   commands, the setup script, the command-line, and config files, and finalized in
+   :meth:`finalize_options`.  All terminal output and filesystem interaction should
+   be done by :meth:`run`.
+
+
+.. attribute:: Command.sub_commands
+
+   *sub_commands* formalizes the notion of a "family" of commands,
+   e.g. ``install`` as the parent with sub-commands ``install_lib``,
+   ``install_headers``, etc.  The parent of a family of commands defines
+   *sub_commands* as a class attribute; it's a list of 2-tuples ``(command_name,
+   predicate)``, with *command_name* a string and *predicate* a function, a
+   string or ``None``.  *predicate* is a method of the parent command that
+   determines whether the corresponding command is applicable in the current
+   situation.  (E.g. ``install_headers`` is only applicable if we have any C
+   header files to install.)  If *predicate* is ``None``, that command is always
+   applicable.
+
+   *sub_commands* is usually defined at the *end* of a class, because
+   predicates can be methods of the class, so they must already have been
+   defined.  The canonical example is the :command:`install` command.
 
 
 :mod:`distutils.command` --- Individual Distutils commands
@@ -1768,11 +1812,11 @@ This module supplies the abstract base class :class:`Command`.
 .. module:: distutils.command.bdist_msi
    :synopsis: Build a binary distribution as a Windows MSI file
 
-.. class:: bdist_msi(Command)
+.. class:: bdist_msi
 
    Builds a `Windows Installer`_ (.msi) binary package.
 
-   .. _Windows Installer: http://msdn.microsoft.com/en-us/library/cc185688(VS.85).aspx
+   .. _Windows Installer: https://msdn.microsoft.com/en-us/library/cc185688(VS.85).aspx
 
    In most cases, the ``bdist_msi`` installer is a better choice than the
    ``bdist_wininst`` installer, because it provides better support for
@@ -1847,9 +1891,6 @@ This module supplies the abstract base class :class:`Command`.
    :synopsis: Build the .py/.pyc files of a package
 
 
-.. % todo
-
-
 :mod:`distutils.command.build_scripts` --- Build the scripts of a package
 =========================================================================
 
@@ -1866,8 +1907,12 @@ This module supplies the abstract base class :class:`Command`.
 .. module:: distutils.command.clean
    :synopsis: Clean a package build area
 
+This command removes the temporary files created by :command:`build`
+and its subcommands, like intermediary compiled object files.  With
+the ``--all`` option, the complete build directory will be removed.
 
-.. % todo
+Extension modules built :ref:`in place <distutils-build-ext-inplace>`
+will not be cleaned, as they are not in the build directory.
 
 
 :mod:`distutils.command.config` --- Perform package configuration
@@ -1943,61 +1988,15 @@ This is described in more detail in :pep:`301`.
 .. % todo
 
 
-Creating a new Distutils command
-================================
+:mod:`distutils.command.check` --- Check the meta-data of a package
+===================================================================
 
-This section outlines the steps to create a new Distutils command.
-
-A new command lives in a module in the :mod:`distutils.command` package. There
-is a sample template in that directory called  :file:`command_template`. Copy
-this file to a new module with the same name as the new command you're
-implementing. This module should implement a class with the same name as the
-module (and the command). So, for instance, to create the command
-``peel_banana`` (so that users can run ``setup.py peel_banana``), you'd copy
-:file:`command_template`  to :file:`distutils/command/peel_banana.py`, then edit
-it so that it's implementing the class :class:`peel_banana`, a subclass of
-:class:`distutils.cmd.Command`.
-
-Subclasses of :class:`Command` must define the following methods.
+.. module:: distutils.command.check
+   :synopsis: Check the metadata of a package
 
 
-.. method:: Command.initialize_options()
+The ``check`` command performs some tests on the meta-data of a package.
+For example, it verifies that all required meta-data are provided as
+the arguments passed to the :func:`setup` function.
 
-   Set default values for all the options that this command supports.  Note that
-   these defaults may be overridden by other commands, by the setup script, by
-   config files, or by the command-line.  Thus, this is not the place to code
-   dependencies between options; generally, :meth:`initialize_options`
-   implementations are just a bunch of ``self.foo = None`` assignments.
-
-
-.. method:: Command.finalize_options()
-
-   Set final values for all the options that this command supports. This is
-   always called as late as possible, ie.  after any option assignments from the
-   command-line or from other commands have been done.  Thus, this is the place
-   to to code option dependencies: if *foo* depends on *bar*, then it is safe to
-   set *foo* from *bar* as long as *foo* still has the same value it was
-   assigned in :meth:`initialize_options`.
-
-
-.. method:: Command.run()
-
-   A command's raison d'etre: carry out the action it exists to perform, controlled
-   by the options initialized in :meth:`initialize_options`, customized by other
-   commands, the setup script, the command-line, and config files, and finalized in
-   :meth:`finalize_options`.  All terminal output and filesystem interaction should
-   be done by :meth:`run`.
-
-*sub_commands* formalizes the notion of a "family" of commands, eg. ``install``
-as the parent with sub-commands ``install_lib``, ``install_headers``, etc.  The
-parent of a family of commands defines *sub_commands* as a class attribute; it's
-a list of 2-tuples ``(command_name, predicate)``, with *command_name* a string
-and *predicate* an unbound method, a string or None. *predicate* is a method of
-the parent command that determines whether the corresponding command is
-applicable in the current situation.  (Eg. we ``install_headers`` is only
-applicable if we have any C header files to install.)  If *predicate* is None,
-that command is always applicable.
-
-*sub_commands* is usually defined at the \*end\* of a class, because predicates
-can be unbound methods, so they must already have been defined.  The canonical
-example is the :command:`install` command.
+.. % todo

@@ -4,6 +4,10 @@
 .. module:: bdb
    :synopsis: Debugger framework.
 
+**Source code:** :source:`Lib/bdb.py`
+
+--------------
+
 The :mod:`bdb` module handles basic debugger functions, like setting breakpoints
 or managing execution via the debugger.
 
@@ -16,7 +20,7 @@ The following exception is defined:
 
 The :mod:`bdb` module also defines two classes:
 
-.. class:: Breakpoint(self, file, line[, temporary=0[, cond=None [, funcname=None]]])
+.. class:: Breakpoint(self, file, line, temporary=0, cond=None, funcname=None)
 
    This class implements temporary breakpoints, ignore counts, disabling and
    (re-)enabling, and conditionals.
@@ -108,7 +112,7 @@ The :mod:`bdb` module also defines two classes:
       * ``"exception"``: An exception has occurred.
       * ``"c_call"``: A C function is about to be called.
       * ``"c_return"``: A C function has returned.
-      * ``"c_exception"``: A C function has thrown an exception.
+      * ``"c_exception"``: A C function has raised an exception.
 
       For the Python events, specialized functions (see below) are called.  For
       the C events, no action is taken.
@@ -182,17 +186,17 @@ The :mod:`bdb` module also defines two classes:
    .. method:: user_line(frame)
 
       This method is called from :meth:`dispatch_line` when either
-      :meth:`stop_here` or :meth:`break_here` yields True.
+      :meth:`stop_here` or :meth:`break_here` yields ``True``.
 
    .. method:: user_return(frame, return_value)
 
       This method is called from :meth:`dispatch_return` when :meth:`stop_here`
-      yields True.
+      yields ``True``.
 
    .. method:: user_exception(frame, exc_info)
 
       This method is called from :meth:`dispatch_exception` when
-      :meth:`stop_here` yields True.
+      :meth:`stop_here` yields ``True``.
 
    .. method:: do_clear(arg)
 
@@ -219,7 +223,7 @@ The :mod:`bdb` module also defines two classes:
    .. method:: set_until(frame)
 
       Stop when the line with the line no greater than the current one is
-      reached or when returning from current frame
+      reached or when returning from current frame.
 
    .. method:: set_trace([frame])
 
@@ -229,11 +233,11 @@ The :mod:`bdb` module also defines two classes:
    .. method:: set_continue()
 
       Stop only at breakpoints or when finished.  If there are no breakpoints,
-      set the system trace function to None.
+      set the system trace function to ``None``.
 
    .. method:: set_quit()
 
-      Set the :attr:`quitting` attribute to True.  This raises :exc:`BdbQuit` in
+      Set the :attr:`quitting` attribute to ``True``.  This raises :exc:`BdbQuit` in
       the next call to one of the :meth:`dispatch_\*` methods.
 
 
@@ -241,7 +245,7 @@ The :mod:`bdb` module also defines two classes:
    breakpoints.  These methods return a string containing an error message if
    something went wrong, or ``None`` if all is well.
 
-   .. method:: set_break(filename, lineno[, temporary=0[, cond[, funcname]]])
+   .. method:: set_break(filename, lineno, temporary=0, cond=None, funcname=None)
 
       Set a new breakpoint.  If the *lineno* line doesn't exist for the
       *filename* passed as argument, return an error message.  The *filename*
@@ -342,12 +346,10 @@ Finally, the module defines the following functions:
 .. function:: effective(file, line, frame)
 
    Determine if there is an effective (active) breakpoint at this line of code.
-   Return breakpoint number or 0 if none.
-
-   Called only if we know there is a breakpoint at this location.  Returns the
-   breakpoint that was triggered and a flag that indicates if it is ok to delete
-   a temporary breakpoint.
+   Return a tuple of the breakpoint and a boolean that indicates if it is ok
+   to delete a temporary breakpoint.  Return ``(None, None)`` if there is no
+   matching breakpoint.
 
 .. function:: set_trace()
 
-   Starts debugging with a :class:`Bdb` instance from caller's frame.
+   Start debugging with a :class:`Bdb` instance from caller's frame.

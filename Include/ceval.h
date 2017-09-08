@@ -10,10 +10,6 @@ extern "C" {
 PyAPI_FUNC(PyObject *) PyEval_CallObjectWithKeywords(
     PyObject *, PyObject *, PyObject *);
 
-/* DLL-level Backwards compatibility: */
-#undef PyEval_CallObject
-PyAPI_FUNC(PyObject *) PyEval_CallObject(PyObject *, PyObject *);
-
 /* Inline this */
 #define PyEval_CallObject(func,arg) \
     PyEval_CallObjectWithKeywords(func, arg, (PyObject *)NULL)
@@ -54,7 +50,7 @@ PyAPI_FUNC(int) Py_GetRecursionLimit(void);
              _Py_CheckRecursiveCall(where))
 #define Py_LeaveRecursiveCall()                         \
             (--PyThreadState_GET()->recursion_depth)
-PyAPI_FUNC(int) _Py_CheckRecursiveCall(char *where);
+PyAPI_FUNC(int) _Py_CheckRecursiveCall(const char *where);
 PyAPI_DATA(int) _Py_CheckRecursionLimit;
 #ifdef USE_STACKCHECK
 #  define _Py_MakeRecCheck(x)  (++(x) > --_Py_CheckRecursionLimit)

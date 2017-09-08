@@ -1,10 +1,27 @@
+import math
 import unittest
 import sys
 import _ast
 from test import test_support
+from test import script_helper
+import os
+import tempfile
 import textwrap
 
 class TestSpecifics(unittest.TestCase):
+
+    def test_no_ending_newline(self):
+        compile("hi", "<test>", "exec")
+        compile("hi\r", "<test>", "exec")
+
+    def test_empty(self):
+        compile("", "<test>", "exec")
+
+    def test_other_newlines(self):
+        compile("\r\n", "<test>", "exec")
+        compile("\r", "<test>", "exec")
+        compile("hi\r\nstuff\r\ndef f():\n    pass\r", "<test>", "exec")
+        compile("this_is\rreally_old_mac\rdef f():\n    pass", "<test>", "exec")
 
     def test_debug_assignment(self):
         # catch assignments to __debug__
@@ -47,6 +64,55 @@ class TestSpecifics(unittest.TestCase):
             self.fail("variable is global and local")
         except SyntaxError:
             pass
+
+    def test_exec_functional_style(self):
+        # Exec'ing a tuple of length 2 works.
+        g = {'b': 2}
+        exec("a = b + 1", g)
+        self.assertEqual(g['a'], 3)
+
+        # As does exec'ing a tuple of length 3.
+        l = {'b': 3}
+        g = {'b': 5, 'c': 7}
+        exec("a = b + c", g, l)
+        self.assertNotIn('a', g)
+        self.assertEqual(l['a'], 10)
+
+        # Tuples not of length 2 or 3 are invalid.
+        with self.assertRaises(TypeError):
+            exec("a = b + 1",)
+
+        with self.assertRaises(TypeError):
+            exec("a = b + 1", {}, {}, {})
+
+        # Can't mix and match the two calling forms.
+        g = {'a': 3, 'b': 4}
+        l = {}
+        with self.assertRaises(TypeError):
+            exec("a = b + 1", g) in g
+        with self.assertRaises(TypeError):
+            exec("a = b + 1", g, l) in g, l
+
+    def test_nested_qualified_exec(self):
+        # Can use qualified exec in nested functions.
+        code = ["""
+def g():
+    def f():
+        if True:
+            exec "" in {}, {}
+        """, """
+def g():
+    def f():
+        if True:
+            exec("", {}, {})
+        """, """
+def g():
+    def f():
+        if True:
+            exec("", {})
+        """]
+        for c in code:
+            compile(c, "<code>", "exec")
 
     def test_exec_with_general_mapping_for_locals(self):
 
@@ -130,7 +196,7 @@ def f(x):
 
     def test_complex_args(self):
 
-        with test_support._check_py3k_warnings(
+        with test_support.check_py3k_warnings(
                 ("tuple parameter unpacking has been removed", SyntaxWarning)):
             exec textwrap.dedent('''
         def comp_args((a, b)):
@@ -239,10 +305,10 @@ if 1:
             self.assertEqual(eval("-" + all_one_bits), -18446744073709551615L)
         else:
             self.fail("How many bits *does* this machine have???")
-        # Verify treatment of contant folding on -(sys.maxint+1)
+        # Verify treatment of constant folding on -(sys.maxint+1)
         # i.e. -2147483648 on 32 bit platforms.  Should return int, not long.
-        self.assertTrue(isinstance(eval("%s" % (-sys.maxint - 1)), int))
-        self.assertTrue(isinstance(eval("%s" % (-sys.maxint - 2)), long))
+        self.assertIsInstance(eval("%s" % (-sys.maxint - 1)), int)
+        self.assertIsInstance(eval("%s" % (-sys.maxint - 2)), long)
 
     if sys.maxint == 9223372036854775807:
         def test_32_63_bit_values(self):
@@ -257,7 +323,7 @@ if 1:
 
             for variable in self.test_32_63_bit_values.func_code.co_consts:
                 if variable is not None:
-                    self.assertTrue(isinstance(variable, int))
+                    self.assertIsInstance(variable, int)
 
     def test_sequence_unpacking_error(self):
         # Verify sequence packing/unpacking with "or".  SF bug #757818
@@ -275,11 +341,19 @@ if 1:
             '(a, None) = 0, 0',
             'for None in range(10): pass',
             'def f(None): pass',
+            'import None',
+            'import x as None',
+            'from x import None',
+            'from x import y as None'
         ]
         for stmt in stmts:
             stmt += "\n"
             self.assertRaises(SyntaxError, compile, stmt, 'tmp', 'single')
             self.assertRaises(SyntaxError, compile, stmt, 'tmp', 'exec')
+        # This is ok.
+        compile("from None import x", "tmp", "exec")
+        compile("from x import None as y", "tmp", "exec")
+        compile("import None as x", "tmp", "exec")
 
     def test_import(self):
         succeed = [
@@ -337,9 +411,28 @@ if 1:
         f1, f2 = f()
         self.assertNotEqual(id(f1.func_code), id(f2.func_code))
 
-    def test_unicode_encoding(self):
+    def test_lambda_doc(self):
+        l = lambda: "foo"
+        self.assertIsNone(l.__doc__)
+
+    @test_support.requires_unicode
+    def test_encoding(self):
+        code = b'# -*- coding: badencoding -*-\npass\n'
+        self.assertRaises(SyntaxError, compile, code, 'tmp', 'exec')
         code = u"# -*- coding: utf-8 -*-\npass\n"
         self.assertRaises(SyntaxError, compile, code, "tmp", "exec")
+        code = 'u"\xc2\xa4"\n'
+        self.assertEqual(eval(code), u'\xc2\xa4')
+        code = u'u"\xc2\xa4"\n'
+        self.assertEqual(eval(code), u'\xc2\xa4')
+        code = '# -*- coding: latin1 -*-\nu"\xc2\xa4"\n'
+        self.assertEqual(eval(code), u'\xc2\xa4')
+        code = '# -*- coding: utf-8 -*-\nu"\xc2\xa4"\n'
+        self.assertEqual(eval(code), u'\xa4')
+        code = '# -*- coding: iso8859-15 -*-\nu"\xc2\xa4"\n'
+        self.assertEqual(eval(code), test_support.u(r'\xc2\u20ac'))
+        code = 'u"""\\\n# -*- coding: utf-8 -*-\n\xc2\xa4"""\n'
+        self.assertEqual(eval(code), u'# -*- coding: utf-8 -*-\n\xc2\xa4')
 
     def test_subscripts(self):
         # SF bug 1448804
@@ -362,56 +455,56 @@ if 1:
         d[1] += 1
         self.assertEqual(d[1], 2)
         del d[1]
-        self.assertEqual(1 in d, False)
+        self.assertNotIn(1, d)
         # Tuple of indices
         d[1, 1] = 1
         self.assertEqual(d[1, 1], 1)
         d[1, 1] += 1
         self.assertEqual(d[1, 1], 2)
         del d[1, 1]
-        self.assertEqual((1, 1) in d, False)
+        self.assertNotIn((1, 1), d)
         # Simple slice
         d[1:2] = 1
         self.assertEqual(d[1:2], 1)
         d[1:2] += 1
         self.assertEqual(d[1:2], 2)
         del d[1:2]
-        self.assertEqual(slice(1, 2) in d, False)
+        self.assertNotIn(slice(1, 2), d)
         # Tuple of simple slices
         d[1:2, 1:2] = 1
         self.assertEqual(d[1:2, 1:2], 1)
         d[1:2, 1:2] += 1
         self.assertEqual(d[1:2, 1:2], 2)
         del d[1:2, 1:2]
-        self.assertEqual((slice(1, 2), slice(1, 2)) in d, False)
+        self.assertNotIn((slice(1, 2), slice(1, 2)), d)
         # Extended slice
         d[1:2:3] = 1
         self.assertEqual(d[1:2:3], 1)
         d[1:2:3] += 1
         self.assertEqual(d[1:2:3], 2)
         del d[1:2:3]
-        self.assertEqual(slice(1, 2, 3) in d, False)
+        self.assertNotIn(slice(1, 2, 3), d)
         # Tuple of extended slices
         d[1:2:3, 1:2:3] = 1
         self.assertEqual(d[1:2:3, 1:2:3], 1)
         d[1:2:3, 1:2:3] += 1
         self.assertEqual(d[1:2:3, 1:2:3], 2)
         del d[1:2:3, 1:2:3]
-        self.assertEqual((slice(1, 2, 3), slice(1, 2, 3)) in d, False)
+        self.assertNotIn((slice(1, 2, 3), slice(1, 2, 3)), d)
         # Ellipsis
         d[...] = 1
         self.assertEqual(d[...], 1)
         d[...] += 1
         self.assertEqual(d[...], 2)
         del d[...]
-        self.assertEqual(Ellipsis in d, False)
+        self.assertNotIn(Ellipsis, d)
         # Tuple of Ellipses
         d[..., ...] = 1
         self.assertEqual(d[..., ...], 1)
         d[..., ...] += 1
         self.assertEqual(d[..., ...], 2)
         del d[..., ...]
-        self.assertEqual((Ellipsis, Ellipsis) in d, False)
+        self.assertNotIn((Ellipsis, Ellipsis), d)
 
     def test_mangling(self):
         class A:
@@ -421,10 +514,10 @@ if 1:
                 import __mangled_mod
                 import __package__.module
 
-        self.assert_("_A__mangled" in A.f.func_code.co_varnames)
-        self.assert_("__not_mangled__" in A.f.func_code.co_varnames)
-        self.assert_("_A__mangled_mod" in A.f.func_code.co_varnames)
-        self.assert_("__package__" in A.f.func_code.co_varnames)
+        self.assertIn("_A__mangled", A.f.func_code.co_varnames)
+        self.assertIn("__not_mangled__", A.f.func_code.co_varnames)
+        self.assertIn("_A__mangled_mod", A.f.func_code.co_varnames)
+        self.assertIn("__package__", A.f.func_code.co_varnames)
 
     def test_compile_ast(self):
         fname = __file__
@@ -447,7 +540,7 @@ if 1:
         for fname, code in sample_code:
             co1 = compile(code, '%s1' % fname, 'exec')
             ast = compile(code, '%s2' % fname, 'exec', _ast.PyCF_ONLY_AST)
-            self.assert_(type(ast) == _ast.Module)
+            self.assertTrue(type(ast) == _ast.Module)
             co2 = compile(ast, '%s3' % fname, 'exec')
             self.assertEqual(co1, co2)
             # the code object's filename comes from the second compilation step
@@ -465,9 +558,133 @@ if 1:
         ast.body = [_ast.BoolOp()]
         self.assertRaises(TypeError, compile, ast, '<ast>', 'exec')
 
+    def test_yet_more_evil_still_undecodable(self):
+        # Issue #25388
+        src = b"#\x00\n#\xfd\n"
+        tmpd = tempfile.mkdtemp()
+        try:
+            fn = os.path.join(tmpd, "bad.py")
+            with open(fn, "wb") as fp:
+                fp.write(src)
+            rc, out, err = script_helper.assert_python_failure(fn)
+        finally:
+            test_support.rmtree(tmpd)
+        self.assertIn(b"Non-ASCII", err)
+
+    def test_null_terminated(self):
+        # The source code is null-terminated internally, but bytes-like
+        # objects are accepted, which could be not terminated.
+        with self.assertRaisesRegexp(TypeError, "without null bytes"):
+            compile(u"123\x00", "<dummy>", "eval")
+        with test_support.check_py3k_warnings():
+            with self.assertRaisesRegexp(TypeError, "without null bytes"):
+                compile(buffer("123\x00"), "<dummy>", "eval")
+            code = compile(buffer("123\x00", 1, 2), "<dummy>", "eval")
+            self.assertEqual(eval(code), 23)
+            code = compile(buffer("1234", 1, 2), "<dummy>", "eval")
+            self.assertEqual(eval(code), 23)
+            code = compile(buffer("$23$", 1, 2), "<dummy>", "eval")
+            self.assertEqual(eval(code), 23)
+
+class TestStackSize(unittest.TestCase):
+    # These tests check that the computed stack size for a code object
+    # stays within reasonable bounds (see issue #21523 for an example
+    # dysfunction).
+    N = 100
+
+    def check_stack_size(self, code):
+        # To assert that the alleged stack size is not O(N), we
+        # check that it is smaller than log(N).
+        if isinstance(code, str):
+            code = compile(code, "<foo>", "single")
+        max_size = math.ceil(math.log(len(code.co_code)))
+        self.assertLessEqual(code.co_stacksize, max_size)
+
+    def test_and(self):
+        self.check_stack_size("x and " * self.N + "x")
+
+    def test_or(self):
+        self.check_stack_size("x or " * self.N + "x")
+
+    def test_and_or(self):
+        self.check_stack_size("x and x or " * self.N + "x")
+
+    def test_chained_comparison(self):
+        self.check_stack_size("x < " * self.N + "x")
+
+    def test_if_else(self):
+        self.check_stack_size("x if x else " * self.N + "x")
+
+    def test_binop(self):
+        self.check_stack_size("x + " * self.N + "x")
+
+    def test_func_and(self):
+        code = "def f(x):\n"
+        code += "   x and x\n" * self.N
+        self.check_stack_size(code)
+
+    def check_constant(self, func, expected):
+        for const in func.__code__.co_consts:
+            if repr(const) == repr(expected):
+                break
+        else:
+            self.fail("unable to find constant %r in %r"
+                      % (expected, func.__code__.co_consts))
+
+    # Merging equal constants is not a strict requirement for the Python
+    # semantics, it's a more an implementation detail.
+    @test_support.cpython_only
+    def test_merge_constants(self):
+        # Issue #25843: compile() must merge constants which are equal
+        # and have the same type.
+
+        def check_same_constant(const):
+            ns = {}
+            code = "f1, f2 = lambda: %r, lambda: %r" % (const, const)
+            exec(code, ns)
+            f1 = ns['f1']
+            f2 = ns['f2']
+            self.assertIs(f1.__code__, f2.__code__)
+            self.check_constant(f1, const)
+            self.assertEqual(repr(f1()), repr(const))
+
+        check_same_constant(None)
+        check_same_constant(0)
+        check_same_constant(0.0)
+        check_same_constant(b'abc')
+        check_same_constant('abc')
+
+    def test_dont_merge_constants(self):
+        # Issue #25843: compile() must not merge constants which are equal
+        # but have a different type.
+
+        def check_different_constants(const1, const2):
+            ns = {}
+            exec("f1, f2 = lambda: %r, lambda: %r" % (const1, const2), ns)
+            f1 = ns['f1']
+            f2 = ns['f2']
+            self.assertIsNot(f1.__code__, f2.__code__)
+            self.check_constant(f1, const1)
+            self.check_constant(f2, const2)
+            self.assertEqual(repr(f1()), repr(const1))
+            self.assertEqual(repr(f2()), repr(const2))
+
+        check_different_constants(0, 0.0)
+        check_different_constants(+0.0, -0.0)
+        check_different_constants((0,), (0.0,))
+
+        # check_different_constants() cannot be used because repr(-0j) is
+        # '(-0-0j)', but when '(-0-0j)' is evaluated to 0j: we loose the sign.
+        f1, f2 = lambda: +0.0j, lambda: -0.0j
+        self.assertIsNot(f1.__code__, f2.__code__)
+        self.check_constant(f1, +0.0j)
+        self.check_constant(f2, -0.0j)
+        self.assertEqual(repr(f1()), repr(+0.0j))
+        self.assertEqual(repr(f2()), repr(-0.0j))
+
 
 def test_main():
-    test_support.run_unittest(TestSpecifics)
+    test_support.run_unittest(__name__)
 
 if __name__ == "__main__":
-    test_main()
+    unittest.main()

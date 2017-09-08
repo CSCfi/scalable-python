@@ -12,10 +12,10 @@
 #include "multibytecodec.h"
 
 
-/* a unicode "undefined" codepoint */
+/* a unicode "undefined" code point */
 #define UNIINV  0xFFFE
 
-/* internal-use DBCS codepoints which aren't used by any charsets */
+/* internal-use DBCS code points which aren't used by any charsets */
 #define NOCHAR  0xFFFF
 #define MULTIC  0xFFFE
 #define DBCINV  0xFFFD
@@ -282,7 +282,7 @@ getcodec(PyObject *self, PyObject *encoding)
         return NULL;
     }
 
-    codecobj = PyCObject_FromVoidPtr((void *)codec, NULL);
+    codecobj = PyCapsule_New((void *)codec, PyMultibyteCodec_CAPSULE_NAME, NULL);
     if (codecobj == NULL)
         return NULL;
 
@@ -307,7 +307,7 @@ register_maps(PyObject *module)
         int r;
         strcpy(mhname + sizeof("__map_") - 1, h->charset);
         r = PyModule_AddObject(module, mhname,
-                        PyCObject_FromVoidPtr((void *)h, NULL));
+                        PyCapsule_New((void *)h, PyMultibyteCodec_CAPSULE_NAME, NULL));
         if (r == -1)
             return -1;
     }
@@ -325,22 +325,26 @@ find_pairencmap(ucs2_t body, ucs2_t modifier,
     min = 0;
     max = haystacksize;
 
-    for (pos = haystacksize >> 1; min != max; pos = (min + max) >> 1)
+    for (pos = haystacksize >> 1; min != max; pos = (min + max) >> 1) {
         if (value < haystack[pos].uniseq) {
-            if (max == pos) break;
-            else max = pos;
+            if (max != pos) {
+                max = pos;
+                continue;
+            }
         }
         else if (value > haystack[pos].uniseq) {
-            if (min == pos) break;
-            else min = pos;
+            if (min != pos) {
+                min = pos;
+                continue;
+            }
         }
-        else
-            break;
+        break;
+    }
 
-        if (value == haystack[pos].uniseq)
-            return haystack[pos].code;
-        else
-            return DBCINV;
+    if (value == haystack[pos].uniseq) {
+        return haystack[pos].code;
+    }
+    return DBCINV;
 }
 #endif
 
@@ -362,14 +366,14 @@ importmap(const char *modname, const char *symbol,
     o = PyObject_GetAttrString(mod, (char*)symbol);
     if (o == NULL)
         goto errorexit;
-    else if (!PyCObject_Check(o)) {
+    else if (!PyCapsule_IsValid(o, PyMultibyteCodec_CAPSULE_NAME)) {
         PyErr_SetString(PyExc_ValueError,
-                        "map data must be a CObject.");
+                        "map data must be a Capsule.");
         goto errorexit;
     }
     else {
         struct dbcs_map *map;
-        map = PyCObject_AsVoidPtr(o);
+        map = PyCapsule_GetPointer(o, PyMultibyteCodec_CAPSULE_NAME);
         if (encmap != NULL)
             *encmap = map->encmap;
         if (decmap != NULL)

@@ -10,6 +10,7 @@ from distutils.core import Distribution
 from distutils.errors import DistutilsFileError
 
 from distutils.tests import support
+from test.test_support import run_unittest
 
 
 class BuildPyTestCase(support.TempdirManager,
@@ -19,11 +20,15 @@ class BuildPyTestCase(support.TempdirManager,
     def test_package_data(self):
         sources = self.mkdtemp()
         f = open(os.path.join(sources, "__init__.py"), "w")
-        f.write("# Pretend this is a package.")
-        f.close()
+        try:
+            f.write("# Pretend this is a package.")
+        finally:
+            f.close()
         f = open(os.path.join(sources, "README.txt"), "w")
-        f.write("Info about this package")
-        f.close()
+        try:
+            f.write("Info about this package")
+        finally:
+            f.close()
 
         destination = self.mkdtemp()
 
@@ -52,11 +57,15 @@ class BuildPyTestCase(support.TempdirManager,
         self.assertEqual(len(cmd.get_outputs()), 3)
         pkgdest = os.path.join(destination, "pkg")
         files = os.listdir(pkgdest)
-        self.assert_("__init__.py" in files)
-        self.assert_("__init__.pyc" in files)
-        self.assert_("README.txt" in files)
+        self.assertIn("__init__.py", files)
+        self.assertIn("README.txt", files)
+        # XXX even with -O, distutils writes pyc, not pyo; bug?
+        if sys.dont_write_bytecode:
+            self.assertNotIn("__init__.pyc", files)
+        else:
+            self.assertIn("__init__.pyc", files)
 
-    def test_empty_package_dir (self):
+    def test_empty_package_dir(self):
         # See SF 1668596/1720897.
         cwd = os.getcwd()
 
@@ -90,6 +99,37 @@ class BuildPyTestCase(support.TempdirManager,
             os.chdir(cwd)
             sys.stdout = old_stdout
 
+    def test_dir_in_package_data(self):
+        """
+        A directory in package_data should not be added to the filelist.
+        """
+        # See bug 19286
+        sources = self.mkdtemp()
+        pkg_dir = os.path.join(sources, "pkg")
+
+        os.mkdir(pkg_dir)
+        open(os.path.join(pkg_dir, "__init__.py"), "w").close()
+
+        docdir = os.path.join(pkg_dir, "doc")
+        os.mkdir(docdir)
+        open(os.path.join(docdir, "testfile"), "w").close()
+
+        # create the directory that could be incorrectly detected as a file
+        os.mkdir(os.path.join(docdir, 'otherdir'))
+
+        os.chdir(sources)
+        dist = Distribution({"packages": ["pkg"],
+                             "package_data": {"pkg": ["doc/*"]}})
+        # script_name need not exist, it just need to be initialized
+        dist.script_name = os.path.join(sources, "setup.py")
+        dist.script_args = ["build"]
+        dist.parse_command_line()
+
+        try:
+            dist.run_commands()
+        except DistutilsFileError:
+            self.fail("failed package_data when data dir includes a dir")
+
     def test_dont_write_bytecode(self):
         # makes sure byte_compile is not used
         pkg_dir, dist = self.create_dist()
@@ -104,10 +144,10 @@ class BuildPyTestCase(support.TempdirManager,
         finally:
             sys.dont_write_bytecode = old_dont_write_bytecode
 
-        self.assertTrue('byte-compiling is disabled' in self.logs[0][1])
+        self.assertIn('byte-compiling is disabled', self.logs[0][1])
 
 def test_suite():
     return unittest.makeSuite(BuildPyTestCase)
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="test_suite")
+    run_unittest(test_suite())

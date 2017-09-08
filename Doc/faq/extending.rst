@@ -2,7 +2,9 @@
 Extending/Embedding FAQ
 =======================
 
-.. contents::
+.. only:: html
+
+   .. contents::
 
 .. highlight:: c
 
@@ -42,59 +44,60 @@ time-critical functions in your code, and gain a significant improvement with
 very little effort, as long as you're running on a machine with an
 x86-compatible processor.
 
-`Pyrex <http://www.cosc.canterbury.ac.nz/~greg/python/Pyrex/>`_ is a compiler
-that accepts a slightly modified form of Python and generates the corresponding
+`Cython <http://cython.org>`_ and its relative `Pyrex
+<https://www.cosc.canterbury.ac.nz/greg.ewing/python/Pyrex/>`_ are compilers
+that accept a slightly modified form of Python and generate the corresponding
 C code.  Pyrex makes it possible to write an extension without having to learn
 Python's C API.
 
 If you need to interface to some C or C++ library for which no Python extension
 currently exists, you can try wrapping the library's data types and functions
 with a tool such as `SWIG <http://www.swig.org>`_.  `SIP
-<http://www.riverbankcomputing.co.uk/software/sip/>`__, `CXX
+<https://riverbankcomputing.com/software/sip/intro>`__, `CXX
 <http://cxx.sourceforge.net/>`_ `Boost
 <http://www.boost.org/libs/python/doc/index.html>`_, or `Weave
-<http://www.scipy.org/Weave>`_ are also alternatives for wrapping
-C++ libraries.
+<https://scipy.github.io/devdocs/tutorial/weave.html>`_ are also
+alternatives for wrapping C++ libraries.
 
 
 How can I execute arbitrary Python statements from C?
 -----------------------------------------------------
 
-The highest-level function to do this is :cfunc:`PyRun_SimpleString` which takes
+The highest-level function to do this is :c:func:`PyRun_SimpleString` which takes
 a single string argument to be executed in the context of the module
 ``__main__`` and returns 0 for success and -1 when an exception occurred
 (including ``SyntaxError``).  If you want more control, use
-:cfunc:`PyRun_String`; see the source for :cfunc:`PyRun_SimpleString` in
+:c:func:`PyRun_String`; see the source for :c:func:`PyRun_SimpleString` in
 ``Python/pythonrun.c``.
 
 
 How can I evaluate an arbitrary Python expression from C?
 ---------------------------------------------------------
 
-Call the function :cfunc:`PyRun_String` from the previous question with the
-start symbol :cdata:`Py_eval_input`; it parses an expression, evaluates it and
+Call the function :c:func:`PyRun_String` from the previous question with the
+start symbol :c:data:`Py_eval_input`; it parses an expression, evaluates it and
 returns its value.
 
 
 How do I extract C values from a Python object?
 -----------------------------------------------
 
-That depends on the object's type.  If it's a tuple, :cfunc:`PyTuple_Size`
-returns its length and :cfunc:`PyTuple_GetItem` returns the item at a specified
-index.  Lists have similar functions, :cfunc:`PyListSize` and
-:cfunc:`PyList_GetItem`.
+That depends on the object's type.  If it's a tuple, :c:func:`PyTuple_Size`
+returns its length and :c:func:`PyTuple_GetItem` returns the item at a specified
+index.  Lists have similar functions, :c:func:`PyListSize` and
+:c:func:`PyList_GetItem`.
 
-For strings, :cfunc:`PyString_Size` returns its length and
-:cfunc:`PyString_AsString` a pointer to its value.  Note that Python strings may
-contain null bytes so C's :cfunc:`strlen` should not be used.
+For strings, :c:func:`PyString_Size` returns its length and
+:c:func:`PyString_AsString` a pointer to its value.  Note that Python strings may
+contain null bytes so C's :c:func:`strlen` should not be used.
 
 To test the type of an object, first make sure it isn't *NULL*, and then use
-:cfunc:`PyString_Check`, :cfunc:`PyTuple_Check`, :cfunc:`PyList_Check`, etc.
+:c:func:`PyString_Check`, :c:func:`PyTuple_Check`, :c:func:`PyList_Check`, etc.
 
 There is also a high-level API to Python objects which is provided by the
 so-called 'abstract' interface -- read ``Include/abstract.h`` for further
 details.  It allows interfacing with any kind of Python sequence using calls
-like :cfunc:`PySequence_Length`, :cfunc:`PySequence_GetItem`, etc.)  as well as
+like :c:func:`PySequence_Length`, :c:func:`PySequence_GetItem`, etc.)  as well as
 many other useful protocols.
 
 
@@ -103,7 +106,7 @@ How do I use Py_BuildValue() to create a tuple of arbitrary length?
 
 You can't.  Use ``t = PyTuple_New(n)`` instead, and fill it with objects using
 ``PyTuple_SetItem(t, i, o)`` -- note that this "eats" a reference count of
-``o``, so you have to :cfunc:`Py_INCREF` it.  Lists have similar functions
+``o``, so you have to :c:func:`Py_INCREF` it.  Lists have similar functions
 ``PyList_New(n)`` and ``PyList_SetItem(l, i, o)``.  Note that you *must* set all
 the tuple items to some value before you pass the tuple to Python code --
 ``PyTuple_New(n)`` initializes them to NULL, which isn't a valid Python value.
@@ -112,9 +115,9 @@ the tuple items to some value before you pass the tuple to Python code --
 How do I call an object's method from C?
 ----------------------------------------
 
-The :cfunc:`PyObject_CallMethod` function can be used to call an arbitrary
+The :c:func:`PyObject_CallMethod` function can be used to call an arbitrary
 method of an object.  The parameters are the object, the name of the method to
-call, a format string like that used with :cfunc:`Py_BuildValue`, and the
+call, a format string like that used with :c:func:`Py_BuildValue`, and the
 argument values::
 
    PyObject *
@@ -122,7 +125,7 @@ argument values::
                        char *arg_format, ...);
 
 This works for any object that has methods -- whether built-in or user-defined.
-You are responsible for eventually :cfunc:`Py_DECREF`\ 'ing the return value.
+You are responsible for eventually :c:func:`Py_DECREF`\ 'ing the return value.
 
 To call, e.g., a file object's "seek" method with arguments 10, 0 (assuming the
 file object pointer is "f")::
@@ -135,7 +138,7 @@ file object pointer is "f")::
            Py_DECREF(res);
    }
 
-Note that since :cfunc:`PyObject_CallObject` *always* wants a tuple for the
+Note that since :c:func:`PyObject_CallObject` *always* wants a tuple for the
 argument list, to call a function without arguments, pass "()" for the format,
 and to call a function with one argument, surround the argument in parentheses,
 e.g. "(i)".
@@ -152,6 +155,8 @@ wherever your ``write()`` method sends it.
 The easiest way to do this is to use the StringIO class in the standard library.
 
 Sample code and use for catching stdout:
+
+.. code-block:: pycon
 
    >>> class StdoutCatcher:
    ...     def __init__(self):
@@ -186,7 +191,7 @@ module) as follows::
 
    attr = PyObject_GetAttrString(module, "<attrname>");
 
-Calling :cfunc:`PyObject_SetAttrString` to assign to variables in the module
+Calling :c:func:`PyObject_SetAttrString` to assign to variables in the module
 also works.
 
 
@@ -216,11 +221,15 @@ How do I debug an extension?
 When using GDB with dynamically loaded extensions, you can't set a breakpoint in
 your extension until your extension is loaded.
 
-In your ``.gdbinit`` file (or interactively), add the command::
+In your ``.gdbinit`` file (or interactively), add the command:
+
+.. code-block:: none
 
    br _PyImport_LoadDynamicModule
 
-Then, when you run GDB::
+Then, when you run GDB:
+
+.. code-block:: shell-session
 
    $ gdb /local/bin/python
    gdb) run myscript.py
@@ -267,16 +276,16 @@ the input is invalid.
 In Python you can use the :mod:`codeop` module, which approximates the parser's
 behavior sufficiently.  IDLE uses this, for example.
 
-The easiest way to do it in C is to call :cfunc:`PyRun_InteractiveLoop` (perhaps
+The easiest way to do it in C is to call :c:func:`PyRun_InteractiveLoop` (perhaps
 in a separate thread) and let the Python interpreter handle the input for
-you. You can also set the :cfunc:`PyOS_ReadlineFunctionPointer` to point at your
+you. You can also set the :c:func:`PyOS_ReadlineFunctionPointer` to point at your
 custom input function. See ``Modules/readline.c`` and ``Parser/myreadline.c``
 for more hints.
 
 However sometimes you have to run the embedded Python interpreter in the same
 thread as your rest application and you can't allow the
-:cfunc:`PyRun_InteractiveLoop` to stop while waiting for user input.  The one
-solution then is to call :cfunc:`PyParser_ParseString` and test for ``e.error``
+:c:func:`PyRun_InteractiveLoop` to stop while waiting for user input.  The one
+solution then is to call :c:func:`PyParser_ParseString` and test for ``e.error``
 equal to ``E_EOF``, which means the input is incomplete).  Here's a sample code
 fragment, untested, inspired by code from Alex Farber::
 
@@ -307,8 +316,8 @@ fragment, untested, inspired by code from Alex Farber::
    }
 
 Another solution is trying to compile the received string with
-:cfunc:`Py_CompileString`. If it compiles without errors, try to execute the
-returned code object by calling :cfunc:`PyEval_EvalCode`. Otherwise save the
+:c:func:`Py_CompileString`. If it compiles without errors, try to execute the
+returned code object by calling :c:func:`PyEval_EvalCode`. Otherwise save the
 input for later. If the compilation fails, find out if it's an error or just
 more input is required - by extracting the message string from the exception
 tuple and comparing it to the string "unexpected EOF while parsing".  Here is a
@@ -342,7 +351,7 @@ complete example using the GNU readline library (you may want to ignore
      {
        line = readline (prompt);
 
-       if (NULL == line)                          /* CTRL-D pressed */
+       if (NULL == line)                          /* Ctrl-D pressed */
        {
          done = 1;
        }
@@ -437,8 +446,8 @@ extension module using g++ (e.g., ``g++ -shared -o mymodule.so mymodule.o``).
 Can I create an object class with some methods implemented in C and others in Python (e.g. through inheritance)?
 ----------------------------------------------------------------------------------------------------------------
 
-In Python 2.2, you can inherit from built-in classes such as :class:`int`,
-:class:`list`, :class:`dict`, etc.
+Yes, you can inherit from built-in classes such as :class:`int`, :class:`list`,
+:class:`dict`, etc.
 
 The Boost Python Library (BPL, http://www.boost.org/libs/python/doc/index.html)
 provides a way of doing this from C++ (i.e. you can inherit from an extension
@@ -460,11 +469,13 @@ This can easily occur when using pre-built extension packages.  RedHat Linux
 7.x, in particular, provided a "python2" binary that is compiled with 4-byte
 Unicode.  This only causes the link failure if the extension uses any of the
 ``PyUnicode_*()`` functions.  It is also a problem if an extension uses any of
-the Unicode-related format specifiers for :cfunc:`Py_BuildValue` (or similar) or
-parameter specifications for :cfunc:`PyArg_ParseTuple`.
+the Unicode-related format specifiers for :c:func:`Py_BuildValue` (or similar) or
+parameter specifications for :c:func:`PyArg_ParseTuple`.
 
 You can check the size of the Unicode character a Python interpreter is using by
 checking the value of sys.maxunicode:
+
+.. code-block:: pycon
 
    >>> import sys
    >>> if sys.maxunicode > 65535:

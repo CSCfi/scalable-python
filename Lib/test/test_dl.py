@@ -1,8 +1,8 @@
-#! /usr/bin/env python
 """Test dlmodule.c
    Roger E. Masse  revised strategy by Barry Warsaw
 """
-from test.test_support import verbose,TestSkipped, import_module
+import unittest
+from test.test_support import verbose, import_module
 dl = import_module('dl', deprecated=True)
 
 sharedlibs = [
@@ -31,7 +31,7 @@ def test_main():
                 print 'worked!'
             break
     else:
-        raise TestSkipped, 'Could not open any shared libraries'
+        raise unittest.SkipTest, 'Could not open any shared libraries'
 
 
 if __name__ == '__main__':

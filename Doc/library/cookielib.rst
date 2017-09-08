@@ -8,13 +8,14 @@
 
 .. note::
    The :mod:`cookielib` module has been renamed to :mod:`http.cookiejar` in
-   Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
-
+   Python 3.  The :term:`2to3` tool will automatically adapt imports when
+   converting your sources to Python 3.
 
 .. versionadded:: 2.4
 
+**Source code:** :source:`Lib/cookielib.py`
 
+--------------
 
 The :mod:`cookielib` module defines classes for automatic handling of HTTP
 cookies.  It is useful for accessing web sites that require small pieces of data
@@ -97,9 +98,9 @@ The following classes are provided:
    Netscape and RFC 2965 cookies.  By default, RFC 2109 cookies (ie. cookies
    received in a :mailheader:`Set-Cookie` header with a version cookie-attribute of
    1) are treated according to the RFC 2965 rules.  However, if RFC 2965 handling
-   is turned off or :attr:`rfc2109_as_netscape` is True, RFC 2109 cookies are
+   is turned off or :attr:`rfc2109_as_netscape` is ``True``, RFC 2109 cookies are
    'downgraded' by the :class:`CookieJar` instance to Netscape cookies, by
-   setting the :attr:`version` attribute of the :class:`Cookie` instance to 0.
+   setting the :attr:`version` attribute of the :class:`~cookielib.Cookie` instance to 0.
    :class:`DefaultCookiePolicy` also provides some parameters to allow some
    fine-tuning of policy.
 
@@ -107,7 +108,7 @@ The following classes are provided:
 .. class:: Cookie()
 
    This class represents Netscape, RFC 2109 and RFC 2965 cookies.  It is not
-   expected that users of :mod:`cookielib` construct their own :class:`Cookie`
+   expected that users of :mod:`cookielib` construct their own :class:`~cookielib.Cookie`
    instances.  Instead, if necessary, call :meth:`make_cookies` on a
    :class:`CookieJar` instance.
 
@@ -121,7 +122,7 @@ The following classes are provided:
       HTTP cookie classes, principally useful for server-side code.  The
       :mod:`cookielib` and :mod:`Cookie` modules do not depend on each other.
 
-   http://wp.netscape.com/newsref/std/cookie_spec.html
+   https://curl.haxx.se/rfc/cookie_spec.html
       The specification of the original Netscape cookie protocol.  Though this is
       still the dominant protocol, the 'Netscape cookie protocol' implemented by all
       the major browsers (and :mod:`cookielib`) only bears a passing resemblance to
@@ -145,7 +146,7 @@ CookieJar and FileCookieJar Objects
 -----------------------------------
 
 :class:`CookieJar` objects support the :term:`iterator` protocol for iterating over
-contained :class:`Cookie` objects.
+contained :class:`~cookielib.Cookie` objects.
 
 :class:`CookieJar` has the following methods:
 
@@ -193,7 +194,7 @@ contained :class:`Cookie` objects.
 
 .. method:: CookieJar.make_cookies(response, request)
 
-   Return sequence of :class:`Cookie` objects extracted from *response* object.
+   Return sequence of :class:`~cookielib.Cookie` objects extracted from *response* object.
 
    See the documentation for :meth:`extract_cookies` for the interfaces required of
    the *response* and *request* arguments.
@@ -201,12 +202,12 @@ contained :class:`Cookie` objects.
 
 .. method:: CookieJar.set_cookie_if_ok(cookie, request)
 
-   Set a :class:`Cookie` if policy says it's OK to do so.
+   Set a :class:`~cookielib.Cookie` if policy says it's OK to do so.
 
 
 .. method:: CookieJar.set_cookie(cookie)
 
-   Set a :class:`Cookie`, without checking with policy to see whether or not it
+   Set a :class:`~cookielib.Cookie`, without checking with policy to see whether or not it
    should be set.
 
 
@@ -307,7 +308,7 @@ FileCookieJar subclasses and co-operation with web browsers
 -----------------------------------------------------------
 
 The following :class:`CookieJar` subclasses are provided for reading and
-writing .
+writing.
 
 .. class:: MozillaCookieJar(filename, delayload=None, policy=None)
 
@@ -382,7 +383,7 @@ methods:
    :meth:`path_return_ok` is called for the cookie path.  Otherwise,
    :meth:`path_return_ok` and :meth:`return_ok` are never called for that cookie
    domain.  If :meth:`path_return_ok` returns true, :meth:`return_ok` is called
-   with the :class:`Cookie` object itself for a full check.  Otherwise,
+   with the :class:`~cookielib.Cookie` object itself for a full check.  Otherwise,
    :meth:`return_ok` is never called for that cookie path.
 
    Note that :meth:`domain_return_ok` is called for every *cookie* domain, not just
@@ -515,7 +516,7 @@ all be assigned to.
    If true, request that the :class:`CookieJar` instance downgrade RFC 2109 cookies
    (ie. cookies received in a :mailheader:`Set-Cookie` header with a version
    cookie-attribute of 1) to Netscape cookies by setting the version attribute of
-   the :class:`Cookie` instance to 0.  The default value is :const:`None`, in which
+   the :class:`~cookielib.Cookie` instance to 0.  The default value is :const:`None`, in which
    case RFC 2109 cookies are downgraded if and only if RFC 2965 handling is turned
    off.  Therefore, RFC 2109 cookies are downgraded by default.
 
@@ -545,7 +546,7 @@ Netscape protocol strictness switches:
 
 .. attribute:: DefaultCookiePolicy.strict_ns_unverifiable
 
-   apply RFC 2965 rules on unverifiable transactions even to Netscape cookies
+   Apply RFC 2965 rules on unverifiable transactions even to Netscape cookies.
 
 
 .. attribute:: DefaultCookiePolicy.strict_ns_domain
@@ -607,7 +608,7 @@ combinations of the above flags:
 Cookie Objects
 --------------
 
-:class:`Cookie` instances have Python attributes roughly corresponding to the
+:class:`~cookielib.Cookie` instances have Python attributes roughly corresponding to the
 standard cookie-attributes specified in the various cookie standards.  The
 correspondence is not one-to-one, because there are complicated rules for
 assigning default values, because the ``max-age`` and ``expires``
@@ -651,7 +652,7 @@ internal consistency, so you should know what you're doing if you do that.
 
 .. attribute:: Cookie.secure
 
-   True if cookie should only be returned over a secure connection.
+   ``True`` if cookie should only be returned over a secure connection.
 
 
 .. attribute:: Cookie.expires
@@ -662,7 +663,7 @@ internal consistency, so you should know what you're doing if you do that.
 
 .. attribute:: Cookie.discard
 
-   True if this is a session cookie.
+   ``True`` if this is a session cookie.
 
 
 .. attribute:: Cookie.comment
@@ -679,7 +680,7 @@ internal consistency, so you should know what you're doing if you do that.
 
 .. attribute:: Cookie.rfc2109
 
-   True if this cookie was received as an RFC 2109 cookie (ie. the cookie
+   ``True`` if this cookie was received as an RFC 2109 cookie (ie. the cookie
    arrived in a :mailheader:`Set-Cookie` header, and the value of the Version
    cookie-attribute in that header was 1).  This attribute is provided because
    :mod:`cookielib` may 'downgrade' RFC 2109 cookies to Netscape cookies, in
@@ -690,18 +691,18 @@ internal consistency, so you should know what you're doing if you do that.
 
 .. attribute:: Cookie.port_specified
 
-   True if a port or set of ports was explicitly specified by the server (in the
+   ``True`` if a port or set of ports was explicitly specified by the server (in the
    :mailheader:`Set-Cookie` / :mailheader:`Set-Cookie2` header).
 
 
 .. attribute:: Cookie.domain_specified
 
-   True if a domain was explicitly specified by the server.
+   ``True`` if a domain was explicitly specified by the server.
 
 
 .. attribute:: Cookie.domain_initial_dot
 
-   True if the domain explicitly specified by the server began with a dot
+   ``True`` if the domain explicitly specified by the server began with a dot
    (``'.'``).
 
 Cookies may have additional non-standard cookie-attributes.  These may be
@@ -723,12 +724,12 @@ accessed using the following methods:
 
    Set the value of the named cookie-attribute.
 
-The :class:`Cookie` class also defines the following method:
+The :class:`~cookielib.Cookie` class also defines the following method:
 
 
 .. method:: Cookie.is_expired([now=None])
 
-   True if cookie has passed the time at which the server requested it should
+   ``True`` if cookie has passed the time at which the server requested it should
    expire.  If *now* is given (in seconds since the epoch), return whether the
    cookie has expired at the specified time.
 
@@ -750,7 +751,7 @@ cookies (assumes Unix/Netscape convention for location of the cookies file)::
 
    import os, cookielib, urllib2
    cj = cookielib.MozillaCookieJar()
-   cj.load(os.path.join(os.environ["HOME"], ".netscape/cookies.txt"))
+   cj.load(os.path.join(os.path.expanduser("~"), ".netscape", "cookies.txt"))
    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
    r = opener.open("http://example.com/")
 

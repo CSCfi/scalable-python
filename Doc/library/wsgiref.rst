@@ -26,8 +26,8 @@ for implementing WSGI servers, a demo HTTP server that serves WSGI applications,
 and a validation tool that checks WSGI servers and applications for conformance
 to the WSGI specification (:pep:`333`).
 
-See http://www.wsgi.org for more information about WSGI, and links to tutorials
-and other resources.
+See https://wsgi.readthedocs.org/ for more information about WSGI, and links to
+tutorials and other resources.
 
 .. XXX If you're just trying to write a web application...
 
@@ -59,7 +59,7 @@ parameter expect a WSGI-compliant dictionary to be supplied; please see
    found, and "http" otherwise.
 
 
-.. function:: request_uri(environ [, include_query=1])
+.. function:: request_uri(environ, include_query=1)
 
    Return the full request URI, optionally including the query string, using the
    algorithm found in the "URL Reconstruction" section of :pep:`333`.  If
@@ -148,7 +148,7 @@ also provides these miscellaneous utilities:
    :rfc:`2616`.
 
 
-.. class:: FileWrapper(filelike [, blksize=8192])
+.. class:: FileWrapper(filelike, blksize=8192)
 
    A wrapper to convert a file-like object to an :term:`iterator`.  The resulting objects
    support both :meth:`__getitem__` and :meth:`__iter__` iteration styles, for
@@ -271,7 +271,7 @@ request.  (E.g., using the :func:`shift_path_info` function from
 :mod:`wsgiref.util`.)
 
 
-.. function:: make_server(host, port, app [, server_class=WSGIServer [, handler_class=WSGIRequestHandler]])
+.. function:: make_server(host, port, app, server_class=WSGIServer, handler_class=WSGIRequestHandler)
 
    Create a new WSGI server listening on *host* and *port*, accepting connections
    for *app*.  The return value is an instance of the supplied *server_class*, and
@@ -418,8 +418,8 @@ Paste" library.
       # Our callable object which is intentionally not compliant to the
       # standard, so the validator is going to break
       def simple_app(environ, start_response):
-          status = '200 OK' # HTTP Status
-          headers = [('Content-type', 'text/plain')] # HTTP Headers
+          status = '200 OK'  # HTTP Status
+          headers = [('Content-type', 'text/plain')]  # HTTP Headers
           start_response(status, headers)
 
           # This is going to break because we need to return a list, and
@@ -460,7 +460,7 @@ input, output, and error streams.
    environment.
 
 
-.. class:: BaseCGIHandler(stdin, stdout, stderr, environ [, multithread=True [, multiprocess=False]])
+.. class:: BaseCGIHandler(stdin, stdout, stderr, environ, multithread=True, multiprocess=False)
 
    Similar to :class:`CGIHandler`, but instead of using the :mod:`sys` and
    :mod:`os` modules, the CGI environment and I/O streams are specified explicitly.
@@ -475,11 +475,11 @@ input, output, and error streams.
    instead of :class:`SimpleHandler`.
 
 
-.. class:: SimpleHandler(stdin, stdout, stderr, environ [,multithread=True [, multiprocess=False]])
+.. class:: SimpleHandler(stdin, stdout, stderr, environ, multithread=True, multiprocess=False)
 
    Similar to :class:`BaseCGIHandler`, but designed for use with HTTP origin
    servers.  If you are writing an HTTP server implementation, you will probably
-   want to subclass this instead of :class:`BaseCGIHandler`
+   want to subclass this instead of :class:`BaseCGIHandler`.
 
    This class is a subclass of :class:`BaseHandler`.  It overrides the
    :meth:`__init__`, :meth:`get_stdin`, :meth:`get_stderr`, :meth:`add_cgi_vars`,
@@ -711,11 +711,11 @@ This is a working "Hello World" WSGI application::
    # object that accepts two arguments. For that purpose, we're going to
    # use a function (note that you're not limited to a function, you can
    # use a class for example). The first argument passed to the function
-   # is a dictionary containing CGI-style envrironment variables and the
-   # second variable is the callable object (see :pep:`333`)
+   # is a dictionary containing CGI-style environment variables and the
+   # second variable is the callable object (see PEP 333).
    def hello_world_app(environ, start_response):
-       status = '200 OK' # HTTP Status
-       headers = [('Content-type', 'text/plain')] # HTTP Headers
+       status = '200 OK'  # HTTP Status
+       headers = [('Content-type', 'text/plain')]  # HTTP Headers
        start_response(status, headers)
 
        # The returned object is going to be printed

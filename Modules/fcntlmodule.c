@@ -21,20 +21,20 @@ conv_descriptor(PyObject *object, int *target)
     int fd = PyObject_AsFileDescriptor(object);
 
     if (fd < 0)
-    return 0;
+        return 0;
     *target = fd;
     return 1;
 }
 
 
-/* fcntl(fd, opt, [arg]) */
+/* fcntl(fd, op, [arg]) */
 
 static PyObject *
 fcntl_fcntl(PyObject *self, PyObject *args)
 {
     int fd;
     int code;
-    long arg;
+    int arg;
     int ret;
     char *str;
     Py_ssize_t len;
@@ -61,7 +61,7 @@ fcntl_fcntl(PyObject *self, PyObject *args)
     PyErr_Clear();
     arg = 0;
     if (!PyArg_ParseTuple(args,
-         "O&i|l;fcntl requires a file or file descriptor,"
+         "O&i|I;fcntl requires a file or file descriptor,"
          " an integer and optionally a third integer or a string",
                           conv_descriptor, &fd, &code, &arg)) {
       return NULL;
@@ -77,20 +77,21 @@ fcntl_fcntl(PyObject *self, PyObject *args)
 }
 
 PyDoc_STRVAR(fcntl_doc,
-"fcntl(fd, opt, [arg])\n\
+"fcntl(fd, op, [arg])\n\
 \n\
-Perform the requested operation on file descriptor fd.  The operation\n\
-is defined by op and is operating system dependent.  These constants are\n\
-available from the fcntl module.  The argument arg is optional, and\n\
-defaults to 0; it may be an int or a string. If arg is given as a string,\n\
+Perform the operation op on file descriptor fd.  The values used\n\
+for op are operating system dependent, and are available\n\
+as constants in the fcntl module, using the same names as used in\n\
+the relevant C header files.  The argument arg is optional, and\n\
+defaults to 0; it may be an int or a string.  If arg is given as a string,\n\
 the return value of fcntl is a string of that length, containing the\n\
-resulting value put in the arg buffer by the operating system.The length\n\
-of the arg string is not allowed to exceed 1024 bytes. If the arg given\n\
+resulting value put in the arg buffer by the operating system.  The length\n\
+of the arg string is not allowed to exceed 1024 bytes.  If the arg given\n\
 is an integer or if none is specified, the result value is an integer\n\
 corresponding to the return value of the fcntl call in the C code.");
 
 
-/* ioctl(fd, opt, [arg]) */
+/* ioctl(fd, op, [arg]) */
 
 static PyObject *
 fcntl_ioctl(PyObject *self, PyObject *args)
@@ -104,7 +105,7 @@ fcntl_ioctl(PyObject *self, PyObject *args)
        whereas the system expects it to be a 32bit bit field value
        regardless of it being passed as an int or unsigned long on
        various platforms.  See the termios.TIOCSWINSZ constant across
-       platforms for an example of thise.
+       platforms for an example of this.
 
        If any of the 64bit platforms ever decide to use more than 32bits
        in their unsigned long ioctl codes this will break and need
@@ -153,7 +154,7 @@ fcntl_ioctl(PyObject *self, PyObject *args)
         else {
             ret = ioctl(fd, code, arg);
         }
-        if (mutate_arg && (len < IOCTL_BUFSZ)) {
+        if (mutate_arg && (len <= IOCTL_BUFSZ)) {
             memcpy(str, buf, len);
         }
         if (ret < 0) {
@@ -212,11 +213,12 @@ fcntl_ioctl(PyObject *self, PyObject *args)
 }
 
 PyDoc_STRVAR(ioctl_doc,
-"ioctl(fd, opt[, arg[, mutate_flag]])\n\
+"ioctl(fd, op[, arg[, mutate_flag]])\n\
 \n\
-Perform the requested operation on file descriptor fd.  The operation is\n\
-defined by opt and is operating system dependent.  Typically these codes are\n\
-retrieved from the fcntl or termios library modules.\n\
+Perform the operation op on file descriptor fd.  The values used for op\n\
+are operating system dependent, and are available as constants in the\n\
+fcntl or termios library modules, using the same names as used in the\n\
+relevant C header files.\n\
 \n\
 The argument arg is optional, and defaults to 0; it may be an int or a\n\
 buffer containing character data (most likely a string or an array). \n\
@@ -299,7 +301,7 @@ PyDoc_STRVAR(flock_doc,
 "flock(fd, operation)\n\
 \n\
 Perform the lock operation op on file descriptor fd.  See the Unix \n\
-manual page for flock(3) for details.  (On some systems, this function is\n\
+manual page for flock(2) for details.  (On some systems, this function is\n\
 emulated using fcntl().)");
 
 

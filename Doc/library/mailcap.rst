@@ -4,7 +4,9 @@
 .. module:: mailcap
    :synopsis: Mailcap file handling.
 
+**Source code:** :source:`Lib/mailcap.py`
 
+--------------
 
 Mailcap files are used to configure how MIME-aware applications such as mail
 readers and Web browsers react to files with different MIME types. (The name
@@ -68,7 +70,7 @@ standard.  However, mailcap files are supported on most Unix systems.
 An example usage::
 
    >>> import mailcap
-   >>> d=mailcap.getcaps()
-   >>> mailcap.findmatch(d, 'video/mpeg', filename='/tmp/tmp1223')
-   ('xmpeg /tmp/tmp1223', {'view': 'xmpeg %s'})
+   >>> d = mailcap.getcaps()
+   >>> mailcap.findmatch(d, 'video/mpeg', filename='tmp1223')
+   ('xmpeg tmp1223', {'view': 'xmpeg %s'})
 

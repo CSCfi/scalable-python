@@ -208,8 +208,12 @@ _set_bool(const char *name, int *target, PyObject *src, int dflt)
 {
     if (src == NULL)
         *target = dflt;
-    else
-        *target = PyObject_IsTrue(src);
+    else {
+        int b = PyObject_IsTrue(src);
+        if (b < 0)
+            return -1;
+        *target = b;
+    }
     return 0;
 }
 
@@ -235,19 +239,24 @@ _set_char(const char *name, char *target, PyObject *src, char dflt)
     if (src == NULL)
         *target = dflt;
     else {
-        if (src == Py_None || PyString_Size(src) == 0)
-            *target = '\0';
-        else if (!PyString_Check(src) || PyString_Size(src) != 1) {
-            PyErr_Format(PyExc_TypeError,
-                         "\"%s\" must be an 1-character string",
-                         name);
-            return -1;
-        }
-        else {
-            char *s = PyString_AsString(src);
-            if (s == NULL)
+        *target = '\0';
+        if (src != Py_None) {
+            Py_ssize_t len;
+            if (!PyString_Check(src)) {
+                PyErr_Format(PyExc_TypeError,
+                    "\"%s\" must be string, not %.200s", name,
+                    src->ob_type->tp_name);
                 return -1;
-            *target = s[0];
+            }
+            len = PyString_GET_SIZE(src);
+            if (len > 1) {
+                PyErr_Format(PyExc_TypeError,
+                    "\"%s\" must be an 1-character string",
+                    name);
+                return -1;
+            }
+            if (len > 0)
+                *target = *PyString_AS_STRING(src);
         }
     }
     return 0;
@@ -263,13 +272,12 @@ _set_str(const char *name, PyObject **target, PyObject *src, const char *dflt)
             *target = NULL;
         else if (!IS_BASESTRING(src)) {
             PyErr_Format(PyExc_TypeError,
-                         "\"%s\" must be an string", name);
+                         "\"%s\" must be a string", name);
             return -1;
         }
         else {
-            Py_XDECREF(*target);
             Py_INCREF(src);
-            *target = src;
+            Py_XSETREF(*target, src);
         }
     }
     return 0;
@@ -422,7 +430,8 @@ dialect_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     if (dialect_check_quoting(self->quoting))
         goto err;
     if (self->delimiter == 0) {
-        PyErr_SetString(PyExc_TypeError, "delimiter must be set");
+        PyErr_SetString(PyExc_TypeError,
+                        "\"delimiter\" must be an 1-character string");
         goto err;
     }
     if (quotechar == Py_None && quoting == NULL)
@@ -708,7 +717,7 @@ parse_process_char(ReaderObj *self, char c)
         break;
 
     case QUOTE_IN_QUOTED_FIELD:
-        /* doublequote - seen a quote in an quoted field */
+        /* doublequote - seen a quote in a quoted field */
         if (dialect->quoting != QUOTE_NONE &&
             c == dialect->quotechar) {
             /* save "" as " */
@@ -760,8 +769,7 @@ parse_process_char(ReaderObj *self, char c)
 static int
 parse_reset(ReaderObj *self)
 {
-    Py_XDECREF(self->fields);
-    self->fields = PyList_New(0);
+    Py_XSETREF(self->fields, PyList_New(0));
     if (self->fields == NULL)
         return -1;
     self->field_len = 0;
@@ -784,9 +792,13 @@ Reader_iternext(ReaderObj *self)
         lineobj = PyIter_Next(self->input_iter);
         if (lineobj == NULL) {
             /* End of input OR exception */
-            if (!PyErr_Occurred() && self->field_len != 0)
-                PyErr_Format(error_obj,
-                             "newline inside string");
+            if (!PyErr_Occurred() && (self->field_len != 0 ||
+                                      self->state == IN_QUOTED_FIELD)) {
+                if (self->dialect->strict)
+                    PyErr_SetString(error_obj, "unexpected end of data");
+                else if (parse_save_field(self) >= 0 )
+                    break;
+            }
             return NULL;
         }
         ++self->line_num;
@@ -973,11 +985,19 @@ join_append_data(WriterObj *self, char *field, int quote_empty,
     int i, rec_len;
     char *lineterm;
 
-#define ADDCH(c) \
+#define INCLEN \
+    do {\
+        if (!copy_phase && rec_len == INT_MAX) { \
+            goto overflow; \
+        } \
+        rec_len++; \
+    } while(0)
+
+#define ADDCH(c)                                \
     do {\
         if (copy_phase) \
             self->rec[rec_len] = c;\
-        rec_len++;\
+        INCLEN;\
     } while(0)
 
     lineterm = PyString_AsString(dialect->lineterminator);
@@ -1047,11 +1067,18 @@ join_append_data(WriterObj *self, char *field, int quote_empty,
     if (*quoted) {
         if (copy_phase)
             ADDCH(dialect->quotechar);
-        else
-            rec_len += 2;
+        else {
+            INCLEN; /* starting quote */
+            INCLEN; /* ending quote */
+        }
     }
     return rec_len;
+
+  overflow:
+    PyErr_NoMemory();
+    return -1;
 #undef ADDCH
+#undef INCLEN
 }
 
 static int
@@ -1184,7 +1211,11 @@ csv_writerow(WriterObj *self, PyObject *seq)
         else {
             PyObject *str;
 
-            str = PyObject_Str(field);
+            if (PyFloat_Check(field)) {
+                str = PyObject_Repr(field);
+            } else {
+                str = PyObject_Str(field);
+            }
             Py_DECREF(field);
             if (str == NULL)
                 return NULL;
@@ -1502,7 +1533,7 @@ PyDoc_STRVAR(csv_reader_doc,
 "provided by the dialect.\n"
 "\n"
 "The returned object is an iterator.  Each iteration returns a row\n"
-"of the CSV file (which can span multiple input lines):\n");
+"of the CSV file (which can span multiple input lines).\n");
 
 PyDoc_STRVAR(csv_writer_doc,
 "    csv_writer = csv.writer(fileobj [, dialect='excel']\n"

@@ -28,17 +28,19 @@ want to refer to :rfc:`3493` titled Basic Socket Interface Extensions for IPv6.
 
 The Python interface is a straightforward transliteration of the Unix system
 call and library interface for sockets to Python's object-oriented style: the
-:func:`socket` function returns a :dfn:`socket object` whose methods implement
+:func:`.socket` function returns a :dfn:`socket object` whose methods implement
 the various socket system calls.  Parameter types are somewhat higher-level than
 in the C interface: as with :meth:`read` and :meth:`write` operations on Python
 files, buffer allocation on receive operations is automatic, and buffer length
 is implicit on send operations.
 
+.. _host_port:
+
 Socket addresses are represented as follows: A single string is used for the
 :const:`AF_UNIX` address family. A pair ``(host, port)`` is used for the
 :const:`AF_INET` address family, where *host* is a string representing either a
 hostname in Internet domain notation like ``'daring.cwi.nl'`` or an IPv4 address
-like ``'100.50.200.5'``, and *port* is an integral port number. For
+like ``'100.50.200.5'``, and *port* is an integer. For
 :const:`AF_INET6` address family, a four-tuple ``(host, port, flowinfo,
 scopeid)`` is used, where *flowinfo* and *scopeid* represents ``sin6_flowinfo``
 and ``sin6_scope_id`` member in :const:`struct sockaddr_in6` in C. For
@@ -72,17 +74,17 @@ numeric address in *host* portion.
    tuple, and the fields depend on the address type. The general tuple form is
    ``(addr_type, v1, v2, v3 [, scope])``, where:
 
-   - *addr_type* is one of TIPC_ADDR_NAMESEQ, TIPC_ADDR_NAME, or
-     TIPC_ADDR_ID.
-   - *scope* is one of TIPC_ZONE_SCOPE, TIPC_CLUSTER_SCOPE, and
-     TIPC_NODE_SCOPE.
-   - If *addr_type* is TIPC_ADDR_NAME, then *v1* is the server type, *v2* is
+   - *addr_type* is one of :const:`TIPC_ADDR_NAMESEQ`, :const:`TIPC_ADDR_NAME`,
+     or :const:`TIPC_ADDR_ID`.
+   - *scope* is one of :const:`TIPC_ZONE_SCOPE`, :const:`TIPC_CLUSTER_SCOPE`,
+     and :const:`TIPC_NODE_SCOPE`.
+   - If *addr_type* is :const:`TIPC_ADDR_NAME`, then *v1* is the server type, *v2* is
      the port identifier, and *v3* should be 0.
 
-     If *addr_type* is TIPC_ADDR_NAMESEQ, then *v1* is the server type, *v2*
+     If *addr_type* is :const:`TIPC_ADDR_NAMESEQ`, then *v1* is the server type, *v2*
      is the lower port number, and *v3* is the upper port number.
 
-     If *addr_type* is TIPC_ADDR_ID, then *v1* is the node, *v2* is the
+     If *addr_type* is :const:`TIPC_ADDR_ID`, then *v1* is the node, *v2* is the
      reference, and *v3* should be set to 0.
 
 
@@ -119,7 +121,7 @@ The module :mod:`socket` exports the following constants and functions:
 
    The accompanying value is a pair ``(h_errno, string)`` representing an error
    returned by a library call. *string* represents the description of *h_errno*, as
-   returned by the :cfunc:`hstrerror` C function.
+   returned by the :c:func:`hstrerror` C function.
 
 
 .. exception:: gaierror
@@ -127,7 +129,7 @@ The module :mod:`socket` exports the following constants and functions:
    This exception is raised for address-related errors, for :func:`getaddrinfo` and
    :func:`getnameinfo`. The accompanying value is a pair ``(error, string)``
    representing an error returned by a library call. *string* represents the
-   description of *error*, as returned by the :cfunc:`gai_strerror` C function. The
+   description of *error*, as returned by the :c:func:`gai_strerror` C function. The
    *error* value will match one of the :const:`EAI_\*` constants defined in this
    module.
 
@@ -146,7 +148,7 @@ The module :mod:`socket` exports the following constants and functions:
           AF_INET6
 
    These constants represent the address (and protocol) families, used for the
-   first argument to :func:`socket`.  If the :const:`AF_UNIX` constant is not
+   first argument to :func:`.socket`.  If the :const:`AF_UNIX` constant is not
    defined then this protocol is unsupported.
 
 
@@ -186,7 +188,7 @@ The module :mod:`socket` exports the following constants and functions:
           RCVALL_*
 
    Constants for Windows' WSAIoctl(). The constants are used as arguments to the
-   :meth:`ioctl` method of socket objects.
+   :meth:`~socket.socket.ioctl` method of socket objects.
 
    .. versionadded:: 2.6
 
@@ -205,18 +207,32 @@ The module :mod:`socket` exports the following constants and functions:
    .. versionadded:: 2.3
 
 
-.. function:: create_connection(address[, timeout])
+.. function:: create_connection(address[, timeout[, source_address]])
 
-   Convenience function.  Connect to *address* (a 2-tuple ``(host, port)``),
-   and return the socket object.  Passing the optional *timeout* parameter will
-   set the timeout on the socket instance before attempting to connect.  If no
-   *timeout* is supplied, the global default timeout setting returned by
+   Connect to a TCP service listening on the Internet *address* (a 2-tuple
+   ``(host, port)``), and return the socket object.  This is a higher-level
+   function than :meth:`socket.connect`: if *host* is a non-numeric hostname,
+   it will try to resolve it for both :data:`AF_INET` and :data:`AF_INET6`,
+   and then try to connect to all possible addresses in turn until a
+   connection succeeds.  This makes it easy to write clients that are
+   compatible to both IPv4 and IPv6.
+
+   Passing the optional *timeout* parameter will set the timeout on the
+   socket instance before attempting to connect.  If no *timeout* is
+   supplied, the global default timeout setting returned by
    :func:`getdefaulttimeout` is used.
+
+   If supplied, *source_address* must be a 2-tuple ``(host, port)`` for the
+   socket to bind to as its source address before connecting.  If host or port
+   are '' or 0 respectively the OS default behavior will be used.
 
    .. versionadded:: 2.6
 
+   .. versionchanged:: 2.7
+      *source_address* was added.
 
-.. function:: getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0)
+
+.. function:: getaddrinfo(host, port[, family[, socktype[, proto[, flags]]]])
 
    Translate the *host*/*port* argument into a sequence of 5-tuples that contain
    all the necessary arguments for creating a socket connected to that service.
@@ -226,19 +242,19 @@ The module :mod:`socket` exports the following constants and functions:
    and *port*, you can pass ``NULL`` to the underlying C API.
 
    The *family*, *socktype* and *proto* arguments can be optionally specified
-   in order to narrow the list of addresses returned.  Passing zero as a
-   value for each of these arguments selects the full range of results.
+   in order to narrow the list of addresses returned.  By default, their value
+   is ``0``, meaning that the full range of results is selected.
    The *flags* argument can be one or several of the ``AI_*`` constants,
-   and will influence how results are computed and returned.
-   For example, :const:`AI_NUMERICHOST` will disable domain name resolution
-   and will raise an error if *host* is a domain name.
+   and will influence how results are computed and returned.  Its default value
+   is ``0``.  For example, :const:`AI_NUMERICHOST` will disable domain name
+   resolution and will raise an error if *host* is a domain name.
 
    The function returns a list of 5-tuples with the following structure:
 
    ``(family, socktype, proto, canonname, sockaddr)``
 
    In these tuples, *family*, *socktype*, *proto* are all integers and are
-   meant to be passed to the :func:`socket` function.  *canonname* will be
+   meant to be passed to the :func:`.socket` function.  *canonname* will be
    a string representing the canonical name of the *host* if
    :const:`AI_CANONNAME` is part of the *flags* argument; else *canonname*
    will be empty.  *sockaddr* is a tuple describing a socket address, whose
@@ -248,12 +264,12 @@ The module :mod:`socket` exports the following constants and functions:
    method.
 
    The following example fetches address information for a hypothetical TCP
-   connection to ``www.python.org`` on port 80 (results may differ on your
+   connection to ``example.org`` on port 80 (results may differ on your
    system if IPv6 isn't enabled)::
 
-      >>> socket.getaddrinfo("www.python.org", 80, 0, 0, socket.SOL_TCP)
-      [(2, 1, 6, '', ('82.94.164.162', 80)),
-       (10, 1, 6, '', ('2001:888:2000:d::a2', 80, 0, 0))]
+      >>> socket.getaddrinfo("example.org", 80, 0, 0, socket.IPPROTO_TCP)
+      [(10, 1, 6, '', ('2606:2800:220:1:248:1893:25c8:1946', 80, 0, 0)),
+       (2, 1, 6, '', ('93.184.216.34', 80))]
 
    .. versionadded:: 2.2
 
@@ -329,7 +345,7 @@ The module :mod:`socket` exports the following constants and functions:
 .. function:: getprotobyname(protocolname)
 
    Translate an Internet protocol name (for example, ``'icmp'``) to a constant
-   suitable for passing as the (optional) third argument to the :func:`socket`
+   suitable for passing as the (optional) third argument to the :func:`.socket`
    function.  This is usually only needed for sockets opened in "raw" mode
    (:const:`SOCK_RAW`); for the normal socket modes, the correct protocol is chosen
    automatically if the protocol is omitted or zero.
@@ -363,7 +379,7 @@ The module :mod:`socket` exports the following constants and functions:
 
    Build a pair of connected socket objects using the given address family, socket
    type, and protocol number.  Address family, socket type, and protocol number are
-   as for the :func:`socket` function above. The default family is :const:`AF_UNIX`
+   as for the :func:`.socket` function above. The default family is :const:`AF_UNIX`
    if defined on the platform; otherwise, the default is :const:`AF_INET`.
    Availability: Unix.
 
@@ -374,7 +390,7 @@ The module :mod:`socket` exports the following constants and functions:
 
    Duplicate the file descriptor *fd* (an integer as returned by a file object's
    :meth:`fileno` method) and build a socket object from the result.  Address
-   family, socket type and protocol number are as for the :func:`socket` function
+   family, socket type and protocol number are as for the :func:`.socket` function
    above. The file descriptor should refer to a socket, but this is not checked ---
    subsequent operations on the object may fail if the file descriptor is invalid.
    This function is rarely needed, but can be used to get or set socket options on
@@ -416,7 +432,7 @@ The module :mod:`socket` exports the following constants and functions:
    Convert an IPv4 address from dotted-quad string format (for example,
    '123.45.67.89') to 32-bit packed binary format, as a string four characters in
    length.  This is useful when conversing with a program that uses the standard C
-   library and needs objects of type :ctype:`struct in_addr`, which is the C type
+   library and needs objects of type :c:type:`struct in_addr`, which is the C type
    for the 32-bit packed binary this function returns.
 
    :func:`inet_aton` also accepts strings with less than three dots; see the
@@ -424,7 +440,7 @@ The module :mod:`socket` exports the following constants and functions:
 
    If the IPv4 address string passed to this function is invalid,
    :exc:`socket.error` will be raised. Note that exactly what is valid depends on
-   the underlying C implementation of :cfunc:`inet_aton`.
+   the underlying C implementation of :c:func:`inet_aton`.
 
    :func:`inet_aton` does not support IPv6, and :func:`inet_pton` should be used
    instead for IPv4/v6 dual stack support.
@@ -435,7 +451,7 @@ The module :mod:`socket` exports the following constants and functions:
    Convert a 32-bit packed IPv4 address (a string four characters in length) to its
    standard dotted-quad string representation (for example, '123.45.67.89').  This
    is useful when conversing with a program that uses the standard C library and
-   needs objects of type :ctype:`struct in_addr`, which is the C type for the
+   needs objects of type :c:type:`struct in_addr`, which is the C type for the
    32-bit packed binary data this function takes as an argument.
 
    If the string passed to this function is not exactly 4 bytes in length,
@@ -447,14 +463,14 @@ The module :mod:`socket` exports the following constants and functions:
 
    Convert an IP address from its family-specific string format to a packed, binary
    format. :func:`inet_pton` is useful when a library or network protocol calls for
-   an object of type :ctype:`struct in_addr` (similar to :func:`inet_aton`) or
-   :ctype:`struct in6_addr`.
+   an object of type :c:type:`struct in_addr` (similar to :func:`inet_aton`) or
+   :c:type:`struct in6_addr`.
 
    Supported values for *address_family* are currently :const:`AF_INET` and
    :const:`AF_INET6`. If the IP address string *ip_string* is invalid,
    :exc:`socket.error` will be raised. Note that exactly what is valid depends on
    both the value of *address_family* and the underlying implementation of
-   :cfunc:`inet_pton`.
+   :c:func:`inet_pton`.
 
    Availability: Unix (maybe not all platforms).
 
@@ -466,8 +482,8 @@ The module :mod:`socket` exports the following constants and functions:
    Convert a packed IP address (a string of some number of characters) to its
    standard, family-specific string representation (for example, ``'7.10.0.5'`` or
    ``'5aef:2b::8'``) :func:`inet_ntop` is useful when a library or network protocol
-   returns an object of type :ctype:`struct in_addr` (similar to :func:`inet_ntoa`)
-   or :ctype:`struct in6_addr`.
+   returns an object of type :c:type:`struct in_addr` (similar to :func:`inet_ntoa`)
+   or :c:type:`struct in6_addr`.
 
    Supported values for *address_family* are currently :const:`AF_INET` and
    :const:`AF_INET6`. If the string *packed_ip* is not the correct length for the
@@ -481,7 +497,7 @@ The module :mod:`socket` exports the following constants and functions:
 
 .. function:: getdefaulttimeout()
 
-   Return the default timeout in floating seconds for new socket objects. A value
+   Return the default timeout in seconds (float) for new socket objects. A value
    of ``None`` indicates that new socket objects have no timeout. When the socket
    module is first imported, the default is ``None``.
 
@@ -490,7 +506,7 @@ The module :mod:`socket` exports the following constants and functions:
 
 .. function:: setdefaulttimeout(timeout)
 
-   Set the default timeout in floating seconds for new socket objects. A value of
+   Set the default timeout in seconds (float) for new socket objects. A value of
    ``None`` indicates that new socket objects have no timeout. When the socket
    module is first imported, the default is ``None``.
 
@@ -507,6 +523,9 @@ The module :mod:`socket` exports the following constants and functions:
 
    Module :mod:`SocketServer`
       Classes that simplify writing network servers.
+
+   Module :mod:`ssl`
+      A TLS/SSL wrapper for socket objects.
 
 
 .. _socket-objects:
@@ -544,6 +563,13 @@ correspond to Unix system calls applicable to sockets.
    remote end will receive no more data (after queued data is flushed). Sockets are
    automatically closed when they are garbage-collected.
 
+   .. note::
+
+      :meth:`close()` releases the resource associated with a connection but
+      does not necessarily close the connection immediately.  If you want
+      to close the connection in a timely fashion, call :meth:`shutdown()`
+      before :meth:`close()`.
+
 
 .. method:: socket.connect(address)
 
@@ -560,10 +586,10 @@ correspond to Unix system calls applicable to sockets.
 .. method:: socket.connect_ex(address)
 
    Like ``connect(address)``, but return an error indicator instead of raising an
-   exception for errors returned by the C-level :cfunc:`connect` call (other
+   exception for errors returned by the C-level :c:func:`connect` call (other
    problems, such as "host not found," can still raise exceptions).  The error
    indicator is ``0`` if the operation succeeded, otherwise the value of the
-   :cdata:`errno` variable.  This is useful to support, for example, asynchronous
+   :c:data:`errno` variable.  This is useful to support, for example, asynchronous
    connects.
 
    .. note::
@@ -616,7 +642,7 @@ correspond to Unix system calls applicable to sockets.
 
    The :meth:`ioctl` method is a limited interface to the WSAIoctl system
    interface.  Please refer to the `Win32 documentation
-   <http://msdn.microsoft.com/en-us/library/ms741621%28VS.85%29.aspx>`_ for more
+   <https://msdn.microsoft.com/en-us/library/ms741621%28VS.85%29.aspx>`_ for more
    information.
 
    On other platforms, the generic :func:`fcntl.fcntl` and :func:`fcntl.ioctl`
@@ -628,8 +654,8 @@ correspond to Unix system calls applicable to sockets.
 .. method:: socket.listen(backlog)
 
    Listen for connections made to the socket.  The *backlog* argument specifies the
-   maximum number of queued connections and should be at least 1; the maximum value
-   is system-dependent (usually 5).
+   maximum number of queued connections and should be at least 0; the maximum value
+   is system-dependent (usually 5), the minimum value is forced to 0.
 
 
 .. method:: socket.makefile([mode[, bufsize]])
@@ -637,12 +663,20 @@ correspond to Unix system calls applicable to sockets.
    .. index:: single: I/O control; buffering
 
    Return a :dfn:`file object` associated with the socket.  (File objects are
-   described in :ref:`bltin-file-objects`.) The file object
-   references a :cfunc:`dup`\ ped version of the socket file descriptor, so the
-   file object and socket object may be closed or garbage-collected independently.
+   described in :ref:`bltin-file-objects`.) The file object does not close the
+   socket explicitly when its :meth:`close` method is called, but only removes
+   its reference to the socket object, so that the socket will be closed if it
+   is not referenced from anywhere else.
+
    The socket must be in blocking mode (it can not have a timeout). The optional
    *mode* and *bufsize* arguments are interpreted the same way as by the built-in
    :func:`file` function.
+
+   .. note::
+
+      On Windows, the file-like object created by :meth:`makefile` cannot be
+      used where a file object with a file descriptor is expected, such as the
+      stream arguments of :meth:`subprocess.Popen`.
 
 
 .. method:: socket.recv(bufsize[, flags])
@@ -696,7 +730,8 @@ correspond to Unix system calls applicable to sockets.
    optional *flags* argument has the same meaning as for :meth:`recv` above.
    Returns the number of bytes sent. Applications are responsible for checking that
    all data has been sent; if only some of the data was transmitted, the
-   application needs to attempt delivery of the remaining data.
+   application needs to attempt delivery of the remaining data. For further
+   information on this concept, consult the :ref:`socket-howto`.
 
 
 .. method:: socket.sendall(string[, flags])
@@ -709,7 +744,8 @@ correspond to Unix system calls applicable to sockets.
    much data, if any, was successfully sent.
 
 
-.. method:: socket.sendto(string[, flags], address)
+.. method:: socket.sendto(string, address)
+            socket.sendto(string, flags, address)
 
    Send data to the socket.  The socket should not be connected to a remote socket,
    since the destination socket is specified by *address*.  The optional *flags*
@@ -723,7 +759,7 @@ correspond to Unix system calls applicable to sockets.
    Set blocking or non-blocking mode of the socket: if *flag* is 0, the socket is
    set to non-blocking, else to blocking mode.  Initially all sockets are in
    blocking mode.  In non-blocking mode, if a :meth:`recv` call doesn't find any
-   data, or if a :meth:`send` call can't immediately dispose of the data, a
+   data, or if a :meth:`send` call can't immediately dispose of the data, an
    :exc:`error` exception is raised; in blocking mode, the calls block until they
    can proceed. ``s.setblocking(0)`` is equivalent to ``s.settimeout(0.0)``;
    ``s.setblocking(1)`` is equivalent to ``s.settimeout(None)``.
@@ -733,7 +769,7 @@ correspond to Unix system calls applicable to sockets.
 
    Set a timeout on blocking socket operations.  The *value* argument can be a
    nonnegative float expressing seconds, or ``None``. If a float is given,
-   subsequent socket operations will raise an :exc:`timeout` exception if the
+   subsequent socket operations will raise a :exc:`timeout` exception if the
    timeout period *value* has elapsed before the operation has completed.  Setting
    a timeout of ``None`` disables timeouts on socket operations.
    ``s.settimeout(0.0)`` is equivalent to ``s.setblocking(0)``;
@@ -744,7 +780,7 @@ correspond to Unix system calls applicable to sockets.
 
 .. method:: socket.gettimeout()
 
-   Return the timeout in floating seconds associated with socket operations, or
+   Return the timeout in seconds (float) associated with socket operations, or
    ``None`` if no timeout is set.  This reflects the last call to
    :meth:`setblocking` or :meth:`settimeout`.
 
@@ -791,13 +827,15 @@ timeout error of its own regardless of any Python socket timeout setting.
    Shut down one or both halves of the connection.  If *how* is :const:`SHUT_RD`,
    further receives are disallowed.  If *how* is :const:`SHUT_WR`, further sends
    are disallowed.  If *how* is :const:`SHUT_RDWR`, further sends and receives are
-   disallowed.
+   disallowed.  Depending on the platform, shutting down one half of the connection
+   can also close the opposite half (e.g. on Mac OS X, ``shutdown(SHUT_WR)`` does
+   not allow further reads on the other end of the connection).
 
 Note that there are no methods :meth:`read` or :meth:`write`; use
 :meth:`~socket.recv` and :meth:`~socket.send` without *flags* argument instead.
 
 Socket objects also have these (read-only) attributes that correspond to the
-values given to the :class:`socket` constructor.
+values given to the :class:`~socket.socket` constructor.
 
 
 .. attribute:: socket.family
@@ -828,12 +866,12 @@ Example
 
 Here are four minimal example programs using the TCP/IP protocol: a server that
 echoes all data that it receives back (servicing only one client), and a client
-using it.  Note that a server must perform the sequence :func:`socket`,
+using it.  Note that a server must perform the sequence :func:`.socket`,
 :meth:`~socket.bind`, :meth:`~socket.listen`, :meth:`~socket.accept` (possibly
 repeating the :meth:`~socket.accept` to service more than one client), while a
-client only needs the sequence :func:`socket`, :meth:`~socket.connect`.  Also
-note that the server does not :meth:`~socket.send`/:meth:`~socket.recv` on the
-socket it is listening on but on the new socket returned by
+client only needs the sequence :func:`.socket`, :meth:`~socket.connect`.  Also
+note that the server does not :meth:`~socket.sendall`/:meth:`~socket.recv` on
+the socket it is listening on but on the new socket returned by
 :meth:`~socket.accept`.
 
 The first two examples support IPv4 only. ::
@@ -851,7 +889,7 @@ The first two examples support IPv4 only. ::
    while 1:
        data = conn.recv(1024)
        if not data: break
-       conn.send(data)
+       conn.sendall(data)
    conn.close()
 
 ::
@@ -863,7 +901,7 @@ The first two examples support IPv4 only. ::
    PORT = 50007              # The same port as used by the server
    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
    s.connect((HOST, PORT))
-   s.send('Hello, world')
+   s.sendall('Hello, world')
    data = s.recv(1024)
    s.close()
    print 'Received', repr(data)
@@ -887,13 +925,13 @@ sends traffic to the first one connected successfully. ::
        af, socktype, proto, canonname, sa = res
        try:
            s = socket.socket(af, socktype, proto)
-       except socket.error, msg:
+       except socket.error as msg:
            s = None
            continue
        try:
            s.bind(sa)
            s.listen(1)
-       except socket.error, msg:
+       except socket.error as msg:
            s.close()
            s = None
            continue
@@ -922,12 +960,12 @@ sends traffic to the first one connected successfully. ::
        af, socktype, proto, canonname, sa = res
        try:
            s = socket.socket(af, socktype, proto)
-       except socket.error, msg:
+       except socket.error as msg:
            s = None
            continue
        try:
            s.connect(sa)
-       except socket.error, msg:
+       except socket.error as msg:
            s.close()
            s = None
            continue
@@ -935,7 +973,7 @@ sends traffic to the first one connected successfully. ::
    if s is None:
        print 'could not open socket'
        sys.exit(1)
-   s.send('Hello, world')
+   s.sendall('Hello, world')
    data = s.recv(1024)
    s.close()
    print 'Received', repr(data)
@@ -965,3 +1003,22 @@ the interface::
 
    # disabled promiscuous mode
    s.ioctl(socket.SIO_RCVALL, socket.RCVALL_OFF)
+
+
+Running an example several times with too small delay between executions, could
+lead to this error::
+
+   socket.error: [Errno 98] Address already in use
+
+This is because the previous execution has left the socket in a ``TIME_WAIT``
+state, and can't be immediately reused.
+
+There is a :mod:`socket` flag to set, in order to prevent this,
+:data:`socket.SO_REUSEADDR`::
+
+   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+   s.bind((HOST, PORT))
+
+the :data:`SO_REUSEADDR` flag tells the kernel to reuse a local socket in
+``TIME_WAIT`` state, without waiting for its natural timeout to expire.

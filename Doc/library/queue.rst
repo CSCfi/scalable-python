@@ -1,24 +1,27 @@
-:mod:`queue` --- A synchronized queue class
+:mod:`Queue` --- A synchronized queue class
 ===========================================
 
 .. module:: Queue
    :synopsis: A synchronized queue class.
 
 .. note::
-   The :mod:`Queue` module has been renamed to :mod:`queue` in Python 3.0.  The
+   The :mod:`Queue` module has been renamed to :mod:`queue` in Python 3.  The
    :term:`2to3` tool will automatically adapt imports when converting your
-   sources to 3.0.
+   sources to Python 3.
 
+**Source code:** :source:`Lib/Queue.py`
+
+--------------
 
 The :mod:`Queue` module implements multi-producer, multi-consumer queues.
 It is especially useful in threaded programming when information must be
-exchanged safely between multiple threads.  The :class:`Queue` class in this
+exchanged safely between multiple threads.  The :class:`~Queue.Queue` class in this
 module implements all the required locking semantics.  It depends on the
 availability of thread support in Python; see the :mod:`threading`
 module.
 
-Implements three types of queue whose only difference is the order that
-the entries are retrieved.  In a FIFO queue, the first tasks added are
+The module implements three types of queue, which differ only in the order in
+which the entries are retrieved.  In a FIFO queue, the first tasks added are
 the first retrieved. In a LIFO queue, the most recently added entry is
 the first retrieved (operating like a stack).  With a priority queue,
 the entries are kept sorted (using the :mod:`heapq` module) and the
@@ -57,14 +60,16 @@ The :mod:`Queue` module defines the following classes and exceptions:
 
 .. exception:: Empty
 
-   Exception raised when non-blocking :meth:`get` (or :meth:`get_nowait`) is called
-   on a :class:`Queue` object which is empty.
+   Exception raised when non-blocking :meth:`~Queue.get` (or
+   :meth:`~Queue.get_nowait`) is called
+   on a :class:`~Queue.Queue` object which is empty.
 
 
 .. exception:: Full
 
-   Exception raised when non-blocking :meth:`put` (or :meth:`put_nowait`) is called
-   on a :class:`Queue` object which is full.
+   Exception raised when non-blocking :meth:`~Queue.put` (or
+   :meth:`~Queue.put_nowait`) is called
+   on a :class:`~Queue.Queue` object which is full.
 
 .. seealso::
 
@@ -78,7 +83,7 @@ The :mod:`Queue` module defines the following classes and exceptions:
 Queue Objects
 -------------
 
-Queue objects (:class:`Queue`, :class:`LifoQueue`, or :class:`PriorityQueue`)
+Queue objects (:class:`~Queue.Queue`, :class:`LifoQueue`, or :class:`PriorityQueue`)
 provide the public methods described below.
 
 
@@ -108,7 +113,7 @@ provide the public methods described below.
 .. method:: Queue.put(item[, block[, timeout]])
 
    Put *item* into the queue. If optional args *block* is true and *timeout* is
-   None (the default), block if necessary until a free slot is available. If
+   ``None`` (the default), block if necessary until a free slot is available. If
    *timeout* is a positive number, it blocks at most *timeout* seconds and raises
    the :exc:`Full` exception if no free slot was available within that time.
    Otherwise (*block* is false), put an item on the queue if a free slot is
@@ -127,7 +132,7 @@ provide the public methods described below.
 .. method:: Queue.get([block[, timeout]])
 
    Remove and return an item from the queue. If optional args *block* is true and
-   *timeout* is None (the default), block if necessary until an item is available.
+   *timeout* is ``None`` (the default), block if necessary until an item is available.
    If *timeout* is a positive number, it blocks at most *timeout* seconds and
    raises the :exc:`Empty` exception if no item was available within that time.
    Otherwise (*block* is false), return an item if one is immediately available,
@@ -183,7 +188,7 @@ Example of how to wait for enqueued tasks to be completed::
    q = Queue()
    for i in range(num_worker_threads):
         t = Thread(target=worker)
-        t.setDaemon(True)
+        t.daemon = True
         t.start()
 
    for item in source():

@@ -128,23 +128,14 @@ partial_new(PyTypeObject *type, PyObject *args, PyObject *kw)
     Py_INCREF(func);
     pto->args = PyTuple_GetSlice(args, 1, PY_SSIZE_T_MAX);
     if (pto->args == NULL) {
-        pto->kw = NULL;
         Py_DECREF(pto);
         return NULL;
     }
-    if (kw != NULL) {
-        pto->kw = PyDict_Copy(kw);
-        if (pto->kw == NULL) {
-            Py_DECREF(pto);
-            return NULL;
-        }
-    } else {
-        pto->kw = Py_None;
-        Py_INCREF(Py_None);
+    pto->kw = (kw != NULL) ? PyDict_Copy(kw) : PyDict_New();
+    if (pto->kw == NULL) {
+        Py_DECREF(pto);
+        return NULL;
     }
-
-    pto->weakreflist = NULL;
-    pto->dict = NULL;
 
     return (PyObject *)pto;
 }
@@ -166,11 +157,11 @@ static PyObject *
 partial_call(partialobject *pto, PyObject *args, PyObject *kw)
 {
     PyObject *ret;
-    PyObject *argappl = NULL, *kwappl = NULL;
+    PyObject *argappl, *kwappl;
 
     assert (PyCallable_Check(pto->fn));
     assert (PyTuple_Check(pto->args));
-    assert (pto->kw == Py_None  ||  PyDict_Check(pto->kw));
+    assert (PyDict_Check(pto->kw));
 
     if (PyTuple_GET_SIZE(pto->args) == 0) {
         argappl = args;
@@ -182,11 +173,12 @@ partial_call(partialobject *pto, PyObject *args, PyObject *kw)
         argappl = PySequence_Concat(pto->args, args);
         if (argappl == NULL)
             return NULL;
+        assert(PyTuple_Check(argappl));
     }
 
-    if (pto->kw == Py_None) {
+    if (PyDict_Size(pto->kw) == 0) {
         kwappl = kw;
-        Py_XINCREF(kw);
+        Py_XINCREF(kwappl);
     } else {
         kwappl = PyDict_Copy(pto->kw);
         if (kwappl == NULL) {
@@ -274,6 +266,73 @@ static PyGetSetDef partial_getsetlist[] = {
     {NULL} /* Sentinel */
 };
 
+/* Pickle strategy:
+   __reduce__ by itself doesn't support getting kwargs in the unpickle
+   operation so we define a __setstate__ that replaces all the information
+   about the partial.  If we only replaced part of it someone would use
+   it as a hook to do strange things.
+ */
+
+PyObject *
+partial_reduce(partialobject *pto, PyObject *unused)
+{
+    return Py_BuildValue("O(O)(OOOO)", Py_TYPE(pto), pto->fn, pto->fn,
+                         pto->args, pto->kw,
+                         pto->dict ? pto->dict : Py_None);
+}
+
+PyObject *
+partial_setstate(partialobject *pto, PyObject *state)
+{
+    PyObject *fn, *fnargs, *kw, *dict;
+
+    if (!PyTuple_Check(state) ||
+        !PyArg_ParseTuple(state, "OOOO", &fn, &fnargs, &kw, &dict) ||
+        !PyCallable_Check(fn) ||
+        !PyTuple_Check(fnargs) ||
+        (kw != Py_None && !PyDict_Check(kw)))
+    {
+        PyErr_SetString(PyExc_TypeError, "invalid partial state");
+        return NULL;
+    }
+
+    if(!PyTuple_CheckExact(fnargs))
+        fnargs = PySequence_Tuple(fnargs);
+    else
+        Py_INCREF(fnargs);
+    if (fnargs == NULL)
+        return NULL;
+
+    if (kw == Py_None)
+        kw = PyDict_New();
+    else if(!PyDict_CheckExact(kw))
+        kw = PyDict_Copy(kw);
+    else
+        Py_INCREF(kw);
+    if (kw == NULL) {
+        Py_DECREF(fnargs);
+        return NULL;
+    }
+
+    Py_INCREF(fn);
+    if (dict == Py_None)
+        dict = NULL;
+    else
+        Py_INCREF(dict);
+
+    Py_SETREF(pto->fn, fn);
+    Py_SETREF(pto->args, fnargs);
+    Py_SETREF(pto->kw, kw);
+    Py_XSETREF(pto->dict, dict);
+    Py_RETURN_NONE;
+}
+
+static PyMethodDef partial_methods[] = {
+    {"__reduce__", (PyCFunction)partial_reduce, METH_NOARGS},
+    {"__setstate__", (PyCFunction)partial_setstate, METH_O},
+    {NULL,              NULL}           /* sentinel */
+};
+
 static PyTypeObject partial_type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "functools.partial",                /* tp_name */
@@ -304,7 +363,7 @@ static PyTypeObject partial_type = {
     offsetof(partialobject, weakreflist),       /* tp_weaklistoffset */
     0,                                  /* tp_iter */
     0,                                  /* tp_iternext */
-    0,                                  /* tp_methods */
+    partial_methods,                    /* tp_methods */
     partial_memberlist,                 /* tp_members */
     partial_getsetlist,                 /* tp_getset */
     0,                                  /* tp_base */

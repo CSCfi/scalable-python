@@ -19,15 +19,16 @@ the :keyword:`print` statement.  (A third way is using the :meth:`write` method
 of file objects; the standard output file can be referenced as ``sys.stdout``.
 See the Library Reference for more information on this.)
 
-.. index:: module: string
-
 Often you'll want more control over the formatting of your output than simply
 printing space-separated values.  There are two ways to format your output; the
 first way is to do all the string handling yourself; using string slicing and
 concatenation operations you can create any layout you can imagine.  The
-standard module :mod:`string` contains some useful operations for padding
+string types have some methods that perform useful operations for padding
 strings to a given column width; these will be discussed shortly.  The second
 way is to use the :meth:`str.format` method.
+
+The :mod:`string` module contains a :class:`~string.Template` class which offers
+yet another way to substitute values into strings.
 
 One question remains, of course: how do you convert values to strings? Luckily,
 Python has ways to convert any value to a string: pass it to the :func:`repr`
@@ -36,7 +37,7 @@ or :func:`str` functions.
 The :func:`str` function is meant to return representations of values which are
 fairly human-readable, while :func:`repr` is meant to generate representations
 which can be read by the interpreter (or will force a :exc:`SyntaxError` if
-there is not equivalent syntax).  For objects which don't have a particular
+there is no equivalent syntax).  For objects which don't have a particular
 representation for human consumption, :func:`str` will return the same value as
 :func:`repr`.  Many values, such as numbers or structures like lists and
 dictionaries, have the same representation using either function.  Strings and
@@ -49,10 +50,10 @@ Some examples::
    'Hello, world.'
    >>> repr(s)
    "'Hello, world.'"
-   >>> str(0.1)
-   '0.1'
-   >>> repr(0.1)
-   '0.10000000000000001'
+   >>> str(1.0/7.0)
+   '0.142857142857'
+   >>> repr(1.0/7.0)
+   '0.14285714285714285'
    >>> x = 10 * 3.25
    >>> y = 200 * 200
    >>> s = 'The value of x is ' + repr(x) + ', and y is ' + repr(y) + '...'
@@ -102,17 +103,18 @@ Here are two ways to write a table of squares and cubes::
 (Note that in the first example, one space between each column was added by the
 way :keyword:`print` works: it always adds spaces between its arguments.)
 
-This example demonstrates the :meth:`rjust` method of string objects, which
-right-justifies a string in a field of a given width by padding it with spaces
-on the left.  There are similar methods :meth:`ljust` and :meth:`center`.  These
-methods do not write anything, they just return a new string.  If the input
-string is too long, they don't truncate it, but return it unchanged; this will
-mess up your column lay-out but that's usually better than the alternative,
-which would be lying about a value.  (If you really want truncation you can
-always add a slice operation, as in ``x.ljust(n)[:n]``.)
+This example demonstrates the :meth:`str.rjust` method of string
+objects, which right-justifies a string in a field of a given width by padding
+it with spaces on the left.  There are similar methods :meth:`str.ljust` and
+:meth:`str.center`.  These methods do not write anything, they just return a
+new string.  If the input string is too long, they don't truncate it, but
+return it unchanged; this will mess up your column lay-out but that's usually
+better than the alternative, which would be lying about a value.  (If you
+really want truncation you can always add a slice operation, as in
+``x.ljust(n)[:n]``.)
 
-There is another method, :meth:`zfill`, which pads a numeric string on the left
-with zeros.  It understands about plus and minus signs::
+There is another method, :meth:`str.zfill`, which pads a numeric string on the
+left with zeros.  It understands about plus and minus signs::
 
    >>> '12'.zfill(5)
    '00012'
@@ -123,20 +125,20 @@ with zeros.  It understands about plus and minus signs::
 
 Basic usage of the :meth:`str.format` method looks like this::
 
-   >>> print 'We are the {0} who say "{1}!"'.format('knights', 'Ni')
+   >>> print 'We are the {} who say "{}!"'.format('knights', 'Ni')
    We are the knights who say "Ni!"
 
 The brackets and characters within them (called format fields) are replaced with
-the objects passed into the :meth:`~str.format` method.  A number in the
+the objects passed into the :meth:`str.format` method.  A number in the
 brackets refers to the position of the object passed into the
-:meth:`~str.format` method. ::
+:meth:`str.format` method. ::
 
    >>> print '{0} and {1}'.format('spam', 'eggs')
    spam and eggs
    >>> print '{1} and {0}'.format('spam', 'eggs')
    eggs and spam
 
-If keyword arguments are used in the :meth:`~str.format` method, their values
+If keyword arguments are used in the :meth:`str.format` method, their values
 are referred to by using the name of the argument. ::
 
    >>> print 'This {food} is {adjective}.'.format(
@@ -153,14 +155,14 @@ Positional and keyword arguments can be arbitrarily combined::
 convert the value before it is formatted. ::
 
    >>> import math
-   >>> print 'The value of PI is approximately {0}.'.format(math.pi)
+   >>> print 'The value of PI is approximately {}.'.format(math.pi)
    The value of PI is approximately 3.14159265359.
-   >>> print 'The value of PI is approximately {0!r}.'.format(math.pi)
+   >>> print 'The value of PI is approximately {!r}.'.format(math.pi)
    The value of PI is approximately 3.141592653589793.
 
 An optional ``':'`` and format specifier can follow the field name. This allows
 greater control over how the value is formatted.  The following example
-truncates Pi to three places after the decimal.
+rounds Pi to three places after the decimal.
 
    >>> import math
    >>> print 'The value of PI is approximately {0:.3f}.'.format(math.pi)
@@ -194,8 +196,8 @@ notation. ::
    >>> print 'Jack: {Jack:d}; Sjoerd: {Sjoerd:d}; Dcab: {Dcab:d}'.format(**table)
    Jack: 4098; Sjoerd: 4127; Dcab: 8637678
 
-This is particularly useful in combination with the new built-in :func:`vars`
-function, which returns a dictionary containing all local variables.
+This is particularly useful in combination with the built-in function
+:func:`vars`, which returns a dictionary containing all local variables.
 
 For a complete overview of string formatting with :meth:`str.format`, see
 :ref:`formatstrings`.
@@ -205,17 +207,13 @@ Old string formatting
 ---------------------
 
 The ``%`` operator can also be used for string formatting. It interprets the
-left argument much like a :cfunc:`sprintf`\ -style format string to be applied
+left argument much like a :c:func:`sprintf`\ -style format string to be applied
 to the right argument, and returns the string resulting from this formatting
 operation. For example::
 
    >>> import math
    >>> print 'The value of PI is approximately %5.3f.' % math.pi
    The value of PI is approximately 3.142.
-
-Since :meth:`str.format` is quite new, a lot of Python code still uses the ``%``
-operator. However, because this old style of formatting will eventually be
-removed from the language, :meth:`str.format` should generally be used.
 
 More information can be found in the :ref:`string-formatting` section.
 
@@ -234,9 +232,9 @@ arguments: ``open(filename, mode)``.
 
 ::
 
-   >>> f = open('/tmp/workfile', 'w')
+   >>> f = open('workfile', 'w')
    >>> print f
-   <open file '/tmp/workfile', mode 'w' at 80a0960>
+   <open file 'workfile', mode 'w' at 80a0960>
 
 The first argument is a string containing the filename.  The second argument is
 another string containing a few characters describing the way in which the file
@@ -293,18 +291,8 @@ containing only a single newline.   ::
    >>> f.readline()
    ''
 
-``f.readlines()`` returns a list containing all the lines of data in the file.
-If given an optional parameter *sizehint*, it reads that many bytes from the
-file and enough more to complete a line, and returns the lines from that.  This
-is often used to allow efficient reading of a large file by lines, but without
-having to load the entire file in memory.  Only complete lines will be returned.
-::
-
-   >>> f.readlines()
-   ['This is the first line of the file.\n', 'Second line of the file\n']
-
-An alternative approach to reading lines is to loop over the file object. This is
-memory efficient, fast, and leads to simpler code::
+For reading lines from a file, you can loop over the file object. This is memory
+efficient, fast, and leads to simple code::
 
    >>> for line in f:
            print line,
@@ -312,9 +300,8 @@ memory efficient, fast, and leads to simpler code::
    This is the first line of the file.
    Second line of the file
 
-The alternative approach is simpler but does not provide as fine-grained
-control.  Since the two approaches manage line buffering differently, they
-should not be mixed.
+If you want to read all the lines of a file in a list you can also use
+``list(f)`` or ``f.readlines()``.
 
 ``f.write(string)`` writes the contents of *string* to the file, returning
 ``None``.   ::
@@ -337,12 +324,12 @@ of the file, 1 uses the current file position, and 2 uses the end of the file as
 the reference point.  *from_what* can be omitted and defaults to 0, using the
 beginning of the file as the reference point. ::
 
-   >>> f = open('/tmp/workfile', 'r+')
+   >>> f = open('workfile', 'r+')
    >>> f.write('0123456789abcdef')
-   >>> f.seek(5)     # Go to the 6th byte in the file
+   >>> f.seek(5)      # Go to the 6th byte in the file
    >>> f.read(1)
    '5'
-   >>> f.seek(-3, 2) # Go to the 3rd byte before the end
+   >>> f.seek(-3, 2)  # Go to the 3rd byte before the end
    >>> f.read(1)
    'd'
 
@@ -361,7 +348,7 @@ objects.  This has the advantage that the file is properly closed after its
 suite finishes, even if an exception is raised on the way.  It is also much
 shorter than writing equivalent :keyword:`try`\ -\ :keyword:`finally` blocks::
 
-    >>> with open('/tmp/workfile', 'r') as f:
+    >>> with open('workfile', 'r') as f:
     ...     read_data = f.read()
     >>> f.closed
     True
@@ -371,47 +358,64 @@ File objects have some additional methods, such as :meth:`~file.isatty` and
 Reference for a complete guide to file objects.
 
 
-.. _tut-pickle:
+.. _tut-json:
 
-The :mod:`pickle` Module
-------------------------
+Saving structured data with :mod:`json`
+---------------------------------------
 
-.. index:: module: pickle
+.. index:: module: json
 
-Strings can easily be written to and read from a file. Numbers take a bit more
+Strings can easily be written to and read from a file.  Numbers take a bit more
 effort, since the :meth:`read` method only returns strings, which will have to
 be passed to a function like :func:`int`, which takes a string like ``'123'``
-and returns its numeric value 123.  However, when you want to save more complex
-data types like lists, dictionaries, or class instances, things get a lot more
-complicated.
+and returns its numeric value 123.  When you want to save more complex data
+types like nested lists and dictionaries, parsing and serializing by hand
+becomes complicated.
 
-Rather than have users be constantly writing and debugging code to save
-complicated data types, Python provides a standard module called :mod:`pickle`.
-This is an amazing module that can take almost any Python object (even some
-forms of Python code!), and convert it to a string representation; this process
-is called :dfn:`pickling`.  Reconstructing the object from the string
-representation is called :dfn:`unpickling`.  Between pickling and unpickling,
-the string representing the object may have been stored in a file or data, or
+Rather than having users constantly writing and debugging code to save
+complicated data types to files, Python allows you to use the popular data
+interchange format called `JSON (JavaScript Object Notation)
+<http://json.org>`_.  The standard module called :mod:`json` can take Python
+data hierarchies, and convert them to string representations; this process is
+called :dfn:`serializing`.  Reconstructing the data from the string representation
+is called :dfn:`deserializing`.  Between serializing and deserializing, the
+string representing the object may have been stored in a file or data, or
 sent over a network connection to some distant machine.
 
-If you have an object ``x``, and a file object ``f`` that's been opened for
-writing, the simplest way to pickle the object takes only one line of code::
+.. note::
+   The JSON format is commonly used by modern applications to allow for data
+   exchange.  Many programmers are already familiar with it, which makes
+   it a good choice for interoperability.
 
-   pickle.dump(x, f)
+If you have an object ``x``, you can view its JSON string representation with a
+simple line of code::
 
-To unpickle the object again, if ``f`` is a file object which has been opened
-for reading::
+   >>> json.dumps([1, 'simple', 'list'])
+   '[1, "simple", "list"]'
 
-   x = pickle.load(f)
+Another variant of the :func:`~json.dumps` function, called :func:`~json.dump`,
+simply serializes the object to a file.  So if ``f`` is a :term:`file object`
+opened for writing, we can do this::
 
-(There are other variants of this, used when pickling many objects or when you
-don't want to write the pickled data to a file; consult the complete
-documentation for :mod:`pickle` in the Python Library Reference.)
+   json.dump(x, f)
 
-:mod:`pickle` is the standard way to make Python objects which can be stored and
-reused by other programs or by a future invocation of the same program; the
-technical term for this is a :dfn:`persistent` object.  Because :mod:`pickle` is
-so widely used, many authors who write Python extensions take care to ensure
-that new data types such as matrices can be properly pickled and unpickled.
+To decode the object again, if ``f`` is a :term:`file object` which has
+been opened for reading::
 
+   x = json.load(f)
+
+This simple serialization technique can handle lists and dictionaries, but
+serializing arbitrary class instances in JSON requires a bit of extra effort.
+The reference for the :mod:`json` module contains an explanation of this.
+
+.. seealso::
+
+   :mod:`pickle` - the pickle module
+
+   Contrary to :ref:`JSON <tut-json>`, *pickle* is a protocol which allows
+   the serialization of arbitrarily complex Python objects.  As such, it is
+   specific to Python and cannot be used to communicate with applications
+   written in other languages.  It is also insecure by default:
+   deserializing pickle data coming from an untrusted source can execute
+   arbitrary code, if the data was crafted by a skilled attacker.
 

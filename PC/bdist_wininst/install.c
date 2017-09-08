@@ -62,7 +62,7 @@
  * instead showing the user an empty listbox to select something from.
  *
  * Finish the code so that we can use other python installations
- * additionaly to those found in the registry,
+ * additionally to those found in the registry,
  * and then #define USE_OTHER_PYTHON_VERSIONS
  *
  *  - install a help-button, which will display something meaningful
@@ -147,7 +147,7 @@ BOOL pyc_compile, pyo_compile;
    the permissions of the current user. */
 HKEY hkey_root = (HKEY)-1;
 
-BOOL success;                   /* Installation successfull? */
+BOOL success;                   /* Installation successful? */
 char *failure_reason = NULL;
 
 HANDLE hBitmap;
@@ -765,7 +765,7 @@ run_installscript(char *pathname, int argc, char **argv, char **pOutput)
 
     tempname = tempnam(NULL, NULL);
     // We use a static CRT while the Python version we load uses
-    // the CRT from one of various possibile DLLs.  As a result we
+    // the CRT from one of various possible DLLs.  As a result we
     // need to redirect the standard handles using the API rather
     // than the CRT.
     redirected = CreateFile(
@@ -1617,16 +1617,16 @@ SelectPythonDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                     PropSheet_SetWizButtons(GetParent(hwnd),
                                             PSWIZB_BACK | PSWIZB_NEXT);
                     /* Get the python directory */
-            ivi = (InstalledVersionInfo *)
+                    ivi = (InstalledVersionInfo *)
                         SendDlgItemMessage(hwnd,
-                                                                IDC_VERSIONS_LIST,
-                                                                LB_GETITEMDATA,
-                                                                id,
-                                                                0);
-            hkey_root = ivi->hkey;
-                                strcpy(python_dir, ivi->prefix);
-                                SetDlgItemText(hwnd, IDC_PATH, python_dir);
-                                /* retrieve the python version and pythondll to use */
+                            IDC_VERSIONS_LIST,
+                            LB_GETITEMDATA,
+                            id,
+                            0);
+                    hkey_root = ivi->hkey;
+                    strcpy(python_dir, ivi->prefix);
+                    SetDlgItemText(hwnd, IDC_PATH, python_dir);
+                    /* retrieve the python version and pythondll to use */
                     result = SendDlgItemMessage(hwnd, IDC_VERSIONS_LIST,
                                                  LB_GETTEXTLEN, (WPARAM)id, 0);
                     pbuf = (char *)malloc(result + 1);
@@ -1742,6 +1742,16 @@ static BOOL OpenLogfile(char *dir)
 
     sprintf(buffer, "%s\\%s-wininst.log", dir, meta_name);
     logfile = fopen(buffer, "a");
+    if (!logfile) {
+        char error[1024];
+
+        sprintf(error, "Can't create \"%s\" (%s).\n\n"
+                "Try to execute the installer as administrator.",
+                buffer, strerror(errno));
+        MessageBox(GetFocus(), error, NULL, MB_OK | MB_ICONSTOP);
+        return FALSE;
+    }
+
     time(&ltime);
     now = localtime(&ltime);
     strftime(buffer, sizeof(buffer),
@@ -1899,21 +1909,21 @@ InstallFilesDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 /*
  * The scheme we have to use depends on the Python version...
  if sys.version < "2.2":
- WINDOWS_SCHEME = {
- 'purelib': '$base',
- 'platlib': '$base',
- 'headers': '$base/Include/$dist_name',
- 'scripts': '$base/Scripts',
- 'data'   : '$base',
- }
+    WINDOWS_SCHEME = {
+    'purelib': '$base',
+    'platlib': '$base',
+    'headers': '$base/Include/$dist_name',
+    'scripts': '$base/Scripts',
+    'data'   : '$base',
+    }
  else:
- WINDOWS_SCHEME = {
- 'purelib': '$base/Lib/site-packages',
- 'platlib': '$base/Lib/site-packages',
- 'headers': '$base/Include/$dist_name',
- 'scripts': '$base/Scripts',
- 'data'   : '$base',
- }
+    WINDOWS_SCHEME = {
+    'purelib': '$base/Lib/site-packages',
+    'platlib': '$base/Lib/site-packages',
+    'headers': '$base/Include/$dist_name',
+    'scripts': '$base/Scripts',
+    'data'   : '$base',
+    }
 */
             scheme = GetScheme(py_major, py_minor);
             /* Run the pre-install script. */

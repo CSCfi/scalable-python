@@ -3,18 +3,14 @@
 
 #include "pyconfig.h" /* include for defines */
 
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-
 /**************************************************************************
 Symbols and macros to supply platform-independent interfaces to mathematical
 functions and constants
 **************************************************************************/
 
-/* Python provides implementations for copysign, acosh, asinh, atanh, 
- * log1p and hypot in Python/pymath.c just in case your math library doesn't
- * provide the functions.
+/* Python provides implementations for copysign, round and hypot in
+ * Python/pymath.c just in case your math library doesn't provide the
+ * functions.
  *
  *Note: PC/pyconfig.h defines copysign as _copysign
  */
@@ -22,20 +18,8 @@ functions and constants
 extern double copysign(double, double);
 #endif
 
-#ifndef HAVE_ACOSH
-extern double acosh(double);
-#endif
-
-#ifndef HAVE_ASINH
-extern double asinh(double);
-#endif
-
-#ifndef HAVE_ATANH
-extern double atanh(double);
-#endif
-
-#ifndef HAVE_LOG1P
-extern double log1p(double);
+#ifndef HAVE_ROUND
+extern double round(double);
 #endif
 
 #ifndef HAVE_HYPOT
@@ -59,7 +43,7 @@ extern int finite(double);
 extern double copysign(double, double);
 #endif
 
-/* High precision defintion of pi and e (Euler)
+/* High precision definition of pi and e (Euler)
  * The values are taken from libc6's math.h.
  */
 #ifndef Py_MATH_PIl
@@ -90,6 +74,11 @@ PyAPI_FUNC(double) _Py_force_double(double);
 #  else
 #    define Py_FORCE_DOUBLE(X) (X)
 #  endif
+#endif
+
+#ifdef HAVE_GCC_ASM_FOR_X87
+PyAPI_FUNC(unsigned short) _Py_get_387controlword(void);
+PyAPI_FUNC(void) _Py_set_387controlword(unsigned short);
 #endif
 
 /* Py_IS_NAN(X)
@@ -163,7 +152,29 @@ PyAPI_FUNC(double) _Py_force_double(double);
  * doesn't support NaNs.
  */
 #if !defined(Py_NAN) && !defined(Py_NO_NAN)
-#define Py_NAN (Py_HUGE_VAL * 0.)
+#if !defined(__INTEL_COMPILER)
+    #define Py_NAN (Py_HUGE_VAL * 0.)
+#else /* __INTEL_COMPILER */
+    #if defined(ICC_NAN_STRICT)
+        #pragma float_control(push)
+        #pragma float_control(precise, on)
+        #pragma float_control(except,  on)
+        #if defined(_MSC_VER)
+            __declspec(noinline)
+        #else /* Linux */
+            __attribute__((noinline))
+        #endif /* _MSC_VER */
+        static double __icc_nan()
+        {
+            return sqrt(-1.0);
+        }
+        #pragma float_control (pop)
+        #define Py_NAN __icc_nan()
+    #else /* ICC_NAN_RELAXED as default for Intel Compiler */
+        static union { unsigned char buf[8]; double __icc_nan; } __nan_store = {0,0,0,0,0,0,0xf8,0x7f};
+        #define Py_NAN (__nan_store.__icc_nan)
+    #endif /* ICC_NAN_STRICT */
+#endif /* __INTEL_COMPILER */
 #endif
 
 /* Py_OVERFLOWED(X)

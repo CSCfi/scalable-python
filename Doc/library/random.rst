@@ -1,10 +1,12 @@
-
 :mod:`random` --- Generate pseudo-random numbers
 ================================================
 
 .. module:: random
    :synopsis: Generate pseudo-random numbers with various common distributions.
 
+**Source code:** :source:`Lib/random.py`
+
+--------------
 
 This module implements pseudo-random number generators for various
 distributions.
@@ -17,7 +19,7 @@ On the real line, there are functions to compute uniform, normal (Gaussian),
 lognormal, negative exponential, gamma, and beta distributions. For generating
 distributions of angles, the von Mises distribution is available.
 
-Almost all module functions depend on the basic function :func:`random`, which
+Almost all module functions depend on the basic function :func:`.random`, which
 generates a random float uniformly in the semi-open range [0.0, 1.0).  Python
 uses the Mersenne Twister as the core generator.  It produces 53-bit precision
 floats and has a period of 2\*\*19937-1.  The underlying implementation in C is
@@ -34,9 +36,10 @@ especially useful for multi-threaded programs, creating a different instance of
 it likely that the generated sequences seen by each thread don't overlap.
 
 Class :class:`Random` can also be subclassed if you want to use a different
-basic generator of your own devising: in that case, override the :meth:`random`,
-:meth:`seed`, :meth:`getstate`, :meth:`setstate` and :meth:`jumpahead` methods.
-Optionally, a new generator can supply a :meth:`getrandbits` method --- this
+basic generator of your own devising: in that case, override the :meth:`~Random.random`,
+:meth:`~Random.seed`, :meth:`~Random.getstate`, :meth:`~Random.setstate` and
+:meth:`~Random.jumpahead` methods.  Optionally, a new generator can supply a
+:meth:`~Random.getrandbits` method --- this
 allows :meth:`randrange` to produce selections over an arbitrarily large range.
 
 .. versionadded:: 2.4
@@ -58,6 +61,13 @@ The :mod:`random` module also provides the :class:`SystemRandom` class which
 uses the system function :func:`os.urandom` to generate random numbers
 from sources provided by the operating system.
 
+.. warning::
+
+   The pseudo-random generators of this module should not be used for
+   security purposes.  Use :func:`os.urandom` or :class:`SystemRandom` if
+   you require a cryptographically secure pseudo-random number generator.
+
+
 Bookkeeping functions:
 
 
@@ -70,12 +80,11 @@ Bookkeeping functions:
    they are used instead of the system time (see the :func:`os.urandom` function
    for details on availability).
 
+   If a :term:`hashable` object is given, deterministic results are only assured
+   when :envvar:`PYTHONHASHSEED` is disabled.
+
    .. versionchanged:: 2.4
       formerly, operating system resources were not used.
-
-   If *x* is not ``None`` or an int or long, ``hash(x)`` is used instead. If *x* is
-   an int or long, *x* is used directly.
-
 
 .. function:: getstate()
 
@@ -92,7 +101,7 @@ Bookkeeping functions:
 
    *state* should have been obtained from a previous call to :func:`getstate`, and
    :func:`setstate` restores the internal state of the generator to what it was at
-   the time :func:`setstate` was called.
+   the time :func:`getstate` was called.
 
    .. versionadded:: 2.1
 
@@ -126,7 +135,8 @@ Bookkeeping functions:
 Functions for integers:
 
 
-.. function:: randrange([start,] stop[, step])
+.. function:: randrange(stop)
+              randrange(start, stop[, step])
 
    Return a randomly selected element from ``range(start, stop, step)``.  This is
    equivalent to ``choice(range(start, stop, step))``, but doesn't actually build a
@@ -152,7 +162,7 @@ Functions for sequences:
 
    Shuffle the sequence *x* in place. The optional argument *random* is a
    0-argument function returning a random float in [0.0, 1.0); by default, this is
-   the function :func:`random`.
+   the function :func:`.random`.
 
    Note that for even rather small ``len(x)``, the total number of permutations of
    *x* is larger than the period of most random number generators; this implies
@@ -198,6 +208,7 @@ be found in any statistics text.
    The end-point value ``b`` may or may not be included in the range
    depending on floating-point rounding in the equation ``a + (b-a) * random()``.
 
+
 .. function:: triangular(low, high, mode)
 
    Return a random floating point number *N* such that ``low <= N <= high`` and
@@ -227,6 +238,12 @@ be found in any statistics text.
 
    Gamma distribution.  (*Not* the gamma function!)  Conditions on the
    parameters are ``alpha > 0`` and ``beta > 0``.
+
+   The probability distribution function is::
+
+                 x ** (alpha - 1) * math.exp(-x / beta)
+       pdf(x) =  --------------------------------------
+                   math.gamma(alpha) * beta ** alpha
 
 
 .. function:: gauss(mu, sigma)
@@ -326,7 +343,7 @@ Examples of basic usage::
 
    M. Matsumoto and T. Nishimura, "Mersenne Twister: A 623-dimensionally
    equidistributed uniform pseudorandom number generator", ACM Transactions on
-   Modeling and Computer Simulation Vol. 8, No. 1, January pp.3-30 1998.
+   Modeling and Computer Simulation Vol. 8, No. 1, January pp.3--30 1998.
 
    Wichmann, B. A. & Hill, I. D., "Algorithm AS 183: An efficient and portable
    pseudo-random number generator", Applied Statistics 31 (1982) 188-190.

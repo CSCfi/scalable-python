@@ -1,5 +1,5 @@
-:mod:`email`: Generating MIME documents
----------------------------------------
+:mod:`email.generator`: Generating MIME documents
+-------------------------------------------------
 
 .. module:: email.generator
    :synopsis: Generate flat text email messages from a message structure.
@@ -17,10 +17,10 @@ yourself.  However the bundled generator knows how to generate most email in a
 standards-compliant way, should handle MIME and non-MIME email messages just
 fine, and is designed so that the transformation from flat text, to a message
 structure via the :class:`~email.parser.Parser` class, and back to flat text,
-is idempotent (the input is identical to the output).  On the other hand, using
-the Generator on a :class:`~email.message.Message` constructed by program may
-result in changes to the :class:`~email.message.Message` object as defaults are
-filled in.
+is idempotent (the input is identical to the output) [#]_.  On the other hand,
+using the Generator on a :class:`~email.message.Message` constructed by program
+may result in changes to the :class:`~email.message.Message` object as defaults
+are filled in.
 
 Here are the public methods of the :class:`Generator` class, imported from the
 :mod:`email.generator` module:
@@ -37,7 +37,7 @@ Here are the public methods of the :class:`Generator` class, imported from the
    followed by a space at the beginning of the line.  This is the only guaranteed
    portable way to avoid having such lines be mistaken for a Unix mailbox format
    envelope header separator (see `WHY THE CONTENT-LENGTH FORMAT IS BAD
-   <http://www.jwz.org/doc/content-length.html>`_ for details).  *mangle_from_*
+   <https://www.jwz.org/doc/content-length.html>`_ for details).  *mangle_from_*
    defaults to ``True``, but you might want to set this to ``False`` if you are not
    writing Unix mailbox format files.
 
@@ -125,3 +125,11 @@ representing the part.
 .. versionchanged:: 2.5
    The previously deprecated method :meth:`__call__` was removed.
 
+
+.. rubric:: Footnotes
+
+.. [#] This statement assumes that you use the appropriate setting for the
+       ``unixfrom`` argument, and that you set maxheaderlen=0 (which will
+       preserve whatever the input line lengths were).  It is also not strictly
+       true, since in many cases runs of whitespace in headers are collapsed
+       into single blanks.  The latter is a bug that will eventually be fixed.

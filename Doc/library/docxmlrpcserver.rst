@@ -8,15 +8,15 @@
 
 .. note::
    The :mod:`DocXMLRPCServer` module has been merged into :mod:`xmlrpc.server`
-   in Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
+   in Python 3.  The :term:`2to3` tool will automatically adapt imports when
+   converting your sources to Python 3.
 
 
 .. versionadded:: 2.3
 
 The :mod:`DocXMLRPCServer` module extends the classes found in
 :mod:`SimpleXMLRPCServer` to serve HTML documentation in response to HTTP GET
-requests. Servers can either be free standing, using :class:`DocXMLRPCServer`,
+requests. Servers can either be free standing, using :class:`~DocXMLRPCServer.DocXMLRPCServer`,
 or embedded in a CGI environment, using :class:`DocCGIXMLRPCRequestHandler`.
 
 
@@ -36,7 +36,7 @@ or embedded in a CGI environment, using :class:`DocCGIXMLRPCRequestHandler`.
 
    Create a new request handler instance. This request handler supports XML-RPC
    POST requests, documentation GET requests, and modifies logging so that the
-   *logRequests* parameter to the :class:`DocXMLRPCServer` constructor parameter is
+   *logRequests* parameter to the :class:`~DocXMLRPCServer.DocXMLRPCServer` constructor parameter is
    honored.
 
 
@@ -45,7 +45,7 @@ or embedded in a CGI environment, using :class:`DocCGIXMLRPCRequestHandler`.
 DocXMLRPCServer Objects
 -----------------------
 
-The :class:`DocXMLRPCServer` class is derived from
+The :class:`~DocXMLRPCServer.DocXMLRPCServer` class is derived from
 :class:`SimpleXMLRPCServer.SimpleXMLRPCServer` and provides a means of creating
 self-documenting, stand alone XML-RPC servers. HTTP POST requests are handled as
 XML-RPC method calls. HTTP GET requests are handled by generating pydoc-style

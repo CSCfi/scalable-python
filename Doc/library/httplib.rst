@@ -6,8 +6,8 @@
 
 .. note::
    The :mod:`httplib` module has been renamed to :mod:`http.client` in Python
-   3.0.  The :term:`2to3` tool will automatically adapt imports when converting
-   your sources to 3.0.
+   3.  The :term:`2to3` tool will automatically adapt imports when converting
+   your sources to Python 3.
 
 
 .. index::
@@ -16,9 +16,18 @@
 
 .. index:: module: urllib
 
+**Source code:** :source:`Lib/httplib.py`
+
+--------------
+
 This module defines classes which implement the client side of the HTTP and
 HTTPS protocols.  It is normally not used directly --- the module :mod:`urllib`
 uses it to handle URLs that use HTTP and HTTPS.
+
+.. seealso::
+
+    The `Requests package <http://requests.readthedocs.org/>`_
+    is recommended for a higher-level HTTP client interface.
 
 .. note::
 
@@ -34,18 +43,20 @@ uses it to handle URLs that use HTTP and HTTPS.
 The module provides the following classes:
 
 
-.. class:: HTTPConnection(host[, port[, strict[, timeout]]])
+.. class:: HTTPConnection(host[, port[, strict[, timeout[, source_address]]]])
 
    An :class:`HTTPConnection` instance represents one transaction with an HTTP
    server.  It should be instantiated passing it a host and optional port
    number.  If no port number is passed, the port is extracted from the host
    string if it has the form ``host:port``, else the default HTTP port (80) is
-   used.  When True, the optional parameter *strict* (which defaults to a false
+   used.  When true, the optional parameter *strict* (which defaults to a false
    value) causes ``BadStatusLine`` to
    be raised if the status line can't be parsed as a valid HTTP/1.0 or 1.1
    status line.  If the optional *timeout* parameter is given, blocking
    operations (like connection attempts) will timeout after that many seconds
    (if it is not given, the global default timeout setting is used).
+   The optional *source_address* parameter may be a tuple of a (host, port)
+   to use as the source address the HTTP connection is made from.
 
    For example, the following calls all create instances that connect to the server
    at the same host and port::
@@ -60,25 +71,41 @@ The module provides the following classes:
    .. versionchanged:: 2.6
       *timeout* was added.
 
+   .. versionchanged:: 2.7
+      *source_address* was added.
 
-.. class:: HTTPSConnection(host[, port[, key_file[, cert_file[, strict[, timeout]]]]])
+
+.. class:: HTTPSConnection(host[, port[, key_file[, cert_file[, strict[, timeout[, source_address[, context]]]]]]])
 
    A subclass of :class:`HTTPConnection` that uses SSL for communication with
-   secure servers.  Default port is ``443``. *key_file* is the name of a PEM
-   formatted file that contains your private key. *cert_file* is a PEM formatted
-   certificate chain file.
+   secure servers.  Default port is ``443``.  If *context* is specified, it must
+   be a :class:`ssl.SSLContext` instance describing the various SSL options.
 
-   .. note::
+   *key_file* and *cert_file* are deprecated, please use
+   :meth:`ssl.SSLContext.load_cert_chain` instead, or let
+   :func:`ssl.create_default_context` select the system's trusted CA
+   certificates for you.
 
-      This does not do any certificate verification.
+   Please read :ref:`ssl-security` for more information on best practices.
 
    .. versionadded:: 2.0
 
    .. versionchanged:: 2.6
       *timeout* was added.
 
+   .. versionchanged:: 2.7
+      *source_address* was added.
 
-.. class:: HTTPResponse(sock[, debuglevel=0][, strict=0])
+   .. versionchanged:: 2.7.9
+      *context* was added.
+
+      This class now performs all the necessary certificate and hostname checks
+      by default. To revert to the previous, unverified, behavior
+      :func:`ssl._create_unverified_context` can be passed to the *context*
+      parameter.
+
+
+.. class:: HTTPResponse(sock, debuglevel=0, strict=0)
 
    Class whose instances are returned upon successful connection.  Not instantiated
    directly by user.
@@ -411,9 +438,16 @@ HTTPConnection Objects
    and the selector *url*.  If the *body* argument is present, it should be a
    string of data to send after the headers are finished. Alternatively, it may
    be an open file object, in which case the contents of the file is sent; this
-   file object should support ``fileno()`` and ``read()`` methods. The header
-   Content-Length is automatically set to the correct value. The *headers*
-   argument should be a mapping of extra HTTP headers to send with the request.
+   file object should support ``fileno()`` and ``read()`` methods. The
+   *headers* argument should be a mapping of extra HTTP headers to send with
+   the request.
+
+   If one is not provided in *headers*, a ``Content-Length`` header is added
+   automatically for all methods if the length of the body can be determined,
+   either from the length of the ``str`` representation, or from the reported
+   size of the file on disk. If *body* is ``None`` the header is not set except
+   for methods that expect a body (``PUT``, ``POST``, and ``PATCH``) in which
+   case it is set to ``0``.
 
    .. versionchanged:: 2.6
       *body* can be a file object.
@@ -434,6 +468,17 @@ HTTPConnection Objects
 
    Set the debugging level (the amount of debugging output printed). The default
    debug level is ``0``, meaning no debugging output is printed.
+
+
+.. method:: HTTPConnection.set_tunnel(host,port=None, headers=None)
+
+   Set the host and the port for HTTP Connect Tunnelling. Normally used when
+   it is required to do HTTPS Conection through a proxy server.
+
+   The headers argument should be a mapping of extra HTTP headers to send
+   with the CONNECT request.
+
+   .. versionadded:: 2.7
 
 
 .. method:: HTTPConnection.connect()
@@ -470,9 +515,16 @@ also send your request step by step, by using the four functions below.
    an argument.
 
 
-.. method:: HTTPConnection.endheaders()
+.. method:: HTTPConnection.endheaders(message_body=None)
 
-   Send a blank line to the server, signalling the end of the headers.
+   Send a blank line to the server, signalling the end of the headers. The
+   optional *message_body* argument can be used to pass a message body
+   associated with the request.  The message body will be sent in the same
+   packet as the message headers if it is string, otherwise it is sent in a
+   separate packet.
+
+   .. versionchanged:: 2.7
+      *message_body* was added.
 
 
 .. method:: HTTPConnection.send(data)
@@ -507,6 +559,9 @@ HTTPResponse Objects
 
    .. versionadded:: 2.4
 
+.. method:: HTTPResponse.fileno()
+
+   Returns the ``fileno`` of the underlying socket.
 
 .. attribute:: HTTPResponse.msg
 
@@ -536,26 +591,25 @@ Examples
 Here is an example session that uses the ``GET`` method::
 
    >>> import httplib
-   >>> conn = httplib.HTTPConnection("www.python.org")
-   >>> conn.request("GET", "/index.html")
+   >>> conn = httplib.HTTPSConnection("www.python.org")
+   >>> conn.request("GET", "/")
    >>> r1 = conn.getresponse()
    >>> print r1.status, r1.reason
    200 OK
    >>> data1 = r1.read()
-   >>> conn.request("GET", "/parrot.spam")
+   >>> conn.request("GET", "/")
    >>> r2 = conn.getresponse()
    >>> print r2.status, r2.reason
    404 Not Found
    >>> data2 = r2.read()
    >>> conn.close()
 
-Here is an example session that uses ``HEAD`` method. Note that ``HEAD`` method
-never returns any data. ::
-
+Here is an example session that uses the ``HEAD`` method.  Note that the
+``HEAD`` method never returns any data. ::
 
    >>> import httplib
-   >>> conn = httplib.HTTPConnection("www.python.org")
-   >>> conn.request("HEAD","/index.html")
+   >>> conn = httplib.HTTPSConnection("www.python.org")
+   >>> conn.request("HEAD","/")
    >>> res = conn.getresponse()
    >>> print res.status, res.reason
    200 OK
@@ -568,14 +622,33 @@ never returns any data. ::
 Here is an example session that shows how to ``POST`` requests::
 
    >>> import httplib, urllib
-   >>> params = urllib.urlencode({'spam': 1, 'eggs': 2, 'bacon': 0})
+   >>> params = urllib.urlencode({'@number': 12524, '@type': 'issue', '@action': 'show'})
    >>> headers = {"Content-type": "application/x-www-form-urlencoded",
    ...            "Accept": "text/plain"}
-   >>> conn = httplib.HTTPConnection("musi-cal.mojam.com:80")
-   >>> conn.request("POST", "/cgi-bin/query", params, headers)
+   >>> conn = httplib.HTTPConnection("bugs.python.org")
+   >>> conn.request("POST", "", params, headers)
    >>> response = conn.getresponse()
    >>> print response.status, response.reason
-   200 OK
+   302 Found
    >>> data = response.read()
+   >>> data
+   'Redirecting to <a href="http://bugs.python.org/issue12524">http://bugs.python.org/issue12524</a>'
    >>> conn.close()
+
+Client side ``HTTP PUT`` requests are very similar to ``POST`` requests. The
+difference lies only the server side where HTTP server will allow resources to
+be created via ``PUT`` request. Here is an example session that shows how to do
+``PUT`` request using httplib::
+
+    >>> # This creates an HTTP message
+    >>> # with the content of BODY as the enclosed representation
+    >>> # for the resource http://localhost:8080/foobar
+    ...
+    >>> import httplib
+    >>> BODY = "***filecontents***"
+    >>> conn = httplib.HTTPConnection("localhost", 8080)
+    >>> conn.request("PUT", "/file", BODY)
+    >>> response = conn.getresponse()
+    >>> print response.status, response.reason
+    200, OK
 

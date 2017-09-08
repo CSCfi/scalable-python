@@ -19,9 +19,31 @@ static PyTupleObject *free_list[PyTuple_MAXSAVESIZE];
 static int numfree[PyTuple_MAXSAVESIZE];
 #endif
 #ifdef COUNT_ALLOCS
-int fast_tuple_allocs;
-int tuple_zero_allocs;
+Py_ssize_t fast_tuple_allocs;
+Py_ssize_t tuple_zero_allocs;
 #endif
+
+/* Debug statistic to count GC tracking of tuples.
+   Please note that tuples are only untracked when considered by the GC, and
+   many of them will be dead before. Therefore, a tracking rate close to 100%
+   does not necessarily prove that the heuristic is inefficient.
+*/
+#ifdef SHOW_TRACK_COUNT
+static Py_ssize_t count_untracked = 0;
+static Py_ssize_t count_tracked = 0;
+
+static void
+show_track(void)
+{
+    fprintf(stderr, "Tuples created: %" PY_FORMAT_SIZE_T "d\n",
+        count_tracked + count_untracked);
+    fprintf(stderr, "Tuples tracked by the GC: %" PY_FORMAT_SIZE_T
+        "d\n", count_tracked);
+    fprintf(stderr, "%.2f%% tuple tracking rate\n\n",
+        (100.0*count_tracked/(count_untracked+count_tracked)));
+}
+#endif
+
 
 PyObject *
 PyTuple_New(register Py_ssize_t size)
@@ -64,7 +86,6 @@ PyTuple_New(register Py_ssize_t size)
         {
             return PyErr_NoMemory();
         }
-        nbytes += sizeof(PyTupleObject) - sizeof(PyObject *);
 
         op = PyObject_GC_NewVar(PyTupleObject, &PyTuple_Type, size);
         if (op == NULL)
@@ -78,6 +99,9 @@ PyTuple_New(register Py_ssize_t size)
         ++numfree[0];
         Py_INCREF(op);          /* extra INCREF so that this is never freed */
     }
+#endif
+#ifdef SHOW_TRACK_COUNT
+    count_tracked++;
 #endif
     _PyObject_GC_TRACK(op);
     return (PyObject *) op;
@@ -131,6 +155,32 @@ PyTuple_SetItem(register PyObject *op, register Py_ssize_t i, PyObject *newitem)
     return 0;
 }
 
+void
+_PyTuple_MaybeUntrack(PyObject *op)
+{
+    PyTupleObject *t;
+    Py_ssize_t i, n;
+
+    if (!PyTuple_CheckExact(op) || !_PyObject_GC_IS_TRACKED(op))
+        return;
+    t = (PyTupleObject *) op;
+    n = Py_SIZE(t);
+    for (i = 0; i < n; i++) {
+        PyObject *elt = PyTuple_GET_ITEM(t, i);
+        /* Tuple with NULL elements aren't
+           fully constructed, don't untrack
+           them yet. */
+        if (!elt ||
+            _PyObject_GC_MAY_BE_TRACKED(elt))
+            return;
+    }
+#ifdef SHOW_TRACK_COUNT
+    count_tracked--;
+    count_untracked++;
+#endif
+    _PyObject_GC_UNTRACK(op);
+}
+
 PyObject *
 PyTuple_Pack(Py_ssize_t n, ...)
 {
@@ -142,8 +192,10 @@ PyTuple_Pack(Py_ssize_t n, ...)
 
     va_start(vargs, n);
     result = PyTuple_New(n);
-    if (result == NULL)
+    if (result == NULL) {
+        va_end(vargs);
         return NULL;
+    }
     items = ((PyTupleObject *)result)->ob_item;
     for (i = 0; i < n; i++) {
         o = va_arg(vargs, PyObject *);
@@ -483,7 +535,7 @@ tupleindex(PyTupleObject *self, PyObject *args)
         else if (cmp < 0)
             return NULL;
     }
-    PyErr_SetString(PyExc_ValueError, "tuple.index(x): x not in list");
+    PyErr_SetString(PyExc_ValueError, "tuple.index(x): x not in tuple");
     return NULL;
 }
 
@@ -709,27 +761,15 @@ tuple_getnewargs(PyTupleObject *v)
 
 }
 
-static PyObject *
-tuple_sizeof(PyTupleObject *self)
-{
-    Py_ssize_t res;
-
-    res = PyTuple_Type.tp_basicsize + Py_SIZE(self) * sizeof(PyObject *);
-    return PyInt_FromSsize_t(res);
-}
-
 PyDoc_STRVAR(index_doc,
 "T.index(value, [start, [stop]]) -> integer -- return first index of value.\n"
 "Raises ValueError if the value is not present."
 );
 PyDoc_STRVAR(count_doc,
 "T.count(value) -> integer -- return number of occurrences of value");
-PyDoc_STRVAR(sizeof_doc,
-"T.__sizeof__() -- size of T in memory, in bytes");
 
 static PyMethodDef tuple_methods[] = {
     {"__getnewargs__",          (PyCFunction)tuple_getnewargs,  METH_NOARGS},
-    {"__sizeof__",      (PyCFunction)tuple_sizeof, METH_NOARGS, sizeof_doc},
     {"index",           (PyCFunction)tupleindex,  METH_VARARGS, index_doc},
     {"count",           (PyCFunction)tuplecount,  METH_O, count_doc},
     {NULL,              NULL}           /* sentinel */
@@ -824,12 +864,12 @@ _PyTuple_Resize(PyObject **pv, Py_ssize_t newsize)
 
     /* XXX UNREF/NEWREF interface should be more symmetrical */
     _Py_DEC_REFTOTAL;
-    _PyObject_GC_UNTRACK(v);
+    if (_PyObject_GC_IS_TRACKED(v))
+        _PyObject_GC_UNTRACK(v);
     _Py_ForgetReference((PyObject *) v);
     /* DECREF items deleted by shrinkage */
     for (i = newsize; i < oldsize; i++) {
-        Py_XDECREF(v->ob_item[i]);
-        v->ob_item[i] = NULL;
+        Py_CLEAR(v->ob_item[i]);
     }
     sv = PyObject_GC_Resize(PyTupleObject, v, newsize);
     if (sv == NULL) {
@@ -875,10 +915,12 @@ PyTuple_Fini(void)
 #if PyTuple_MAXSAVESIZE > 0
     /* empty tuples are used all over the place and applications may
      * rely on the fact that an empty tuple is a singleton. */
-    Py_XDECREF(free_list[0]);
-    free_list[0] = NULL;
+    Py_CLEAR(free_list[0]);
 
     (void)PyTuple_ClearFreeList();
+#endif
+#ifdef SHOW_TRACK_COUNT
+    show_track();
 #endif
 }
 
@@ -924,8 +966,8 @@ tupleiter_next(tupleiterobject *it)
         return item;
     }
 
-    Py_DECREF(seq);
     it->it_seq = NULL;
+    Py_DECREF(seq);
     return NULL;
 }
 

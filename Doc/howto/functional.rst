@@ -5,9 +5,6 @@
 :Author: A. M. Kuchling
 :Release: 0.31
 
-(This is a first draft.  Please send comments/error reports/suggestions to
-amk@amk.ca.)
-
 In this document, we'll take a tour of Python's features suitable for
 implementing programs in a functional style.  After an introduction to the
 concepts of functional programming, we'll look at language features such as
@@ -47,15 +44,14 @@ Programming languages support decomposing problems in several different ways:
   functional languages include the ML family (Standard ML, OCaml, and other
   variants) and Haskell.
 
-The designers of some computer languages choose to emphasize one
-particular approach to programming.  This often makes it difficult to
-write programs that use a different approach.  Other languages are
-multi-paradigm languages that support several different approaches.
-Lisp, C++, and Python are multi-paradigm; you can write programs or
-libraries that are largely procedural, object-oriented, or functional
-in all of these languages.  In a large program, different sections
-might be written using different approaches; the GUI might be
-object-oriented while the processing logic is procedural or
+The designers of some computer languages choose to emphasize one particular
+approach to programming.  This often makes it difficult to write programs that
+use a different approach.  Other languages are multi-paradigm languages that
+support several different approaches.  Lisp, C++, and Python are
+multi-paradigm; you can write programs or libraries that are largely
+procedural, object-oriented, or functional in all of these languages.  In a
+large program, different sections might be written using different approaches;
+the GUI might be object-oriented while the processing logic is procedural or
 functional, for example.
 
 In a functional program, input flows through a set of functions. Each function
@@ -248,9 +244,9 @@ Built-in functions such as :func:`max` and :func:`min` can take a single
 iterator argument and will return the largest or smallest element.  The ``"in"``
 and ``"not in"`` operators also support iterators: ``X in iterator`` is true if
 X is found in the stream returned by the iterator.  You'll run into obvious
-problems if the iterator is infinite; ``max()``, ``min()``, and ``"not in"``
+problems if the iterator is infinite; ``max()``, ``min()``
 will never return, and if the element X never appears in the stream, the
-``"in"`` operator won't return either.
+``"in"`` and ``"not in"`` operators won't return either.
 
 Note that you can only go forward in an iterator; there's no way to get the
 previous element, reset the iterator, or make a copy of it.  Iterator objects
@@ -335,7 +331,7 @@ substring.
 
 List comprehensions and generator expressions (short form: "listcomps" and
 "genexps") are a concise notation for such operations, borrowed from the
-functional programming language Haskell (http://www.haskell.org/).  You can strip
+functional programming language Haskell (https://www.haskell.org/).  You can strip
 all the whitespace from a stream of strings with the following code::
 
     line_list = ['  line 1\n', 'line 2  \n', ...]
@@ -398,14 +394,14 @@ equivalent to the following Python code::
             continue   # Skip this element
         for expr2 in sequence2:
             if not (condition2):
-                continue    # Skip this element
+                continue   # Skip this element
             ...
             for exprN in sequenceN:
-                 if not (conditionN):
-                     continue   # Skip this element
+                if not (conditionN):
+                    continue   # Skip this element
 
-                 # Output the value of
-                 # the expression.
+                # Output the value of
+                # the expression.
 
 This means that when there are multiple ``for...in`` clauses but no ``if``
 clauses, the length of the resulting output will be equal to the product of the
@@ -591,7 +587,8 @@ And here's an example of changing the counter:
 
 Because ``yield`` will often be returning ``None``, you should always check for
 this case.  Don't just use its value in expressions unless you're sure that the
-``send()`` method will be the only method used resume your generator function.
+``send()`` method will be the only method used to resume your generator
+function.
 
 In addition to ``send()``, there are two other new methods on generators:
 
@@ -744,11 +741,11 @@ the constructed list's ``.sort()`` method. ::
     [9878, 9828, 8442, 7953, 6431, 6213, 2207, 769]
 
 (For a more detailed discussion of sorting, see the Sorting mini-HOWTO in the
-Python wiki at http://wiki.python.org/moin/HowTo/Sorting.)
+Python wiki at https://wiki.python.org/moin/HowTo/Sorting.)
 
 The ``any(iter)`` and ``all(iter)`` built-ins look at the truth values of an
-iterable's contents.  :func:`any` returns True if any element in the iterable is
-a true value, and :func:`all` returns True if all of the elements are true
+iterable's contents.  :func:`any` returns ``True`` if any element in the iterable is
+a true value, and :func:`all` returns ``True`` if all of the elements are true
 values:
 
     >>> any([0,1,0])
@@ -1118,132 +1115,6 @@ Some of the functions in this module are:
 Consult the operator module's documentation for a complete list.
 
 
-
-The functional module
----------------------
-
-Collin Winter's `functional module <http://oakwinter.com/code/functional/>`__
-provides a number of more advanced tools for functional programming. It also
-reimplements several Python built-ins, trying to make them more intuitive to
-those used to functional programming in other languages.
-
-This section contains an introduction to some of the most important functions in
-``functional``; full documentation can be found at `the project's website
-<http://oakwinter.com/code/functional/documentation/>`__.
-
-``compose(outer, inner, unpack=False)``
-
-The ``compose()`` function implements function composition.  In other words, it
-returns a wrapper around the ``outer`` and ``inner`` callables, such that the
-return value from ``inner`` is fed directly to ``outer``.  That is, ::
-
-    >>> def add(a, b):
-    ...     return a + b
-    ...
-    >>> def double(a):
-    ...     return 2 * a
-    ...
-    >>> compose(double, add)(5, 6)
-    22
-
-is equivalent to ::
-
-    >>> double(add(5, 6))
-    22
-
-The ``unpack`` keyword is provided to work around the fact that Python functions
-are not always `fully curried <http://en.wikipedia.org/wiki/Currying>`__.  By
-default, it is expected that the ``inner`` function will return a single object
-and that the ``outer`` function will take a single argument. Setting the
-``unpack`` argument causes ``compose`` to expect a tuple from ``inner`` which
-will be expanded before being passed to ``outer``. Put simply, ::
-
-    compose(f, g)(5, 6)
-
-is equivalent to::
-
-    f(g(5, 6))
-
-while ::
-
-    compose(f, g, unpack=True)(5, 6)
-
-is equivalent to::
-
-    f(*g(5, 6))
-
-Even though ``compose()`` only accepts two functions, it's trivial to build up a
-version that will compose any number of functions. We'll use ``reduce()``,
-``compose()`` and ``partial()`` (the last of which is provided by both
-``functional`` and ``functools``). ::
-
-    from functional import compose, partial
-
-    multi_compose = partial(reduce, compose)
-
-
-We can also use ``map()``, ``compose()`` and ``partial()`` to craft a version of
-``"".join(...)`` that converts its arguments to string::
-
-    from functional import compose, partial
-
-    join = compose("".join, partial(map, str))
-
-
-``flip(func)``
-
-``flip()`` wraps the callable in ``func`` and causes it to receive its
-non-keyword arguments in reverse order. ::
-
-    >>> def triple(a, b, c):
-    ...     return (a, b, c)
-    ...
-    >>> triple(5, 6, 7)
-    (5, 6, 7)
-    >>>
-    >>> flipped_triple = flip(triple)
-    >>> flipped_triple(5, 6, 7)
-    (7, 6, 5)
-
-``foldl(func, start, iterable)``
-
-``foldl()`` takes a binary function, a starting value (usually some kind of
-'zero'), and an iterable.  The function is applied to the starting value and the
-first element of the list, then the result of that and the second element of the
-list, then the result of that and the third element of the list, and so on.
-
-This means that a call such as::
-
-    foldl(f, 0, [1, 2, 3])
-
-is equivalent to::
-
-    f(f(f(0, 1), 2), 3)
-
-
-``foldl()`` is roughly equivalent to the following recursive function::
-
-    def foldl(func, start, seq):
-        if len(seq) == 0:
-            return start
-
-        return foldl(func, func(start, seq[0]), seq[1:])
-
-Speaking of equivalence, the above ``foldl`` call can be expressed in terms of
-the built-in ``reduce`` like so::
-
-    reduce(f, [1, 2, 3], 0)
-
-
-We can use ``foldl()``, ``operator.concat()`` and ``partial()`` to write a
-cleaner, more aesthetically-pleasing version of Python's ``"".join(...)``
-idiom::
-
-    from functional import foldl, partial from operator import concat
-
-    join = partial(foldl, concat, "")
-
-
 Revision History and Acknowledgements
 =====================================
 
@@ -1273,7 +1144,7 @@ General
 
 **Structure and Interpretation of Computer Programs**, by Harold Abelson and
 Gerald Jay Sussman with Julie Sussman.  Full text at
-http://mitpress.mit.edu/sicp/.  In this classic textbook of computer science,
+https://mitpress.mit.edu/sicp/.  In this classic textbook of computer science,
 chapters 2 and 3 discuss the use of sequences and streams to organize the data
 flow inside a program.  The book uses Scheme for its examples, but many of the
 design approaches described in these chapters are applicable to functional-style
@@ -1282,12 +1153,12 @@ Python code.
 http://www.defmacro.org/ramblings/fp.html: A general introduction to functional
 programming that uses Java examples and has a lengthy historical introduction.
 
-http://en.wikipedia.org/wiki/Functional_programming: General Wikipedia entry
+https://en.wikipedia.org/wiki/Functional_programming: General Wikipedia entry
 describing functional programming.
 
-http://en.wikipedia.org/wiki/Coroutine: Entry for coroutines.
+https://en.wikipedia.org/wiki/Coroutine: Entry for coroutines.
 
-http://en.wikipedia.org/wiki/Currying: Entry for the concept of currying.
+https://en.wikipedia.org/wiki/Currying: Entry for the concept of currying.
 
 Python-specific
 ---------------
@@ -1299,9 +1170,10 @@ Text Processing".
 
 Mertz also wrote a 3-part series of articles on functional programming
 for IBM's DeveloperWorks site; see
-`part 1 <http://www-128.ibm.com/developerworks/library/l-prog.html>`__,
-`part 2 <http://www-128.ibm.com/developerworks/library/l-prog2.html>`__, and
-`part 3 <http://www-128.ibm.com/developerworks/linux/library/l-prog3.html>`__,
+
+`part 1 <https://www.ibm.com/developerworks/linux/library/l-prog/index.html>`__,
+`part 2 <https://www.ibm.com/developerworks/linux/library/l-prog2/index.html>`__, and
+`part 3 <https://www.ibm.com/developerworks/linux/library/l-prog3/index.html>`__,
 
 
 Python documentation

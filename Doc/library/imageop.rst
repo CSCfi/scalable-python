@@ -7,7 +7,7 @@
    :deprecated:
 
 .. deprecated:: 2.6
-    The :mod:`imageop` module has been removed in Python 3.0.
+    The :mod:`imageop` module has been removed in Python 3.
 
 The :mod:`imageop` module contains some useful operations on images. It operates
 on images consisting of 8 or 32 bit pixels stored in Python strings.  This is
@@ -49,7 +49,7 @@ The module defines the following variables and functions:
 
 .. function:: grey2mono(image, width, height, threshold)
 
-   Convert a 8-bit deep greyscale image to a 1-bit deep image by thresholding all
+   Convert an 8-bit deep greyscale image to a 1-bit deep image by thresholding all
    the pixels.  The resulting image is tightly packed and is probably only useful
    as an argument to :func:`mono2grey`.
 

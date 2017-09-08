@@ -1,21 +1,13 @@
-try:
-    import idlelib.PyShell
-except ImportError:
-    # IDLE is not installed, but maybe PyShell is on sys.path:
-    try:
-        import PyShell
-    except ImportError:
-        raise
-    else:
-        import os
-        idledir = os.path.dirname(os.path.abspath(PyShell.__file__))
-        if idledir != os.getcwd():
-            # We're not in the IDLE directory, help the subprocess find run.py
-            pypath = os.environ.get('PYTHONPATH', '')
-            if pypath:
-                os.environ['PYTHONPATH'] = pypath + ':' + idledir
-            else:
-                os.environ['PYTHONPATH'] = idledir
-        PyShell.main()
-else:
-    idlelib.PyShell.main()
+import os.path
+import sys
+
+# Enable running IDLE with idlelib in a non-standard location.
+# This was once used to run development versions of IDLE.
+# Because PEP 434 declared idle.py a public interface,
+# removal should require deprecation.
+idlelib_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if idlelib_dir not in sys.path:
+    sys.path.insert(0, idlelib_dir)
+
+from idlelib.PyShell import main  # This is subject to change
+main()

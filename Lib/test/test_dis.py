@@ -12,11 +12,11 @@ def _f(a):
     return 1
 
 dis_f = """\
- %-4d         0 LOAD_FAST                0 (a)
+%3d           0 LOAD_FAST                0 (a)
               3 PRINT_ITEM
               4 PRINT_NEWLINE
 
- %-4d         5 LOAD_CONST               1 (1)
+%3d           5 LOAD_CONST               1 (1)
               8 RETURN_VALUE
 """%(_f.func_code.co_firstlineno + 1,
      _f.func_code.co_firstlineno + 2)
@@ -28,17 +28,17 @@ def bug708901():
         pass
 
 dis_bug708901 = """\
- %-4d         0 SETUP_LOOP              23 (to 26)
+%3d           0 SETUP_LOOP              23 (to 26)
               3 LOAD_GLOBAL              0 (range)
               6 LOAD_CONST               1 (1)
 
- %-4d         9 LOAD_CONST               2 (10)
+%3d           9 LOAD_CONST               2 (10)
              12 CALL_FUNCTION            2
              15 GET_ITER
         >>   16 FOR_ITER                 6 (to 25)
              19 STORE_FAST               0 (res)
 
- %-4d        22 JUMP_ABSOLUTE           16
+%3d          22 JUMP_ABSOLUTE           16
         >>   25 POP_BLOCK
         >>   26 LOAD_CONST               0 (None)
              29 RETURN_VALUE
@@ -53,30 +53,25 @@ def bug1333982(x=[]):
     pass
 
 dis_bug1333982 = """\
- %-4d         0 LOAD_CONST               1 (0)
-              3 JUMP_IF_TRUE            41 (to 47)
-              6 POP_TOP
-              7 LOAD_GLOBAL              0 (AssertionError)
-             10 BUILD_LIST               0
-             13 DUP_TOP
-             14 STORE_FAST               1 (_[1])
-             17 LOAD_FAST                0 (x)
-             20 GET_ITER
-        >>   21 FOR_ITER                13 (to 37)
-             24 STORE_FAST               2 (s)
-             27 LOAD_FAST                1 (_[1])
-             30 LOAD_FAST                2 (s)
-             33 LIST_APPEND
-             34 JUMP_ABSOLUTE           21
-        >>   37 DELETE_FAST              1 (_[1])
+%3d           0 LOAD_CONST               1 (0)
+              3 POP_JUMP_IF_TRUE        41
+              6 LOAD_GLOBAL              0 (AssertionError)
+              9 BUILD_LIST               0
+             12 LOAD_FAST                0 (x)
+             15 GET_ITER
+        >>   16 FOR_ITER                12 (to 31)
+             19 STORE_FAST               1 (s)
+             22 LOAD_FAST                1 (s)
+             25 LIST_APPEND              2
+             28 JUMP_ABSOLUTE           16
 
- %-4d        40 LOAD_CONST               2 (1)
-             43 BINARY_ADD
-             44 RAISE_VARARGS            2
-        >>   47 POP_TOP
+%3d     >>   31 LOAD_CONST               2 (1)
+             34 BINARY_ADD
+             35 CALL_FUNCTION            1
+             38 RAISE_VARARGS            1
 
- %-4d        48 LOAD_CONST               0 (None)
-             51 RETURN_VALUE
+%3d     >>   41 LOAD_CONST               0 (None)
+             44 RETURN_VALUE
 """%(bug1333982.func_code.co_firstlineno + 1,
      bug1333982.func_code.co_firstlineno + 2,
      bug1333982.func_code.co_firstlineno + 3)
@@ -109,8 +104,8 @@ class DisTests(unittest.TestCase):
 
     def test_opmap(self):
         self.assertEqual(dis.opmap["STOP_CODE"], 0)
-        self.assertEqual(dis.opmap["LOAD_CONST"] in dis.hasconst, True)
-        self.assertEqual(dis.opmap["STORE_NAME"] in dis.hasname, True)
+        self.assertIn(dis.opmap["LOAD_CONST"], dis.hasconst)
+        self.assertIn(dis.opmap["STORE_NAME"], dis.hasname)
 
     def test_opname(self):
         self.assertEqual(dis.opname[dis.opmap["LOAD_FAST"]], "LOAD_FAST")
@@ -130,6 +125,8 @@ class DisTests(unittest.TestCase):
         # so fails if the tests are run with -O.  Skip this test then.
         if __debug__:
             self.do_disassembly_test(bug1333982, dis_bug1333982)
+        else:
+            self.skipTest('need asserts, run without -O')
 
     def test_big_linenos(self):
         def func(count):

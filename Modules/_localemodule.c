@@ -32,10 +32,6 @@ This software comes with no warranty. Use at your own risk.
 #include <wchar.h>
 #endif
 
-#if defined(__APPLE__)
-#include <CoreFoundation/CoreFoundation.h>
-#endif
-
 #if defined(MS_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -61,9 +57,10 @@ copy_grouping(char* s)
     int i;
     PyObject *result, *val = NULL;
 
-    if (s[0] == '\0')
+    if (s[0] == '\0') {
         /* empty string: no grouping at all */
         return PyList_New(0);
+    }
 
     for (i = 0; s[i] != '\0' && s[i] != CHAR_MAX; i++)
         ; /* nothing */
@@ -165,7 +162,15 @@ PyLocale_setlocale(PyObject* self, PyObject* args)
     PyObject *result_object;
 
     if (!PyArg_ParseTuple(args, "i|z:setlocale", &category, &locale))
-    return NULL;
+        return NULL;
+
+#if defined(MS_WINDOWS)
+    if (category < LC_MIN || category > LC_MAX)
+    {
+        PyErr_SetString(Error, "invalid locale category");
+        return NULL;
+    }
+#endif
 
     if (locale) {
         /* set locale */
@@ -310,7 +315,7 @@ PyLocale_strcoll(PyObject* self, PyObject* args)
     }
     /* Convert the unicode strings to wchar[]. */
     len1 = PyUnicode_GET_SIZE(os1) + 1;
-    ws1 = PyMem_MALLOC(len1 * sizeof(wchar_t));
+    ws1 = PyMem_NEW(wchar_t, len1);
     if (!ws1) {
         PyErr_NoMemory();
         goto done;
@@ -319,7 +324,7 @@ PyLocale_strcoll(PyObject* self, PyObject* args)
         goto done;
     ws1[len1 - 1] = 0;
     len2 = PyUnicode_GET_SIZE(os2) + 1;
-    ws2 = PyMem_MALLOC(len2 * sizeof(wchar_t));
+    ws2 = PyMem_NEW(wchar_t, len2);
     if (!ws2) {
         PyErr_NoMemory();
         goto done;
@@ -409,38 +414,6 @@ PyLocale_getdefaultlocale(PyObject* self)
     /* cannot determine the language code (very unlikely) */
     Py_INCREF(Py_None);
     return Py_BuildValue("Os", Py_None, encoding);
-}
-#endif
-
-#if defined(__APPLE__)
-/*
-** Find out what the current script is.
-** Donated by Fredrik Lundh.
-*/
-static char *mac_getscript(void)
-{
-    CFStringEncoding enc = CFStringGetSystemEncoding();
-    static CFStringRef name = NULL;
-    /* Return the code name for the encodings for which we have codecs. */
-    switch(enc) {
-    case kCFStringEncodingMacRoman: return "mac-roman";
-    case kCFStringEncodingMacGreek: return "mac-greek";
-    case kCFStringEncodingMacCyrillic: return "mac-cyrillic";
-    case kCFStringEncodingMacTurkish: return "mac-turkish";
-    case kCFStringEncodingMacIcelandic: return "mac-icelandic";
-    /* XXX which one is mac-latin2? */
-    }
-    if (!name) {
-        /* This leaks an object. */
-        name = CFStringConvertEncodingToIANACharSetName(enc);
-    }
-    return (char *)CFStringGetCStringPtr(name, 0);
-}
-
-static PyObject*
-PyLocale_getdefaultlocale(PyObject* self)
-{
-    return Py_BuildValue("Os", Py_None, mac_getscript());
 }
 #endif
 
@@ -567,12 +540,12 @@ PyLocale_nl_langinfo(PyObject* self, PyObject* args)
        returns numeric values in the char* return value, which would
        crash PyString_FromString.  */
     for (i = 0; langinfo_constants[i].name; i++)
-    if (langinfo_constants[i].value == item) {
-        /* Check NULL as a workaround for GNU libc's returning NULL
-           instead of an empty string for nl_langinfo(ERA).  */
-        const char *result = nl_langinfo(item);
-        return PyString_FromString(result != NULL ? result : "");
-    }
+        if (langinfo_constants[i].value == item) {
+            /* Check NULL as a workaround for GNU libc's returning NULL
+               instead of an empty string for nl_langinfo(ERA).  */
+            const char *result = nl_langinfo(item);
+            return PyString_FromString(result != NULL ? result : "");
+        }
     PyErr_SetString(PyExc_ValueError, "unsupported langinfo constant");
     return NULL;
 }
@@ -689,7 +662,7 @@ static struct PyMethodDef PyLocale_Methods[] = {
    METH_VARARGS, strcoll__doc__},
   {"strxfrm", (PyCFunction) PyLocale_strxfrm,
    METH_VARARGS, strxfrm__doc__},
-#if defined(MS_WINDOWS) || defined(__APPLE__)
+#if defined(MS_WINDOWS)
   {"_getdefaultlocale", (PyCFunction) PyLocale_getdefaultlocale, METH_NOARGS},
 #endif
 #ifdef HAVE_LANGINFO_H

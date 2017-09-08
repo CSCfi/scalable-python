@@ -2,6 +2,7 @@
 
 from test import test_support, mapping_tests
 import UserDict
+import warnings
 
 d0 = {}
 d1 = {"one": 1}
@@ -29,7 +30,9 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         self.assertEqual(UserDict.UserDict(one=1, two=2), d2)
         # item sequence constructor
         self.assertEqual(UserDict.UserDict([('one',1), ('two',2)]), d2)
-        self.assertEqual(UserDict.UserDict(dict=[('one',1), ('two',2)]), d2)
+        with test_support.check_warnings((".*'dict'.*",
+                                          PendingDeprecationWarning)):
+            self.assertEqual(UserDict.UserDict(dict=[('one',1), ('two',2)]), d2)
         # both together
         self.assertEqual(UserDict.UserDict([('one',1), ('two',2)], two=3, three=5), d3)
 
@@ -38,9 +41,9 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         self.assertEqual(UserDict.UserDict().fromkeys('one two'.split()), d4)
         self.assertEqual(UserDict.UserDict.fromkeys('one two'.split(), 1), d5)
         self.assertEqual(UserDict.UserDict().fromkeys('one two'.split(), 1), d5)
-        self.assert_(u1.fromkeys('one two'.split()) is not u1)
-        self.assert_(isinstance(u1.fromkeys('one two'.split()), UserDict.UserDict))
-        self.assert_(isinstance(u2.fromkeys('one two'.split()), UserDict.IterableUserDict))
+        self.assertTrue(u1.fromkeys('one two'.split()) is not u1)
+        self.assertIsInstance(u1.fromkeys('one two'.split()), UserDict.UserDict)
+        self.assertIsInstance(u2.fromkeys('one two'.split()), UserDict.IterableUserDict)
 
         # Test __repr__
         self.assertEqual(str(u0), str(d0))
@@ -95,10 +98,10 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
 
         # Test has_key and "in".
         for i in u2.keys():
-            self.assertTrue(i in u2)
+            self.assertIn(i, u2)
             self.assertEqual(i in u1, i in d1)
             self.assertEqual(i in u0, i in d0)
-            with test_support._check_py3k_warnings():
+            with test_support.check_py3k_warnings():
                 self.assertTrue(u2.has_key(i))
                 self.assertEqual(u1.has_key(i), d1.has_key(i))
                 self.assertEqual(u0.has_key(i), d0.has_key(i))
@@ -132,7 +135,7 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         # Test setdefault
         t = UserDict.UserDict()
         self.assertEqual(t.setdefault("x", 42), 42)
-        self.assert_(t.has_key("x"))
+        self.assertTrue(t.has_key("x"))
         self.assertEqual(t.setdefault("x", 23), 42)
 
         # Test pop
@@ -148,6 +151,36 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         self.assertEqual(t.popitem(), ("x", 42))
         self.assertRaises(KeyError, t.popitem)
 
+    def test_init(self):
+        for kw in 'self', 'other', 'iterable':
+            self.assertEqual(list(UserDict.UserDict(**{kw: 42}).items()),
+                             [(kw, 42)])
+        self.assertEqual(list(UserDict.UserDict({}, dict=42).items()),
+                         [('dict', 42)])
+        self.assertEqual(list(UserDict.UserDict({}, dict=None).items()),
+                         [('dict', None)])
+        with test_support.check_warnings((".*'dict'.*",
+                                          PendingDeprecationWarning)):
+            self.assertEqual(list(UserDict.UserDict(dict={'a': 42}).items()),
+                             [('a', 42)])
+        self.assertRaises(TypeError, UserDict.UserDict, 42)
+        self.assertRaises(TypeError, UserDict.UserDict, (), ())
+        self.assertRaises(TypeError, UserDict.UserDict.__init__)
+
+    def test_update(self):
+        for kw in 'self', 'other', 'iterable':
+            d = UserDict.UserDict()
+            d.update(**{kw: 42})
+            self.assertEqual(list(d.items()), [(kw, 42)])
+        d = UserDict.UserDict()
+        with test_support.check_warnings((".*'dict'.*",
+                                          PendingDeprecationWarning)):
+            d.update(dict={'a': 42})
+        self.assertEqual(list(d.items()), [('a', 42)])
+        self.assertRaises(TypeError, UserDict.UserDict().update, 42)
+        self.assertRaises(TypeError, UserDict.UserDict().update, {}, {})
+        self.assertRaises(TypeError, UserDict.UserDict.update)
+
     def test_missing(self):
         # Make sure UserDict doesn't have a __missing__ method
         self.assertEqual(hasattr(UserDict, "__missing__"), False)
@@ -155,15 +188,15 @@ class UserDictTest(mapping_tests.TestHashMappingProtocol):
         # (D) subclass defines __missing__ method returning a value
         # (E) subclass defines __missing__ method raising RuntimeError
         # (F) subclass sets __missing__ instance variable (no effect)
-        # (G) subclass doesn't define __missing__ at a all
+        # (G) subclass doesn't define __missing__ at all
         class D(UserDict.UserDict):
             def __missing__(self, key):
                 return 42
         d = D({1: 2, 3: 4})
         self.assertEqual(d[1], 2)
         self.assertEqual(d[3], 4)
-        self.assert_(2 not in d)
-        self.assert_(2 not in d.keys())
+        self.assertNotIn(2, d)
+        self.assertNotIn(2, d.keys())
         self.assertEqual(d[2], 42)
         class E(UserDict.UserDict):
             def __missing__(self, key):
@@ -270,12 +303,12 @@ class UserDictMixinTest(mapping_tests.TestMappingProtocol):
 
         ## Now, test the DictMixin methods one by one
         # has_key
-        self.assert_(s.has_key(10))
-        self.assert_(not s.has_key(20))
+        self.assertTrue(s.has_key(10))
+        self.assertTrue(not s.has_key(20))
 
         # __contains__
-        self.assert_(10 in s)
-        self.assert_(20 not in s)
+        self.assertIn(10, s)
+        self.assertNotIn(20, s)
 
         # __iter__
         self.assertEqual([k for k in s], [10, 30])
@@ -310,7 +343,7 @@ class UserDictMixinTest(mapping_tests.TestMappingProtocol):
 
         # pop
         self.assertEqual(s.pop(10), 'ten')
-        self.assert_(10 not in s)
+        self.assertNotIn(10, s)
         s[10] = 'ten'
         self.assertEqual(s.pop("x", 1), 1)
         s["x"] = 42
@@ -318,7 +351,7 @@ class UserDictMixinTest(mapping_tests.TestMappingProtocol):
 
         # popitem
         k, v = s.popitem()
-        self.assert_(k not in s)
+        self.assertNotIn(k, s)
         s[k] = v
 
         # clear

@@ -2,9 +2,10 @@ import os
 import unittest
 import random
 from test import test_support
-import thread
+thread = test_support.import_module('thread')
 import time
 import sys
+import weakref
 
 from test import lock_tests
 
@@ -64,44 +65,89 @@ class ThreadRunningTests(BasicThreadTest):
 
     def test_stack_size(self):
         # Various stack size tests.
-        self.assertEquals(thread.stack_size(), 0, "intial stack size is not 0")
+        self.assertEqual(thread.stack_size(), 0, "initial stack size is not 0")
 
         thread.stack_size(0)
-        self.assertEquals(thread.stack_size(), 0, "stack_size not reset to default")
+        self.assertEqual(thread.stack_size(), 0, "stack_size not reset to default")
 
-        if os.name not in ("nt", "os2", "posix"):
-            return
-
-        tss_supported = True
+    @unittest.skipIf(os.name not in ("nt", "os2", "posix"), 'test meant for nt, os2, and posix')
+    def test_nt_and_posix_stack_size(self):
         try:
             thread.stack_size(4096)
         except ValueError:
             verbose_print("caught expected ValueError setting "
                             "stack_size(4096)")
         except thread.error:
-            tss_supported = False
-            verbose_print("platform does not support changing thread stack "
-                            "size")
+            self.skipTest("platform does not support changing thread stack "
+                          "size")
 
-        if tss_supported:
-            fail_msg = "stack_size(%d) failed - should succeed"
-            for tss in (262144, 0x100000, 0):
-                thread.stack_size(tss)
-                self.assertEquals(thread.stack_size(), tss, fail_msg % tss)
-                verbose_print("successfully set stack_size(%d)" % tss)
+        fail_msg = "stack_size(%d) failed - should succeed"
+        for tss in (262144, 0x100000, 0):
+            thread.stack_size(tss)
+            self.assertEqual(thread.stack_size(), tss, fail_msg % tss)
+            verbose_print("successfully set stack_size(%d)" % tss)
 
-            for tss in (262144, 0x100000):
-                verbose_print("trying stack_size = (%d)" % tss)
-                self.next_ident = 0
-                self.created = 0
-                for i in range(NUMTASKS):
-                    self.newtask()
+        for tss in (262144, 0x100000):
+            verbose_print("trying stack_size = (%d)" % tss)
+            self.next_ident = 0
+            self.created = 0
+            for i in range(NUMTASKS):
+                self.newtask()
 
-                verbose_print("waiting for all tasks to complete")
-                self.done_mutex.acquire()
-                verbose_print("all tasks done")
+            verbose_print("waiting for all tasks to complete")
+            self.done_mutex.acquire()
+            verbose_print("all tasks done")
 
-            thread.stack_size(0)
+        thread.stack_size(0)
+
+    def test__count(self):
+        # Test the _count() function.
+        orig = thread._count()
+        mut = thread.allocate_lock()
+        mut.acquire()
+        started = []
+        def task():
+            started.append(None)
+            mut.acquire()
+            mut.release()
+        thread.start_new_thread(task, ())
+        while not started:
+            time.sleep(0.01)
+        self.assertEqual(thread._count(), orig + 1)
+        # Allow the task to finish.
+        mut.release()
+        # The only reliable way to be sure that the thread ended from the
+        # interpreter's point of view is to wait for the function object to be
+        # destroyed.
+        done = []
+        wr = weakref.ref(task, lambda _: done.append(None))
+        del task
+        while not done:
+            time.sleep(0.01)
+        self.assertEqual(thread._count(), orig)
+
+    def test_save_exception_state_on_error(self):
+        # See issue #14474
+        def task():
+            started.release()
+            raise SyntaxError
+        def mywrite(self, *args):
+            try:
+                raise ValueError
+            except ValueError:
+                pass
+            real_write(self, *args)
+        c = thread._count()
+        started = thread.allocate_lock()
+        with test_support.captured_output("stderr") as stderr:
+            real_write = stderr.write
+            stderr.write = mywrite
+            started.acquire()
+            thread.start_new_thread(task, ())
+            started.acquire()
+            while thread._count() > c:
+                time.sleep(0.01)
+        self.assertIn("Traceback", stderr.getvalue())
 
 
 class Barrier:
@@ -174,7 +220,10 @@ class TestForkInThread(unittest.TestCase):
     def setUp(self):
         self.read_fd, self.write_fd = os.pipe()
 
-    def _test_forkinthread(self):
+    @unittest.skipIf(sys.platform.startswith('win'),
+                     "This test is only appropriate for POSIX-like systems.")
+    @test_support.reap_threads
+    def test_forkinthread(self):
         def thread1():
             try:
                 pid = os.fork() # fork in a thread
@@ -184,16 +233,18 @@ class TestForkInThread(unittest.TestCase):
             if pid == 0: # child
                 os.close(self.read_fd)
                 os.write(self.write_fd, "OK")
-                sys.exit(0)
+                # Exiting the thread normally in the child process can leave
+                # any additional threads (such as the one started by
+                # importing _tkinter) still running, and this can prevent
+                # the half-zombie child process from being cleaned up. See
+                # Issue #26456.
+                os._exit(0)
             else: # parent
                 os.close(self.write_fd)
 
         thread.start_new_thread(thread1, ())
         self.assertEqual(os.read(self.read_fd, 2), "OK",
                          "Unable to fork() in thread")
-
-    if not sys.platform.startswith('win'):
-        test_forkinthread = _test_forkinthread
 
     def tearDown(self):
         try:

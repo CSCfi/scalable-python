@@ -8,9 +8,12 @@
 
 .. note::
    The :mod:`Cookie` module has been renamed to :mod:`http.cookies` in Python
-   3.0.  The :term:`2to3` tool will automatically adapt imports when converting
-   your sources to 3.0.
+   3.  The :term:`2to3` tool will automatically adapt imports when converting
+   your sources to Python 3.
 
+**Source code:** :source:`Lib/Cookie.py`
+
+--------------
 
 The :mod:`Cookie` module defines classes for abstracting the concept of
 cookies, an HTTP state management mechanism. It supports both simple string-only
@@ -19,8 +22,14 @@ cookie value.
 
 The module formerly strictly applied the parsing rules described in the
 :rfc:`2109` and :rfc:`2068` specifications.  It has since been discovered that
-MSIE 3.0x doesn't follow the character rules outlined in those specs.  As a
-result, the parsing rules used are a bit less strict.
+MSIE 3.0x doesn't follow the character rules outlined in those specs and also
+many current day browsers and servers have relaxed parsing rules when comes to
+Cookie handling.  As a result, the parsing rules used are a bit less strict.
+
+The character set, :data:`string.ascii_letters`, :data:`string.digits` and
+``!#$%&'*+-.^_`|~`` denote the set of valid characters allowed by this module
+in Cookie name (as :attr:`~Morsel.key`).
+
 
 .. note::
 
@@ -73,11 +82,11 @@ result, the parsing rules used are a bit less strict.
       The same security warning from :class:`SerialCookie` applies here.
 
 A further security note is warranted.  For backwards compatibility, the
-:mod:`Cookie` module exports a class named :class:`Cookie` which is just an
-alias for :class:`SmartCookie`.  This is probably a mistake and will likely be
-removed in a future version.  You should not use the :class:`Cookie` class in
-your applications, for the same reason why you should not use the
-:class:`SerialCookie` class.
+:mod:`Cookie` module exports a class named :class:`~Cookie.Cookie` which is
+just an alias for :class:`SmartCookie`.  This is probably a mistake and will
+likely be removed in a future version.  You should not use the
+:class:`~Cookie.Cookie` class in your applications, for the same reason why
+you should not use the :class:`SerialCookie` class.
 
 
 .. seealso::
@@ -107,7 +116,7 @@ Cookie Objects
 
    Return an encoded value. *val* can be any type, but return value must be a
    string. This method does nothing in :class:`BaseCookie` --- it exists so it can
-   be overridden
+   be overridden.
 
    In general, it should be the case that :meth:`value_encode` and
    :meth:`value_decode` are inverses on the range of *value_decode*.
@@ -164,7 +173,7 @@ Morsel Objects
    * ``version``
    * ``httponly``
 
-   The attribute :attr:`httponly` specifies that the cookie is only transfered
+   The attribute :attr:`httponly` specifies that the cookie is only transferred
    in HTTP requests, and is not accessible through JavaScript. This is intended
    to mitigate some forms of cross-site scripting.
 
@@ -191,7 +200,7 @@ Morsel Objects
 
 .. method:: Morsel.set(key, value, coded_value)
 
-   Set the *key*, *value* and *coded_value* members.
+   Set the *key*, *value* and *coded_value* attributes.
 
 
 .. method:: Morsel.isReservedKey(K)
@@ -235,8 +244,6 @@ The following example demonstrates how to use the :mod:`Cookie` module.
 
    >>> import Cookie
    >>> C = Cookie.SimpleCookie()
-   >>> C = Cookie.SerialCookie()
-   >>> C = Cookie.SmartCookie()
    >>> C["fig"] = "newton"
    >>> C["sugar"] = "wafer"
    >>> print C # generate HTTP headers
@@ -245,28 +252,27 @@ The following example demonstrates how to use the :mod:`Cookie` module.
    >>> print C.output() # same thing
    Set-Cookie: fig=newton
    Set-Cookie: sugar=wafer
-   >>> C = Cookie.SmartCookie()
+   >>> C = Cookie.SimpleCookie()
    >>> C["rocky"] = "road"
    >>> C["rocky"]["path"] = "/cookie"
    >>> print C.output(header="Cookie:")
    Cookie: rocky=road; Path=/cookie
    >>> print C.output(attrs=[], header="Cookie:")
    Cookie: rocky=road
-   >>> C = Cookie.SmartCookie()
+   >>> C = Cookie.SimpleCookie()
    >>> C.load("chips=ahoy; vienna=finger") # load from a string (HTTP header)
    >>> print C
    Set-Cookie: chips=ahoy
    Set-Cookie: vienna=finger
-   >>> C = Cookie.SmartCookie()
+   >>> C = Cookie.SimpleCookie()
    >>> C.load('keebler="E=everybody; L=\\"Loves\\"; fudge=\\012;";')
    >>> print C
    Set-Cookie: keebler="E=everybody; L=\"Loves\"; fudge=\012;"
-   >>> C = Cookie.SmartCookie()
+   >>> C = Cookie.SimpleCookie()
    >>> C["oreo"] = "doublestuff"
    >>> C["oreo"]["path"] = "/"
    >>> print C
    Set-Cookie: oreo=doublestuff; Path=/
-   >>> C = Cookie.SmartCookie()
    >>> C["twix"] = "none for you"
    >>> C["twix"].value
    'none for you'
@@ -280,6 +286,8 @@ The following example demonstrates how to use the :mod:`Cookie` module.
    >>> print C
    Set-Cookie: number=7
    Set-Cookie: string=seven
+   >>> # SerialCookie and SmartCookie are deprecated
+   >>> # using it can cause security loopholes in your code.
    >>> C = Cookie.SerialCookie()
    >>> C["number"] = 7
    >>> C["string"] = "seven"

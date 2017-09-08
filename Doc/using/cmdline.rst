@@ -1,4 +1,7 @@
-.. highlightlang:: none
+.. highlightlang:: sh
+
+.. ATTENTION: You probably should update Misc/python.man, too, if you modify
+   this file.
 
 .. _using-on-general:
 
@@ -38,7 +41,7 @@ additional methods of invocation:
 
 * When called with standard input connected to a tty device, it prompts for
   commands and executes them until an EOF (an end-of-file character, you can
-  produce that with *Ctrl-D* on UNIX or *Ctrl-Z, Enter* on Windows) is read.
+  produce that with :kbd:`Ctrl-D` on UNIX or :kbd:`Ctrl-Z, Enter` on Windows) is read.
 * When called with a file name argument or with a file as standard input, it
   reads and executes a script from that file.
 * When called with a directory name argument, it reads and executes an
@@ -78,6 +81,12 @@ source.
    the implementation may not always enforce this (e.g. it may allow you to
    use a name that includes a hyphen).
 
+   Package names are also permitted. When a package name is supplied instead
+   of a normal module, the interpreter will execute ``<pkg>.__main__`` as
+   the main module. This behaviour is deliberately similar to the handling
+   of directories and zipfiles that are passed to the interpreter as the
+   script argument.
+
    .. note::
 
       This option cannot be used with built-in modules and extension modules
@@ -97,7 +106,7 @@ source.
 
    .. seealso::
       :func:`runpy.run_module`
-         The actual implementation of this feature.
+         Equivalent functionality directly available to Python code
 
       :pep:`338` -- Executing modules as scripts
 
@@ -105,6 +114,11 @@ source.
 
    .. versionchanged:: 2.5
       The named module can now be located inside a package.
+
+   .. versionchanged:: 2.7
+      Supply the package name to run a ``__main__`` submodule.
+      sys.argv[0] is now set to ``"-m"`` while searching for the module
+      (it was previously incorrectly set to ``"-c"``)
 
 
 .. describe:: -
@@ -115,6 +129,10 @@ source.
    If this option is given, the first element of :data:`sys.argv` will be
    ``"-"`` and the current directory will be added to the start of
    :data:`sys.path`.
+
+   .. seealso::
+      :func:`runpy.run_path`
+         Equivalent functionality directly available to Python code
 
 
 .. describe:: <script>
@@ -206,6 +224,7 @@ Miscellaneous options
    raises an exception.  See also :envvar:`PYTHONINSPECT`.
 
 
+.. _using-on-optimizations:
 .. cmdoption:: -O
 
    Turn on basic optimizations.  This changes the filename extension for
@@ -264,7 +283,8 @@ Miscellaneous options
 
 .. cmdoption:: -s
 
-   Don't add user site directory to sys.path
+   Don't add the :data:`user site-packages directory <site.USER_SITE>` to
+   :data:`sys.path`.
 
    .. versionadded:: 2.6
 
@@ -283,7 +303,7 @@ Miscellaneous options
 
    Issue a warning when a source file mixes tabs and spaces for indentation in a
    way that makes it depend on the worth of a tab expressed in spaces.  Issue an
-   error when the option is given twice (:option:`-tt`).
+   error when the option is given twice (:option:`!-tt`).
 
 
 .. cmdoption:: -u
@@ -303,7 +323,7 @@ Miscellaneous options
 
    Print a message each time a module is initialized, showing the place
    (filename or built-in module) from which it is loaded.  When given twice
-   (:option:`-vv`), print a message for each file that is checked for when
+   (:option:`!-vv`), print a message for each file that is checked for when
    searching for a module.  Also provides information on module cleanup at exit.
    See also :envvar:`PYTHONVERBOSE`.
 
@@ -323,6 +343,10 @@ Miscellaneous options
    one option, the action for the last matching option is performed.  Invalid
    :option:`-W` options are ignored (though, a warning message is printed about
    invalid options when the first warning is issued).
+
+   Starting from Python 2.7, :exc:`DeprecationWarning` and its descendants
+   are ignored by default.  The :option:`!-Wd` option can be used to re-enable
+   them.
 
    Warnings can also be controlled from within a Python program using the
    :mod:`warnings` module.
@@ -354,7 +378,7 @@ Miscellaneous options
    the remaining fields.  Empty fields match all values; trailing empty fields
    may be omitted.  The *message* field matches the start of the warning message
    printed; this match is case-insensitive.  The *category* field matches the
-   warning category.  This must be a class name; the match test whether the
+   warning category.  This must be a class name; the match tests whether the
    actual warning category of the message is a subclass of the specified warning
    category.  The full class name must be given.  The *module* field matches the
    (fully-qualified) module name; this match is case-sensitive.  The *line*
@@ -366,6 +390,8 @@ Miscellaneous options
 
       :pep:`230` -- Warning framework
 
+      :envvar:`PYTHONWARNINGS`
+
 
 .. cmdoption:: -x
 
@@ -376,18 +402,9 @@ Miscellaneous options
 
 .. cmdoption:: -3
 
-   Warn about Python 3.x incompatibilities which cannot be fixed trivially by
-   :ref:`2to3 <2to3-reference>`. Among these are:
-
-   * :meth:`dict.has_key`
-   * :func:`apply`
-   * :func:`callable`
-   * :func:`coerce`
-   * :func:`execfile`
-   * :func:`reduce`
-   * :func:`reload`
-
-   Using these will emit a :exc:`DeprecationWarning`.
+   Warn about Python 3.x possible incompatibilities by emitting a
+   :exc:`DeprecationWarning` for features that are removed or significantly
+   changed in Python 3.
 
    .. versionadded:: 2.6
 
@@ -398,7 +415,7 @@ Options you shouldn't use
 
    Reserved for use by Jython_.
 
-.. _Jython: http://jython.org
+.. _Jython: http://www.jython.org/
 
 .. cmdoption:: -U
 
@@ -421,7 +438,10 @@ Options you shouldn't use
 Environment variables
 ---------------------
 
-These environment variables influence Python's behavior.
+These environment variables influence Python's behavior, they are processed
+before the command-line switches other than -E.  It is customary that
+command-line switches override environmental variables where there is a
+conflict.
 
 .. envvar:: PYTHONHOME
 
@@ -514,13 +534,14 @@ These environment variables influence Python's behavior.
 .. envvar:: PYTHONCASEOK
 
    If this is set, Python ignores case in :keyword:`import` statements.  This
-   only works on Windows.
+   only works on Windows, OS X, OS/2, and RiscOS.
 
 
 .. envvar:: PYTHONDONTWRITEBYTECODE
 
    If this is set, Python won't try to write ``.pyc`` or ``.pyo`` files on the
-   import of source modules.
+   import of source modules.  This is equivalent to specifying the :option:`-B`
+   option.
 
    .. versionadded:: 2.6
 
@@ -556,7 +577,8 @@ These environment variables influence Python's behavior.
 
 .. envvar:: PYTHONNOUSERSITE
 
-   If this is set, Python won't add the user site directory to sys.path
+   If this is set, Python won't add the :data:`user site-packages directory
+   <site.USER_SITE>` to :data:`sys.path`.
 
    .. versionadded:: 2.6
 
@@ -567,7 +589,10 @@ These environment variables influence Python's behavior.
 
 .. envvar:: PYTHONUSERBASE
 
-   Sets the base directory for the user site directory
+   Defines the :data:`user base directory <site.USER_BASE>`, which is used to
+   compute the path of the :data:`user site-packages directory <site.USER_SITE>`
+   and :ref:`Distutils installation paths <inst-alt-install-user>` for ``python
+   setup.py install --user``.
 
    .. versionadded:: 2.6
 
@@ -582,12 +607,29 @@ These environment variables influence Python's behavior.
    value instead of the value got through the C runtime.  Only works on
    Mac OS X.
 
+.. envvar:: PYTHONWARNINGS
+
+   This is equivalent to the :option:`-W` option. If set to a comma
+   separated string, it is equivalent to specifying :option:`-W` multiple
+   times.
+
+
+.. envvar:: PYTHONHTTPSVERIFY
+
+   If this environment variable is set specifically to ``0``, then it is
+   equivalent to implicitly calling :func:`ssl._https_verify_certificates` with
+   ``enable=False`` when :mod:`ssl` is first imported.
+
+   Refer to the documentation of :func:`ssl._https_verify_certificates` for
+   details.
+
+   .. versionadded:: 2.7.12
 
 Debug-mode variables
 ~~~~~~~~~~~~~~~~~~~~
 
 Setting these variables only has an effect in a debug build of Python, that is,
-if Python was configured with the :option:`--with-pydebug` build option.
+if Python was configured with the ``--with-pydebug`` build option.
 
 .. envvar:: PYTHONTHREADDEBUG
 
@@ -606,4 +648,3 @@ if Python was configured with the :option:`--with-pydebug` build option.
 
    If set, Python will print memory allocation statistics every time a new
    object arena is created, and on shutdown.
-

@@ -29,7 +29,7 @@ p_macro = re.compile(
   '^[\t ]*#[\t ]*define[\t ]+'
   '([a-zA-Z0-9_]+)\(([_a-zA-Z][_a-zA-Z0-9]*)\)[\t ]+')
 
-p_include = re.compile('^[\t ]*#[\t ]*include[\t ]+<([a-zA-Z0-9_/\.]+)')
+p_include = re.compile('^[\t ]*#[\t ]*include[\t ]+<([^>\n]+)>')
 
 p_comment = re.compile(r'/\*([^*]+|\*+[^/])*(\*+/)?')
 p_cpp_comment = re.compile('//.*')
@@ -58,6 +58,12 @@ except KeyError:
                 raise KeyError
         except KeyError:
             searchdirs=['/usr/include']
+            try:
+                searchdirs.insert(0, os.path.join('/usr/include',
+                                                  os.environ['MULTIARCH']))
+            except KeyError:
+                pass
+
 
 def main():
     global filedict
@@ -95,7 +101,7 @@ def pytify(body):
     for p in ignores:
         body = p.sub(' ', body)
     # replace char literals by ord(...)
-    body = p_char.sub('ord(\\0)', body)
+    body = p_char.sub("ord('\\1')", body)
     # Compute negative hexadecimal constants
     start = 0
     UMAX = 2*(sys.maxint+1)

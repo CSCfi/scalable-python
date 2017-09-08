@@ -106,10 +106,18 @@ PyErr_GivenExceptionMatches(PyObject *err, PyObject *exc)
         err = PyExceptionInstance_Class(err);
 
     if (PyExceptionClass_Check(err) && PyExceptionClass_Check(exc)) {
-        int res = 0;
+        int res = 0, reclimit;
         PyObject *exception, *value, *tb;
         PyErr_Fetch(&exception, &value, &tb);
+        /* Temporarily bump the recursion limit, so that in the most
+           common case PyObject_IsSubclass will not raise a recursion
+           error we have to ignore anyway.  Don't do it when the limit
+           is already insanely high, to avoid overflow */
+        reclimit = Py_GetRecursionLimit();
+        if (reclimit < (1 << 30))
+            Py_SetRecursionLimit(reclimit + 5);
         res = PyObject_IsSubclass(err, exc);
+        Py_SetRecursionLimit(reclimit);
         /* This function must not fail, so print the error here */
         if (res == -1) {
             PyErr_WriteUnraisable(err);
@@ -219,14 +227,11 @@ finally:
     tstate = PyThreadState_GET();
     if (++tstate->recursion_depth > Py_GetRecursionLimit()) {
         --tstate->recursion_depth;
-        /* throw away the old exception... */
-        Py_DECREF(*exc);
-        Py_DECREF(*val);
-        /* ... and use the recursion error instead */
-        *exc = PyExc_RuntimeError;
-        *val = PyExc_RecursionErrorInst;
-        Py_INCREF(*exc);
-        Py_INCREF(*val);
+        /* throw away the old exception and use the recursion error instead */
+        Py_INCREF(PyExc_RuntimeError);
+        Py_SETREF(*exc, PyExc_RuntimeError);
+        Py_INCREF(PyExc_RecursionErrorInst);
+        Py_SETREF(*val, PyExc_RecursionErrorInst);
         /* just keeping the old traceback */
         return;
     }
@@ -253,6 +258,26 @@ void
 PyErr_Clear(void)
 {
     PyErr_Restore(NULL, NULL, NULL);
+}
+
+/* Restore previously fetched exception if an exception is not set,
+   otherwise drop previously fetched exception.
+   Like _PyErr_ChainExceptions() in Python 3, but doesn't set the context.
+ */
+void
+_PyErr_ReplaceException(PyObject *exc, PyObject *val, PyObject *tb)
+{
+    if (exc == NULL)
+        return;
+
+    if (PyErr_Occurred()) {
+        Py_DECREF(exc);
+        Py_XDECREF(val);
+        Py_XDECREF(tb);
+    }
+    else {
+        PyErr_Restore(exc, val, tb);
+    }
 }
 
 /* Convenience functions to set a type error exception and return 0 */
@@ -365,7 +390,7 @@ PyErr_SetFromErrnoWithFilenameObject(PyObject *exc, PyObject *filenameObject)
 
 
 PyObject *
-PyErr_SetFromErrnoWithFilename(PyObject *exc, char *filename)
+PyErr_SetFromErrnoWithFilename(PyObject *exc, const char *filename)
 {
     PyObject *name = filename ? PyString_FromString(filename) : NULL;
     PyObject *result = PyErr_SetFromErrnoWithFilenameObject(exc, name);
@@ -373,9 +398,9 @@ PyErr_SetFromErrnoWithFilename(PyObject *exc, char *filename)
     return result;
 }
 
-#ifdef Py_WIN_WIDE_FILENAMES
+#ifdef MS_WINDOWS
 PyObject *
-PyErr_SetFromErrnoWithUnicodeFilename(PyObject *exc, Py_UNICODE *filename)
+PyErr_SetFromErrnoWithUnicodeFilename(PyObject *exc, const Py_UNICODE *filename)
 {
     PyObject *name = filename ?
                      PyUnicode_FromUnicode(filename, wcslen(filename)) :
@@ -384,7 +409,7 @@ PyErr_SetFromErrnoWithUnicodeFilename(PyObject *exc, Py_UNICODE *filename)
     Py_XDECREF(name);
     return result;
 }
-#endif /* Py_WIN_WIDE_FILENAMES */
+#endif /* MS_WINDOWS */
 
 PyObject *
 PyErr_SetFromErrno(PyObject *exc)
@@ -454,7 +479,6 @@ PyObject *PyErr_SetExcFromWindowsErrWithFilename(
     return ret;
 }
 
-#ifdef Py_WIN_WIDE_FILENAMES
 PyObject *PyErr_SetExcFromWindowsErrWithUnicodeFilename(
     PyObject *exc,
     int ierr,
@@ -469,7 +493,6 @@ PyObject *PyErr_SetExcFromWindowsErrWithUnicodeFilename(
     Py_XDECREF(name);
     return ret;
 }
-#endif /* Py_WIN_WIDE_FILENAMES */
 
 PyObject *PyErr_SetExcFromWindowsErr(PyObject *exc, int ierr)
 {
@@ -493,7 +516,6 @@ PyObject *PyErr_SetFromWindowsErrWithFilename(
     return result;
 }
 
-#ifdef Py_WIN_WIDE_FILENAMES
 PyObject *PyErr_SetFromWindowsErrWithUnicodeFilename(
     int ierr,
     const Py_UNICODE *filename)
@@ -507,11 +529,10 @@ PyObject *PyErr_SetFromWindowsErrWithUnicodeFilename(
     Py_XDECREF(name);
     return result;
 }
-#endif /* Py_WIN_WIDE_FILENAMES */
 #endif /* MS_WINDOWS */
 
 void
-_PyErr_BadInternalCall(char *filename, int lineno)
+_PyErr_BadInternalCall(const char *filename, int lineno)
 {
     PyErr_Format(PyExc_SystemError,
                  "%s:%d: bad argument to internal function",
@@ -602,6 +623,40 @@ PyErr_NewException(char *name, PyObject *base, PyObject *dict)
     return result;
 }
 
+
+/* Create an exception with docstring */
+PyObject *
+PyErr_NewExceptionWithDoc(char *name, char *doc, PyObject *base, PyObject *dict)
+{
+    int result;
+    PyObject *ret = NULL;
+    PyObject *mydict = NULL; /* points to the dict only if we create it */
+    PyObject *docobj;
+
+    if (dict == NULL) {
+        dict = mydict = PyDict_New();
+        if (dict == NULL) {
+            return NULL;
+        }
+    }
+
+    if (doc != NULL) {
+        docobj = PyString_FromString(doc);
+        if (docobj == NULL)
+            goto failure;
+        result = PyDict_SetItemString(dict, "__doc__", docobj);
+        Py_DECREF(docobj);
+        if (result < 0)
+            goto failure;
+    }
+
+    ret = PyErr_NewException(name, base, dict);
+  failure:
+    Py_XDECREF(mydict);
+    return ret;
+}
+
+
 /* Call when an exception has occurred but there is no way for Python
    to handle it.  Examples: exception in __del__ or during GC. */
 void
@@ -641,12 +696,18 @@ PyErr_WriteUnraisable(PyObject *obj)
                 PyFile_WriteString(className, f);
             if (v && v != Py_None) {
                 PyFile_WriteString(": ", f);
-                PyFile_WriteObject(v, f, 0);
+                if (PyFile_WriteObject(v, f, 0) < 0) {
+                    PyErr_Clear();
+                    PyFile_WriteString("<exception repr() failed>", f);
+                }
             }
             Py_XDECREF(moduleName);
         }
         PyFile_WriteString(" in ", f);
-        PyFile_WriteObject(obj, f, 0);
+        if (PyFile_WriteObject(obj, f, 0) < 0) {
+            PyErr_Clear();
+            PyFile_WriteString("<object repr() failed>", f);
+        }
         PyFile_WriteString(" ignored\n", f);
         PyErr_Clear(); /* Just in case */
     }

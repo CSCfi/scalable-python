@@ -7,6 +7,10 @@
 
 .. index:: module: pickle
 
+**Source code:** :source:`Lib/shelve.py`
+
+--------------
+
 A "shelf" is a persistent, dictionary-like object.  The difference with "dbm"
 databases is that the values (not the keys!) in a shelf can be essentially
 arbitrary Python objects --- anything that the :mod:`pickle` module can handle.
@@ -14,7 +18,7 @@ This includes most class instances, recursive data types, and objects containing
 lots of shared  sub-objects.  The keys are ordinary strings.
 
 
-.. function:: open(filename[, flag='c'[, protocol=None[, writeback=False]]])
+.. function:: open(filename, flag='c', protocol=None, writeback=False)
 
    Open a persistent dictionary.  The filename specified is the base filename for
    the underlying database.  As a side-effect, an extension may be added to the
@@ -31,7 +35,7 @@ lots of shared  sub-objects.  The keys are ordinary strings.
    Because of Python semantics, a shelf cannot know when a mutable
    persistent-dictionary entry is modified.  By default modified objects are
    written *only* when assigned to the shelf (see :ref:`shelve-example`).  If the
-   optional *writeback* parameter is set to *True*, all entries accessed are also
+   optional *writeback* parameter is set to ``True``, all entries accessed are also
    cached in memory, and written back on :meth:`~Shelf.sync` and
    :meth:`~Shelf.close`; this can make it handier to mutate mutable entries in
    the persistent dictionary, but, if many entries are accessed, it can consume
@@ -40,15 +44,21 @@ lots of shared  sub-objects.  The keys are ordinary strings.
    determine which accessed entries are mutable, nor which ones were actually
    mutated).
 
-   .. note::
+   Like file objects, shelve objects should be closed explicitly to ensure
+   that the persistent data is flushed to disk.
 
-      Do not rely on the shelf being closed automatically; always call
-      :meth:`close` explicitly when you don't need it any more, or use a
-      :keyword:`with` statement with :func:`contextlib.closing`.
+.. warning::
 
+   Because the :mod:`shelve` module is backed by :mod:`pickle`, it is insecure
+   to load a shelf from an untrusted source.  Like with pickle, loading a shelf
+   can execute arbitrary code.
 
-Shelf objects support all methods supported by dictionaries.  This eases the
-transition from dictionary based scripts to those requiring persistent storage.
+Shelf objects support most of the methods supported by dictionaries.  This
+eases the transition from dictionary based scripts to those requiring
+persistent storage.
+
+Note, the Python 3 transition methods (:meth:`~dict.viewkeys`,
+:meth:`~dict.viewvalues`, and :meth:`~dict.viewitems`) are not supported.
 
 Two additional methods are supported:
 
@@ -67,7 +77,7 @@ Two additional methods are supported:
 
 .. seealso::
 
-   `Persistent dictionary recipe <http://code.activestate.com/recipes/576642/>`_
+   `Persistent dictionary recipe <https://code.activestate.com/recipes/576642/>`_
    with widely supported storage formats and having the speed of native
    dictionaries.
 
@@ -96,7 +106,7 @@ Restrictions
   implementation used.
 
 
-.. class:: Shelf(dict[, protocol=None[, writeback=False]])
+.. class:: Shelf(dict, protocol=None, writeback=False)
 
    A subclass of :class:`UserDict.DictMixin` which stores pickled values in the
    *dict* object.
@@ -114,7 +124,7 @@ Restrictions
    memory and make sync and close take a long time.
 
 
-.. class:: BsdDbShelf(dict[, protocol=None[, writeback=False]])
+.. class:: BsdDbShelf(dict, protocol=None, writeback=False)
 
    A subclass of :class:`Shelf` which exposes :meth:`first`, :meth:`!next`,
    :meth:`previous`, :meth:`last` and :meth:`set_location` which are available in
@@ -125,7 +135,7 @@ Restrictions
    the same interpretation as for the :class:`Shelf` class.
 
 
-.. class:: DbfilenameShelf(filename[, flag='c'[, protocol=None[, writeback=False]]])
+.. class:: DbfilenameShelf(filename, flag='c', protocol=None, writeback=False)
 
    A subclass of :class:`Shelf` which accepts a *filename* instead of a dict-like
    object.  The underlying file will be opened using :func:`anydbm.open`.  By

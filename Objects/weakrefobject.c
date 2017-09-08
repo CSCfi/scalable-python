@@ -52,9 +52,8 @@ clear_weakref(PyWeakReference *self)
 {
     PyObject *callback = self->wr_callback;
 
-    if (PyWeakref_GET_OBJECT(self) != Py_None) {
-        PyWeakReference **list = GET_WEAKREFS_LISTPTR(
-            PyWeakref_GET_OBJECT(self));
+    if (self->wr_object != Py_None) {
+        PyWeakReference **list = GET_WEAKREFS_LISTPTR(self->wr_object);
 
         if (*list == self)
             /* If 'self' is the end of the list (and thus self->wr_next == NULL)
@@ -168,13 +167,21 @@ weakref_repr(PyWeakReference *self)
                 PyErr_Clear();
         else if (PyString_Check(nameobj))
                 name = PyString_AS_STRING(nameobj);
-        PyOS_snprintf(buffer, sizeof(buffer),
-                      name ? "<weakref at %p; to '%.50s' at %p (%s)>"
-                           : "<weakref at %p; to '%.50s' at %p>",
-                      self,
-                      Py_TYPE(PyWeakref_GET_OBJECT(self))->tp_name,
-                      PyWeakref_GET_OBJECT(self),
-                      name);
+        if (name != NULL) {
+            PyOS_snprintf(buffer, sizeof(buffer),
+                          "<weakref at %p; to '%.50s' at %p (%s)>",
+                          self,
+                          Py_TYPE(PyWeakref_GET_OBJECT(self))->tp_name,
+                          PyWeakref_GET_OBJECT(self),
+                          name);
+        }
+        else {
+            PyOS_snprintf(buffer, sizeof(buffer),
+                          "<weakref at %p; to '%.50s' at %p>",
+                          self,
+                          Py_TYPE(PyWeakref_GET_OBJECT(self))->tp_name,
+                          PyWeakref_GET_OBJECT(self));
+        }
         Py_XDECREF(nameobj);
     }
     return PyString_FromString(buffer);
@@ -187,15 +194,19 @@ weakref_repr(PyWeakReference *self)
 static PyObject *
 weakref_richcompare(PyWeakReference* self, PyWeakReference* other, int op)
 {
-    if (op != Py_EQ || self->ob_type != other->ob_type) {
+    if ((op != Py_EQ && op != Py_NE) || self->ob_type != other->ob_type) {
         Py_INCREF(Py_NotImplemented);
         return Py_NotImplemented;
     }
     if (PyWeakref_GET_OBJECT(self) == Py_None
         || PyWeakref_GET_OBJECT(other) == Py_None) {
-        PyObject *res = self==other ? Py_True : Py_False;
-        Py_INCREF(res);
-        return res;
+        int res = (self == other);
+        if (op == Py_NE)
+            res = !res;
+        if (res)
+            Py_RETURN_TRUE;
+        else
+            Py_RETURN_FALSE;
     }
     return PyObject_RichCompare(PyWeakref_GET_OBJECT(self),
                                 PyWeakref_GET_OBJECT(other), op);
@@ -260,7 +271,6 @@ static int
 parse_weakref_init_args(char *funcname, PyObject *args, PyObject *kwargs,
                         PyObject **obp, PyObject **callbackp)
 {
-    /* XXX Should check that kwargs == NULL or is empty. */
     return PyArg_UnpackTuple(args, funcname, 1, 2, obp, callbackp);
 }
 
@@ -322,6 +332,9 @@ static int
 weakref___init__(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     PyObject *tmp;
+
+    if (!_PyArg_NoKeywords("ref()", kwargs))
+        return -1;
 
     if (parse_weakref_init_args("__init__", args, kwargs, &tmp, &tmp))
         return 0;
@@ -913,11 +926,9 @@ PyObject_ClearWeakRefs(PyObject *object)
     if (*list != NULL) {
         PyWeakReference *current = *list;
         Py_ssize_t count = _PyWeakref_GetWeakrefCount(current);
-        int restore_error = PyErr_Occurred() ? 1 : 0;
         PyObject *err_type, *err_value, *err_tb;
 
-        if (restore_error)
-            PyErr_Fetch(&err_type, &err_value, &err_tb);
+        PyErr_Fetch(&err_type, &err_value, &err_tb);
         if (count == 1) {
             PyObject *callback = current->wr_callback;
 
@@ -935,8 +946,7 @@ PyObject_ClearWeakRefs(PyObject *object)
 
             tuple = PyTuple_New(count * 2);
             if (tuple == NULL) {
-                if (restore_error)
-                    PyErr_Fetch(&err_type, &err_value, &err_tb);
+                _PyErr_ReplaceException(err_type, err_value, err_tb);
                 return;
             }
 
@@ -967,7 +977,7 @@ PyObject_ClearWeakRefs(PyObject *object)
             }
             Py_DECREF(tuple);
         }
-        if (restore_error)
-            PyErr_Restore(err_type, err_value, err_tb);
+        assert(!PyErr_Occurred());
+        PyErr_Restore(err_type, err_value, err_tb);
     }
 }
