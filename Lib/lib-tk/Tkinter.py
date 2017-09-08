@@ -1634,7 +1634,7 @@ class Tk(Misc, Wm):
         # ensure that self.tk is always _something_.
         self.tk = None
         if baseName is None:
-            import sys, os
+            import os
             baseName = os.path.basename(sys.argv[0])
             baseName, ext = os.path.splitext(baseName)
             if ext not in ('.py', '.pyc', '.pyo'):
@@ -1643,7 +1643,9 @@ class Tk(Misc, Wm):
         self.tk = _tkinter.create(screenName, baseName, className, interactive, wantobjects, useTk, sync, use)
         if useTk:
             self._loadtk()
-        self.readprofile(baseName, className)
+        if not sys.flags.ignore_environment:
+            # Issue #16248: Honor the -E flag to avoid code injection.
+            self.readprofile(baseName, className)
     def loadtk(self):
         if not self._tkloaded:
             self.tk.loadtk()
