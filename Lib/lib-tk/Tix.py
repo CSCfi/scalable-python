@@ -1,6 +1,6 @@
 # -*-mode: python; fill-column: 75; tab-width: 8; coding: iso-latin-1-unix -*-
 #
-# $Id: Tix.py 72279 2009-05-04 16:06:12Z walter.doerwald $
+# $Id$
 #
 # Tix.py -- Tix widget wrappers.
 #

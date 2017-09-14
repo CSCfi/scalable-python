@@ -31,7 +31,7 @@
  *   PERFORMANCE OF THIS SOFTWARE.
  */
 
-/* CVS: $Id: _cursesmodule.c 83743 2010-08-05 16:35:53Z matthias.klose $ */
+/* CVS: $Id$ */
 
 /*
 

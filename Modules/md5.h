@@ -21,7 +21,7 @@
   ghost@aladdin.com
 
  */
-/* $Id: md5.h 43594 2006-04-03 16:27:50Z matthias.klose $ */
+/* $Id$ */
 /*
   Independent implementation of MD5 (RFC 1321).
 

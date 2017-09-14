@@ -1,4 +1,4 @@
-# $Id: hashlib.py 66093 2008-08-31 16:34:18Z gregory.p.smith $
+# $Id$
 #
 #  Copyright (C) 2005   Gregory P. Smith (greg@krypto.org)
 #  Licensed to PSF under a Contributor Agreement.

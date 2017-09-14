@@ -10,7 +10,7 @@
 /*
  * Written by Thomas Heller, May 2000
  *
- * $Id: install.c 81031 2010-05-09 15:15:40Z antoine.pitrou $
+ * $Id$
  */
 
 /*

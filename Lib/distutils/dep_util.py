@@ -6,7 +6,7 @@ timestamp dependency analysis."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: dep_util.py 58049 2007-09-08 00:34:17Z skip.montanaro $"
+__revision__ = "$Id$"
 
 import os
 from distutils.errors import DistutilsFileError

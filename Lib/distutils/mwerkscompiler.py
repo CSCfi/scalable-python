@@ -6,7 +6,7 @@ Windows."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: mwerkscompiler.py 55881 2007-06-11 05:28:45Z neal.norwitz $"
+__revision__ = "$Id$"
 
 import sys, os, string
 from types import *

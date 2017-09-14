@@ -4,7 +4,7 @@
 Implements the Distutils 'install_lib' command
 (install all Python modules)."""
 
-__revision__ = "$Id: install_lib.py 81308 2010-05-18 23:37:50Z georg.brandl $"
+__revision__ = "$Id$"
 
 import os
 from types import IntType

@@ -5,7 +5,7 @@ for the Distutils compiler abstraction model."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: ccompiler.py 77425 2010-01-11 22:54:57Z tarek.ziade $"
+__revision__ = "$Id$"
 
 import sys, os, re
 from types import *

@@ -6,7 +6,7 @@ dnl NOTE: autoconf 2.64 doesn't seem to work (use 2.61).
 # Set VERSION so we only need to edit in one place (i.e., here)
 m4_define(PYTHON_VERSION, 2.6)
 
-AC_REVISION($Revision: 81510 $)
+AC_REVISION($Revision$)
 AC_PREREQ(2.61)
 AC_INIT(python, PYTHON_VERSION, http://www.python.org/python-bugs)
 AC_CONFIG_SRCDIR([Include/object.h])

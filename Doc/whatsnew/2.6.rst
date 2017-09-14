@@ -8,7 +8,7 @@
 :Release: |release|
 :Date: |today|
 
-.. $Id: 2.6.rst 81887 2010-06-11 01:07:06Z andrew.kuchling $
+.. $Id$
    Rules for maintenance:
 
    * Anyone can add text to this document.  Do not spend very much time

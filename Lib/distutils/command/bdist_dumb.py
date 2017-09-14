@@ -6,7 +6,7 @@ $exec_prefix)."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: bdist_dumb.py 61000 2008-02-23 17:40:11Z christian.heimes $"
+__revision__ = "$Id$"
 
 import os
 from distutils.core import Command

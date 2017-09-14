@@ -95,7 +95,7 @@
 #include "bsddb.h"
 #undef COMPILING_BSDDB_C
 
-static char *rcs_id = "$Id: _bsddb.c 81031 2010-05-09 15:15:40Z antoine.pitrou $";
+static char *rcs_id = "$Id$";
 
 /* --------------------------------------------------------------------- */
 /* Various macro definitions */

@@ -1103,7 +1103,7 @@ _check_and_flush (FILE *stream)
 
 /* Subversion branch and revision management */
 static const char _patchlevel_revision[] = PY_PATCHLEVEL_REVISION;
-static const char headurl[] = "$HeadURL: http://svn.python.org/projects/python/tags/r267/Python/sysmodule.c $";
+static const char headurl[] = "$HeadURL$";
 static int svn_initialized;
 static char patchlevel_revision[50]; /* Just the number */
 static char branch[50];
@@ -1224,6 +1224,7 @@ static PyStructSequence_Field flags_fields[] = {
     {"unicode",                 "-U"},
     /* {"skip_first",                   "-x"}, */
     {"bytes_warning", "-b"},
+    {"hash_randomization", "-R"},
     {0}
 };
 
@@ -1232,9 +1233,9 @@ static PyStructSequence_Desc flags_desc = {
     flags__doc__,       /* doc */
     flags_fields,       /* fields */
 #ifdef RISCOS
-    16
+    17
 #else
-    15
+    16
 #endif
 };
 
@@ -1271,6 +1272,7 @@ make_flags(void)
     SetFlag(Py_UnicodeFlag);
     /* SetFlag(skipfirstline); */
     SetFlag(Py_BytesWarningFlag);
+    SetFlag(Py_HashRandomizationFlag);
 #undef SetFlag
 
     if (PyErr_Occurred()) {

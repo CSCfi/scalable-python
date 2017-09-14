@@ -30,13 +30,13 @@
 """Read from and write to tar format archives.
 """
 
-__version__ = "$Revision: 81664 $"
+__version__ = "$Revision$"
 # $Source$
 
 version     = "0.9.0"
 __author__  = "Lars Gustäbel (lars@gustaebel.de)"
-__date__    = "$Date: 2010-06-03 06:07:08 -0400 (Thu, 03 Jun 2010) $"
-__cvsid__   = "$Id: tarfile.py 81664 2010-06-03 10:07:08Z lars.gustaebel $"
+__date__    = "$Date$"
+__cvsid__   = "$Id$"
 __credits__ = "Gustavo Niemeyer, Niels Gustäbel, Richard Townsend."
 
 #---------

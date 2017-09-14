@@ -1,4 +1,4 @@
-Scalable Python 1.1 (based on Python 2.6.7)
+Scalable Python 1.x (based on Python 2.6.9)
 ---
 
   Copyright (c) 2011-2016  CSC - IT Center for Science Ltd.
@@ -80,10 +80,11 @@ By default, the MPI related parts in special interpreter are build by "mpicc".
 Alternate MPI compiler can be specified with variable MPICC.
 
 ---- Start of the original Python README ----
-This is Python version 2.6.7
+This is Python version 2.6.9
 ============================
 
-Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
+Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
+              2011, 2012, 2013
 Python Software Foundation.
 All rights reserved.
 

@@ -5,7 +5,7 @@ distribution)."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: bdist.py 62197 2008-04-07 01:53:39Z mark.hammond $"
+__revision__ = "$Id$"
 
 import os
 from types import *

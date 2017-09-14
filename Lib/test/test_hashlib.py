@@ -1,6 +1,6 @@
 # Test hashlib module
 #
-# $Id: test_hashlib.py 79216 2010-03-21 19:16:28Z georg.brandl $
+# $Id$
 #
 #  Copyright (C) 2005-2010   Gregory P. Smith (greg@krypto.org)
 #  Licensed to PSF under a Contributor Agreement.

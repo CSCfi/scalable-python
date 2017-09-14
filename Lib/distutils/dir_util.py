@@ -4,7 +4,7 @@ Utility functions for manipulating directories and directory trees."""
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: dir_util.py 83648 2010-08-03 07:51:50Z ezio.melotti $"
+__revision__ = "$Id$"
 
 import os, sys
 from types import *

@@ -1,6 +1,6 @@
 #
 # XML-RPC CLIENT LIBRARY
-# $Id: xmlrpclib.py 65467 2008-08-04 00:50:11Z brett.cannon $
+# $Id$
 #
 # an XML-RPC client interface for Python.
 #

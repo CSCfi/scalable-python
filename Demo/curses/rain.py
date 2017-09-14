@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# $Id: rain.py 46625 2006-06-03 23:02:15Z andrew.kuchling $
+# $Id$
 #
 # somebody should probably check the randrange()s...
 

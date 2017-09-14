@@ -1,7 +1,7 @@
 /*
  /  Author: Sam Rushing <rushing@nightmare.com>
  /  Hacked for Unix by AMK
- /  $Id: mmapmodule.c 81031 2010-05-09 15:15:40Z antoine.pitrou $
+ /  $Id$
 
  / Modified to support mmap with offset - to map a 'window' of a file
  /   Author:  Yotam Medini  yotamm@mellanox.co.il

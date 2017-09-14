@@ -10,7 +10,7 @@ additional features:
 
 # This module should be kept compatible with Python 2.1.
 
-__revision__ = "$Id: fancy_getopt.py 60923 2008-02-21 18:18:37Z guido.van.rossum $"
+__revision__ = "$Id$"
 
 import sys, string, re
 from types import *
