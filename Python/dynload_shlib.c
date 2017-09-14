@@ -69,36 +69,36 @@ static int nhandles = 0;
 dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
                                     const char *pathname, FILE *fp)
 {
-	dl_funcptr p;
-	void *handle;
-	char funcname[258];
-	char pathbuf[260];
-	int dlopenflags=0;
+    dl_funcptr p;
+    void *handle;
+    char funcname[258];
+    char pathbuf[260];
+    int dlopenflags=0;
 
-	if (strchr(pathname, '/') == NULL) {
-		/* Prefix bare filename with "./" */
-		PyOS_snprintf(pathbuf, sizeof(pathbuf), "./%-.255s", pathname);
-		pathname = pathbuf;
-	}
+    if (strchr(pathname, '/') == NULL) {
+        /* Prefix bare filename with "./" */
+        PyOS_snprintf(pathbuf, sizeof(pathbuf), "./%-.255s", pathname);
+        pathname = pathbuf;
+    }
 
-	PyOS_snprintf(funcname, sizeof(funcname), 
-		      LEAD_UNDERSCORE "init%.200s", shortname);
+    PyOS_snprintf(funcname, sizeof(funcname),
+                  LEAD_UNDERSCORE "init%.200s", shortname);
 
 #ifndef ENABLE_MPI
-	if (fp != NULL) {
-		int i;
-		struct stat statb;
-		fstat(fileno(fp), &statb);
-		for (i = 0; i < nhandles; i++) {
-			if (statb.st_dev == handles[i].dev &&
-			    statb.st_ino == handles[i].ino) {
-				p = (dl_funcptr) dlsym(handles[i].handle,
-						       funcname);
-				return p;
-			}
-		}
-		if (nhandles < 128) {
-			handles[nhandles].dev = statb.st_dev;
+    if (fp != NULL) {
+        int i;
+        struct stat statb;
+        fstat(fileno(fp), &statb);
+        for (i = 0; i < nhandles; i++) {
+            if (statb.st_dev == handles[i].dev &&
+                statb.st_ino == handles[i].ino) {
+                p = (dl_funcptr) dlsym(handles[i].handle,
+                                       funcname);
+                return p;
+            }
+        }
+        if (nhandles < 128) {
+            handles[nhandles].dev = statb.st_dev;
 #ifdef __VMS
             handles[nhandles].ino[0] = statb.st_ino[0];
             handles[nhandles].ino[1] = statb.st_ino[1];
@@ -106,8 +106,8 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 #else
             handles[nhandles].ino = statb.st_ino;
 #endif
-		}
-	}
+        }
+    }
 #endif
 
 #if !(defined(PYOS_OS2) && defined(PYCC_GCC))

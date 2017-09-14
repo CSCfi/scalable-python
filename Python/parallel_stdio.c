@@ -49,7 +49,7 @@ void init_io_wrappers(void)
 // Finalize wrapper stuff
 void finalize_io_wrappers(void)
 {
-  if (initialized) 
+  if (initialized)
     {
       MPI_Comm_free(&io_comm);
       fclose(fp_dummy);
@@ -124,7 +124,7 @@ FILE* __wrap_fopen(const char *filename, const char *modes)
         fp = NULL;
       else
         fp = fp_dummy;
-    } 
+    }
     // Store the "parallel" file pointer
     if (fp != NULL) {
       parallel_fps[current_fp] = fp;
@@ -152,7 +152,7 @@ int  __wrap_fclose(FILE *fp)
   int i = check_fp(fp);
   if ( i == current_fp && i > 0 )
     current_fp--;
-  if ( ! i || (rank == MASTER) ) 
+  if ( ! i || (rank == MASTER) )
   {
     x = fclose(fp);
   }
@@ -163,16 +163,16 @@ int  __wrap_fclose(FILE *fp)
 
 void  __wrap_setbuf(FILE *fp, char *buf)
 {
-  if ( ! check_fp(fp) || (rank == MASTER) ) 
+  if ( ! check_fp(fp) || (rank == MASTER) )
     setbuf(fp, buf);
 }
 
 int  __wrap_setvbuf(FILE *fp, char *buf, int type, size_t size)
 {
   int x;
-  if (check_fp(fp)) 
+  if (check_fp(fp))
   {
-    if (rank == MASTER) 
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
     fprintf(stderr, "[%d] (%d%d) setvbuf + send\n", rank,
@@ -191,14 +191,14 @@ int  __wrap_setvbuf(FILE *fp, char *buf, int type, size_t size)
 
 int  __wrap_flockfile(FILE *fp)
 {
-  if ( ! check_fp(fp) || (rank == MASTER) ) 
+  if ( ! check_fp(fp) || (rank == MASTER) )
     flockfile(fp);
   return 0;
 }
 
 int  __wrap_funlockfile(FILE *fp)
 {
-  if ( ! check_fp(fp) || (rank == MASTER) ) 
+  if ( ! check_fp(fp) || (rank == MASTER) )
     funlockfile(fp);
   return 0;
 }
@@ -206,9 +206,9 @@ int  __wrap_funlockfile(FILE *fp)
 int __wrap_ferror(FILE* fp)
 {
   int x;
-  if (check_fp(fp)) 
+  if (check_fp(fp))
   {
-    if (rank == MASTER) 
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
     fprintf(stderr, "[%d] (%d%d) ferror + send\n", rank,
@@ -228,9 +228,9 @@ int __wrap_ferror(FILE* fp)
 int __wrap_feof(FILE* fp)
 {
   int x;
-  if (check_fp(fp)) 
+  if (check_fp(fp))
   {
-    if (rank == MASTER) 
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
     fprintf(stderr, "[%d] (%d%d) feof + send\n", rank,
@@ -249,7 +249,7 @@ int __wrap_feof(FILE* fp)
 
 void  __wrap_clearerr(FILE *fp)
 {
-  if ( ! check_fp(fp) || (rank == MASTER) ) 
+  if ( ! check_fp(fp) || (rank == MASTER) )
     clearerr(fp);
 }
 
@@ -257,9 +257,9 @@ void  __wrap_clearerr(FILE *fp)
 int __wrap_fseek(FILE *fp, long offset, int origin)
 {
   int x;
-  if (check_fp(fp)) 
+  if (check_fp(fp))
   {
-    if (rank == MASTER) 
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
     fprintf(stderr, "[%d] (%d%d) fseek + send\n", rank,
@@ -278,7 +278,7 @@ int __wrap_fseek(FILE *fp, long offset, int origin)
 
 void __wrap_rewind(FILE *fp)
 {
-  if (! check_fp(fp) || (rank == MASTER)) 
+  if (! check_fp(fp) || (rank == MASTER))
     rewind(fp);
 }
 
@@ -286,8 +286,8 @@ void __wrap_rewind(FILE *fp)
 int __wrap_ungetc(int c, FILE* fp)
 {
   int x;
-  if (enabled) 
-    if (rank == MASTER) 
+  if (enabled)
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
     fprintf(stderr, "[%d] (%d%d) ungetc + send\n", rank,
@@ -306,9 +306,9 @@ int __wrap_ungetc(int c, FILE* fp)
 int __wrap_fflush(FILE *fp)
 {
   int x;
-  if (check_fp(fp)) 
+  if (check_fp(fp))
   {
-    if (rank == MASTER) 
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
     fprintf(stderr, "[%d] (%d%d) fflush + send\n", rank,
@@ -328,8 +328,8 @@ int __wrap_fflush(FILE *fp)
 int __wrap_fgetpos ( FILE * fp, fpos_t * pos )
 {
   int x;
-  if (enabled) 
-    if (rank == MASTER) 
+  if (enabled)
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
     fprintf(stderr, "[%d] (%d%d) fgetpos + send\n", rank,
@@ -348,8 +348,8 @@ int __wrap_fgetpos ( FILE * fp, fpos_t * pos )
 int __wrap_fsetpos ( FILE * fp, const fpos_t * pos )
 {
   int x;
-  if (enabled) 
-    if (rank == MASTER) 
+  if (enabled)
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
     fprintf(stderr, "[%d] (%d%d) fsetpos + send\n", rank,
@@ -368,8 +368,8 @@ int __wrap_fsetpos ( FILE * fp, const fpos_t * pos )
 long int __wrap_ftell ( FILE * fp )
 {
   long x;
-  if (enabled) 
-    if (rank == MASTER) 
+  if (enabled)
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
     fprintf(stderr, "[%d] (%d%d) ftell + send\n", rank,
@@ -389,7 +389,7 @@ long int __wrap_ftell ( FILE * fp )
 int __wrap_getc(FILE *fp)
 {
   int x;
-  if (enabled) 
+  if (enabled)
     if (rank == MASTER )
     {
 #ifdef DEBUG_MPI
@@ -411,7 +411,7 @@ int __wrap_getc(FILE *fp)
 int __wrap_getc_unlocked(FILE *fp)
 {
   int x;
-  if (enabled) 
+  if (enabled)
     if (rank == MASTER )
     {
 #ifdef DEBUG_MPI
@@ -434,8 +434,8 @@ int __wrap_fread(void *ptr, size_t size, size_t n, FILE* fp)
 {
   // Is it OK to use just int for the size of data read?
   int x;
-  if (enabled) 
-    if (rank == MASTER) 
+  if (enabled)
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
       fprintf(stderr, "[%d] (%d%d) fread + send\n", rank,
@@ -459,8 +459,8 @@ char *__wrap_fgets(char *str, int num, FILE* fp)
 {
   char* s;
   int s_is_null=0;
-  if (enabled) 
-    if (rank == MASTER) 
+  if (enabled)
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
       fprintf(stderr, "[%d] (%d%d) fgets + send\n", rank,
@@ -485,8 +485,8 @@ char *__wrap_fgets(char *str, int num, FILE* fp)
         s = NULL;
       else
         MPI_Bcast(s, num, MPI_BYTE, MASTER, io_comm);
-    }    
-  else   
+    }
+  else
     s = fgets(str, num, fp);
   return s;
 }
@@ -494,7 +494,7 @@ char *__wrap_fgets(char *str, int num, FILE* fp)
 int __wrap_fgetc ( FILE * fp )
 {
   int x;
-  if (enabled) 
+  if (enabled)
     if (rank == MASTER )
     {
 #ifdef DEBUG_MPI
@@ -515,8 +515,8 @@ int __wrap_fstat(int fildes, struct stat *buf)
 {
   int size = sizeof(struct stat);
   int x;
-  if (enabled) 
-    if (rank == MASTER) 
+  if (enabled)
+    if (rank == MASTER)
     {
 #ifdef DEBUG_MPI
       fprintf(stderr, "[%d] (%d%d) fstat + send\n", rank,
