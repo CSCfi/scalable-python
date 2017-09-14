@@ -2207,7 +2207,7 @@ then
 			LINKFORSHARED="-Wl,--export-dynamic"
 		fi;;
 	SunOS/5*)
-		case $CC in
+		case $cc_family in
 		  gnu)
 		    if $CC -Xlinker --help 2>&1 | grep export-dynamic >/dev/null
 		    then
