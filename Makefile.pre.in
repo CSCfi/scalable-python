@@ -436,7 +436,6 @@ SERIAL_OBJS=	\
 		Objects/fileobject.o \
 		Parser/tokenizer.o \
 		Python/frozenmain.o \
-		Python/getmtime.o \
 		Python/import.o \
 		Python/marshal.o \
 		Python/parallel_stdio.o \
@@ -451,7 +450,6 @@ MPI_OBJS=	\
 		Objects/fileobject_mpi.o \
 		Parser/tokenizer_mpi.o \
 		Python/frozenmain_mpi.o \
-		Python/getmtime_mpi.o \
 		Python/import_mpi.o \
 		Python/marshal_mpi.o \
 		Python/parallel_stdio_mpi.o \
