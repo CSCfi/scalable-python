@@ -45,8 +45,10 @@ The :mod:`binascii` module defines the following functions:
 .. function:: b2a_base64(data)
 
    Convert binary data to a line of ASCII characters in base64 coding. The return
-   value is the converted line, including a newline char. The length of *data*
-   should be at most 57 to adhere to the base64 standard.
+   value is the converted line, including a newline char.  The newline is
+   added because the original use case for this function was to feed it a
+   series of 57 byte input lines to get output lines that conform to the
+   MIME-base64 standard.  Otherwise the output conforms to :rfc:`3548`.
 
 
 .. function:: a2b_qp(string[, header])
@@ -127,7 +129,7 @@ The :mod:`binascii` module defines the following functions:
    The return value is in the range [-2**31, 2**31-1]
    regardless of platform.  In the past the value would be signed on
    some platforms and unsigned on others.  Use & 0xffffffff on the
-   value if you want it to match 3.0 behavior.
+   value if you want it to match Python 3 behavior.
 
 .. versionchanged:: 3.0
    The return value is unsigned and in the range [0, 2**32-1]
@@ -165,7 +167,7 @@ The :mod:`binascii` module defines the following functions:
 .. seealso::
 
    Module :mod:`base64`
-      Support for base64 encoding used in MIME email messages.
+      Support for RFC compliant base64-style encoding in base 16, 32, and 64.
 
    Module :mod:`binhex`
       Support for the binhex format used on the Macintosh.

@@ -1,10 +1,12 @@
-#! /usr/bin/env python
 """Very simple test script for the SGI gl library extension module
     taken mostly from the documentation.
     Roger E. Masse
 """
-from test.test_support import verbose, TestSkipped
-import gl, GL, time
+import unittest
+from test.test_support import verbose, import_module
+import time
+gl = import_module('gl')
+GL = import_module('GL')
 
 glattrs = ['RGBcolor', 'RGBcursor', 'RGBmode', 'RGBrange', 'RGBwritemask',
 '__doc__', '__name__', 'addtopup', 'altgetmatrix', 'arc', 'arcf',
@@ -87,7 +89,7 @@ def test_main():
     try:
         display = os.environ['DISPLAY']
     except:
-        raise TestSkipped, "No $DISPLAY -- skipping gl test"
+        raise unittest.SkipTest, "No $DISPLAY -- skipping gl test"
 
     # touch all the attributes of gl without doing anything
     if verbose:

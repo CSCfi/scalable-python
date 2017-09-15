@@ -23,8 +23,10 @@ typedef struct {
     PyObject *co_filename;	/* string (where it was loaded from) */
     PyObject *co_name;		/* string (name, for reference) */
     int co_firstlineno;		/* first source line number */
-    PyObject *co_lnotab;	/* string (encoding addr<->lineno mapping) */
+    PyObject *co_lnotab;	/* string (encoding addr<->lineno mapping) See
+				   Objects/lnotab_notes.txt for details. */
     void *co_zombieframe;     /* for optimization only (see frameobject.c) */
+    PyObject *co_weakreflist;   /* to support weakrefs to code objects */
 } PyCodeObject;
 
 /* Masks for co_flags above */
@@ -68,8 +70,16 @@ PyAPI_DATA(PyTypeObject) PyCode_Type;
 /* Public interface */
 PyAPI_FUNC(PyCodeObject *) PyCode_New(
 	int, int, int, int, PyObject *, PyObject *, PyObject *, PyObject *,
-	PyObject *, PyObject *, PyObject *, PyObject *, int, PyObject *); 
+	PyObject *, PyObject *, PyObject *, PyObject *, int, PyObject *);
         /* same as struct above */
+
+/* Creates a new empty code object with the specified source location. */
+PyAPI_FUNC(PyCodeObject *)
+PyCode_NewEmpty(const char *filename, const char *funcname, int firstlineno);
+
+/* Return the line number associated with the specified bytecode index
+   in this code object.  If you just need the line number of a frame,
+   use PyFrame_GetLineNumber() instead. */
 PyAPI_FUNC(int) PyCode_Addr2Line(PyCodeObject *, int);
 
 /* for internal use only */
@@ -82,15 +92,20 @@ typedef struct _addr_pair {
         int ap_upper;
 } PyAddrPair;
 
-/* Check whether lasti (an instruction offset) falls outside bounds
-   and whether it is a line number that should be traced.  Returns
-   a line number if it should be traced or -1 if the line should not.
-
-   If lasti is not within bounds, updates bounds.
+/* Update *bounds to describe the first and one-past-the-last instructions in the
+   same line as lasti.  Return the number of that line.
 */
+PyAPI_FUNC(int) _PyCode_CheckLineNumber(PyCodeObject* co,
+                                        int lasti, PyAddrPair *bounds);
 
-PyAPI_FUNC(int) PyCode_CheckLineNumber(PyCodeObject* co,
-                                       int lasti, PyAddrPair *bounds);
+/* Create a comparable key used to compare constants taking in account the
+ * object type. It is used to make sure types are not coerced (e.g., float and
+ * complex) _and_ to distinguish 0.0 from -0.0 e.g. on IEEE platforms
+ *
+ * Return (type(obj), obj, ...): a tuple with variable size (at least 2 items)
+ * depending on the type and the value. The type is the first item to not
+ * compare bytes and str which can raise a BytesWarning exception. */
+PyAPI_FUNC(PyObject*) _PyCode_ConstantKey(PyObject *obj);
 
 PyAPI_FUNC(PyObject*) PyCode_Optimize(PyObject *code, PyObject* consts,
                                       PyObject *names, PyObject *lineno_obj);

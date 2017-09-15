@@ -1,4 +1,3 @@
-
 :mod:`SocketServer` --- A framework for network servers
 =======================================================
 
@@ -8,22 +7,43 @@
 .. note::
 
    The :mod:`SocketServer` module has been renamed to :mod:`socketserver` in
-   Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
+   Python 3.  The :term:`2to3` tool will automatically adapt imports when
+   converting your sources to Python 3.
 
+**Source code:** :source:`Lib/SocketServer.py`
+
+--------------
 
 The :mod:`SocketServer` module simplifies the task of writing network servers.
 
-There are four basic server classes: :class:`TCPServer` uses the Internet TCP
-protocol, which provides for continuous streams of data between the client and
-server.  :class:`UDPServer` uses datagrams, which are discrete packets of
-information that may arrive out of order or be lost while in transit.  The more
-infrequently used :class:`UnixStreamServer` and :class:`UnixDatagramServer`
-classes are similar, but use Unix domain sockets; they're not available on
-non-Unix platforms.  For more details on network programming, consult a book
-such as
-W. Richard Steven's UNIX Network Programming or Ralph Davis's Win32 Network
-Programming.
+There are four basic concrete server classes:
+
+
+.. class:: TCPServer(server_address, RequestHandlerClass, bind_and_activate=True)
+
+   This uses the Internet TCP protocol, which provides for
+   continuous streams of data between the client and server.
+   If *bind_and_activate* is true, the constructor automatically attempts to
+   invoke :meth:`~BaseServer.server_bind` and
+   :meth:`~BaseServer.server_activate`.  The other parameters are passed to
+   the :class:`BaseServer` base class.
+
+
+.. class:: UDPServer(server_address, RequestHandlerClass, bind_and_activate=True)
+
+   This uses datagrams, which are discrete packets of information that may
+   arrive out of order or be lost while in transit.  The parameters are
+   the same as for :class:`TCPServer`.
+
+
+.. class:: UnixStreamServer(server_address, RequestHandlerClass, bind_and_activate=True)
+           UnixDatagramServer(server_address, RequestHandlerClass, bind_and_activate=True)
+
+   These more infrequently used classes are similar to the TCP and
+   UDP classes, but use Unix domain sockets; they're not available on
+   non-Unix platforms.  The parameters are the same as for
+   :class:`TCPServer`.
+
 
 These four classes process requests :dfn:`synchronously`; each request must be
 completed before the next request can be started.  This isn't suitable if each
@@ -35,11 +55,14 @@ support asynchronous behaviour.
 
 Creating a server requires several steps.  First, you must create a request
 handler class by subclassing the :class:`BaseRequestHandler` class and
-overriding its :meth:`handle` method; this method will process incoming
+overriding its :meth:`~BaseRequestHandler.handle` method;
+this method will process incoming
 requests.  Second, you must instantiate one of the server classes, passing it
-the server's address and the request handler class.  Finally, call the
-:meth:`handle_request` or :meth:`serve_forever` method of the server object to
-process one or many requests.
+the server's address and the request handler class.  Then call the
+:meth:`~BaseServer.handle_request` or
+:meth:`~BaseServer.serve_forever` method of the server object to
+process one or many requests.  Finally, call :meth:`~BaseServer.server_close`
+to close the socket.
 
 When inheriting from :class:`ThreadingMixIn` for threaded connection behavior,
 you should explicitly declare how you want your threads to behave on an abrupt
@@ -78,18 +101,36 @@ Note that :class:`UnixDatagramServer` derives from :class:`UDPServer`, not from
 stream server is the address family, which is simply repeated in both Unix
 server classes.
 
-Forking and threading versions of each type of server can be created using the
-:class:`ForkingMixIn` and :class:`ThreadingMixIn` mix-in classes.  For instance,
-a threading UDP server class is created as follows::
 
-   class ThreadingUDPServer(ThreadingMixIn, UDPServer): pass
+.. class:: ForkingMixIn
+           ThreadingMixIn
 
-The mix-in class must come first, since it overrides a method defined in
-:class:`UDPServer`.  Setting the various member variables also changes the
-behavior of the underlying server mechanism.
+   Forking and threading versions of each type of server can be created
+   using these mix-in classes.  For instance, :class:`ThreadingUDPServer`
+   is created as follows::
+
+      class ThreadingUDPServer(ThreadingMixIn, UDPServer):
+          pass
+
+   The mix-in class comes first, since it overrides a method defined in
+   :class:`UDPServer`.  Setting the various attributes also changes the
+   behavior of the underlying server mechanism.
+
+   :class:`ForkingMixIn` and the Forking classes mentioned below are
+   only available on POSIX platforms that support :func:`~os.fork`.
+
+
+.. class:: ForkingTCPServer
+           ForkingUDPServer
+           ThreadingTCPServer
+           ThreadingUDPServer
+
+   These classes are pre-defined using the mix-in classes.
+
 
 To implement a service, you must derive a class from :class:`BaseRequestHandler`
-and redefine its :meth:`handle` method.  You can then run various versions of
+and redefine its :meth:`~BaseRequestHandler.handle` method.
+You can then run various versions of
 the service by combining one of the server classes with your request handler
 class.  The request handler class must be different for datagram or stream
 services.  This can be hidden by using the handler subclasses
@@ -111,16 +152,16 @@ has requested.  Here a threading or forking server is appropriate.
 In some cases, it may be appropriate to process part of a request synchronously,
 but to finish processing in a forked child depending on the request data.  This
 can be implemented by using a synchronous server and doing an explicit fork in
-the request handler class :meth:`handle` method.
+the request handler class :meth:`~BaseRequestHandler.handle` method.
 
 Another approach to handling multiple simultaneous requests in an environment
-that supports neither threads nor :func:`fork` (or where these are too expensive
-or inappropriate for the service) is to maintain an explicit table of partially
-finished requests and to use :func:`select` to decide which request to work on
-next (or whether to handle a new incoming request).  This is particularly
-important for stream services where each client can potentially be connected for
-a long time (if threads or subprocesses cannot be used). See :mod:`asyncore` for
-another way to manage this.
+that supports neither threads nor :func:`~os.fork` (or where these are too
+expensive or inappropriate for the service) is to maintain an explicit table of
+partially finished requests and to use :func:`~select.select` to decide which
+request to work on next (or whether to handle a new incoming request).  This is
+particularly important for stream services where each client can potentially be
+connected for a long time (if threads or subprocesses cannot be used). See
+:mod:`asyncore` for another way to manage this.
 
 .. XXX should data and methods be intermingled, or separate?
    how should the distinction between class and instance variables be drawn?
@@ -129,207 +170,230 @@ another way to manage this.
 Server Objects
 --------------
 
-.. class:: BaseServer
+.. class:: BaseServer(server_address, RequestHandlerClass)
 
    This is the superclass of all Server objects in the module.  It defines the
    interface, given below, but does not implement most of the methods, which is
-   done in subclasses.
+   done in subclasses.  The two parameters are stored in the respective
+   :attr:`server_address` and :attr:`RequestHandlerClass` attributes.
 
 
-.. method:: BaseServer.fileno()
+   .. method:: fileno()
 
-   Return an integer file descriptor for the socket on which the server is
-   listening.  This function is most commonly passed to :func:`select.select`, to
-   allow monitoring multiple servers in the same process.
+      Return an integer file descriptor for the socket on which the server is
+      listening.  This function is most commonly passed to :func:`select.select`, to
+      allow monitoring multiple servers in the same process.
 
 
-.. method:: BaseServer.handle_request()
+   .. method:: handle_request()
 
-   Process a single request.  This function calls the following methods in
-   order: :meth:`get_request`, :meth:`verify_request`, and
-   :meth:`process_request`.  If the user-provided :meth:`handle` method of the
-   handler class raises an exception, the server's :meth:`handle_error` method
-   will be called.  If no request is received within :attr:`self.timeout`
-   seconds, :meth:`handle_timeout` will be called and :meth:`handle_request`
-   will return.
+      Process a single request.  This function calls the following methods in
+      order: :meth:`get_request`, :meth:`verify_request`, and
+      :meth:`process_request`.  If the user-provided
+      :meth:`~BaseRequestHandler.handle` method of the
+      handler class raises an exception, the server's :meth:`handle_error` method
+      will be called.  If no request is received within :attr:`timeout`
+      seconds, :meth:`handle_timeout` will be called and :meth:`handle_request`
+      will return.
 
 
-.. method:: BaseServer.serve_forever(poll_interval=0.5)
+   .. method:: serve_forever(poll_interval=0.5)
 
-   Handle requests until an explicit :meth:`shutdown` request.  Polls for
-   shutdown every *poll_interval* seconds.
+      Handle requests until an explicit :meth:`shutdown` request.  Poll for
+      shutdown every *poll_interval* seconds.
+      Ignores the :attr:`timeout` attribute.
+      If you need to do periodic tasks, do them in another thread.
 
 
-.. method:: BaseServer.shutdown()
+   .. method:: shutdown()
 
-   Tells the :meth:`serve_forever` loop to stop and waits until it does.
+      Tell the :meth:`serve_forever` loop to stop and wait until it does.
 
-   .. versionadded:: 2.6
+      .. versionadded:: 2.6
 
 
-.. attribute:: BaseServer.address_family
+   .. method:: server_close()
 
-   The family of protocols to which the server's socket belongs.
-   Common examples are :const:`socket.AF_INET` and :const:`socket.AF_UNIX`.
+      Clean up the server. May be overridden.
 
+      .. versionadded:: 2.6
 
-.. attribute:: BaseServer.RequestHandlerClass
 
-   The user-provided request handler class; an instance of this class is created
-   for each request.
+   .. attribute:: address_family
 
+      The family of protocols to which the server's socket belongs.
+      Common examples are :const:`socket.AF_INET` and :const:`socket.AF_UNIX`.
 
-.. attribute:: BaseServer.server_address
 
-   The address on which the server is listening.  The format of addresses varies
-   depending on the protocol family; see the documentation for the socket module
-   for details.  For Internet protocols, this is a tuple containing a string giving
-   the address, and an integer port number: ``('127.0.0.1', 80)``, for example.
+   .. attribute:: RequestHandlerClass
 
+      The user-provided request handler class; an instance of this class is created
+      for each request.
 
-.. attribute:: BaseServer.socket
 
-   The socket object on which the server will listen for incoming requests.
+   .. attribute:: server_address
 
+      The address on which the server is listening.  The format of addresses varies
+      depending on the protocol family;
+      see the documentation for the :mod:`socket` module
+      for details.  For Internet protocols, this is a tuple containing a string giving
+      the address, and an integer port number: ``('127.0.0.1', 80)``, for example.
 
-The server classes support the following class variables:
 
-.. XXX should class variables be covered before instance variables, or vice versa?
+   .. attribute:: socket
 
-.. attribute:: BaseServer.allow_reuse_address
+      The socket object on which the server will listen for incoming requests.
 
-   Whether the server will allow the reuse of an address. This defaults to
-   :const:`False`, and can be set in subclasses to change the policy.
 
+   The server classes support the following class variables:
 
-.. attribute:: BaseServer.request_queue_size
+   .. XXX should class variables be covered before instance variables, or vice versa?
 
-   The size of the request queue.  If it takes a long time to process a single
-   request, any requests that arrive while the server is busy are placed into a
-   queue, up to :attr:`request_queue_size` requests.  Once the queue is full,
-   further requests from clients will get a "Connection denied" error.  The default
-   value is usually 5, but this can be overridden by subclasses.
+   .. attribute:: allow_reuse_address
 
+      Whether the server will allow the reuse of an address. This defaults to
+      :const:`False`, and can be set in subclasses to change the policy.
 
-.. attribute:: BaseServer.socket_type
 
-   The type of socket used by the server; :const:`socket.SOCK_STREAM` and
-   :const:`socket.SOCK_DGRAM` are two common values.
+   .. attribute:: request_queue_size
 
+      The size of the request queue.  If it takes a long time to process a single
+      request, any requests that arrive while the server is busy are placed into a
+      queue, up to :attr:`request_queue_size` requests.  Once the queue is full,
+      further requests from clients will get a "Connection denied" error.  The default
+      value is usually 5, but this can be overridden by subclasses.
 
-.. attribute:: BaseServer.timeout
 
-   Timeout duration, measured in seconds, or :const:`None` if no timeout is
-   desired.  If :meth:`handle_request` receives no incoming requests within the
-   timeout period, the :meth:`handle_timeout` method is called.
+   .. attribute:: socket_type
 
+      The type of socket used by the server; :const:`socket.SOCK_STREAM` and
+      :const:`socket.SOCK_DGRAM` are two common values.
 
-There are various server methods that can be overridden by subclasses of base
-server classes like :class:`TCPServer`; these methods aren't useful to external
-users of the server object.
 
-.. XXX should the default implementations of these be documented, or should
-   it be assumed that the user will look at SocketServer.py?
+   .. attribute:: timeout
 
-.. method:: BaseServer.finish_request()
+      Timeout duration, measured in seconds, or :const:`None` if no timeout is
+      desired.  If :meth:`handle_request` receives no incoming requests within the
+      timeout period, the :meth:`handle_timeout` method is called.
 
-   Actually processes the request by instantiating :attr:`RequestHandlerClass` and
-   calling its :meth:`handle` method.
 
+   There are various server methods that can be overridden by subclasses of base
+   server classes like :class:`TCPServer`; these methods aren't useful to external
+   users of the server object.
 
-.. method:: BaseServer.get_request()
+   .. XXX should the default implementations of these be documented, or should
+      it be assumed that the user will look at SocketServer.py?
 
-   Must accept a request from the socket, and return a 2-tuple containing the *new*
-   socket object to be used to communicate with the client, and the client's
-   address.
+   .. method:: finish_request()
 
+      Actually processes the request by instantiating :attr:`RequestHandlerClass` and
+      calling its :meth:`~BaseRequestHandler.handle` method.
 
-.. method:: BaseServer.handle_error(request, client_address)
 
-   This function is called if the :attr:`RequestHandlerClass`'s :meth:`handle`
-   method raises an exception.  The default action is to print the traceback to
-   standard output and continue handling further requests.
+   .. method:: get_request()
 
+      Must accept a request from the socket, and return a 2-tuple containing the *new*
+      socket object to be used to communicate with the client, and the client's
+      address.
 
-.. method:: BaseServer.handle_timeout()
 
-   This function is called when the :attr:`timeout` attribute has been set to a
-   value other than :const:`None` and the timeout period has passed with no
-   requests being received.  The default action for forking servers is
-   to collect the status of any child processes that have exited, while
-   in threading servers this method does nothing.
+   .. method:: handle_error(request, client_address)
 
+      This function is called if the :meth:`~BaseRequestHandler.handle`
+      method of a :attr:`RequestHandlerClass` instance raises
+      an exception.  The default action is to print the traceback to
+      standard output and continue handling further requests.
 
-.. method:: BaseServer.process_request(request, client_address)
 
-   Calls :meth:`finish_request` to create an instance of the
-   :attr:`RequestHandlerClass`.  If desired, this function can create a new process
-   or thread to handle the request; the :class:`ForkingMixIn` and
-   :class:`ThreadingMixIn` classes do this.
+   .. method:: handle_timeout()
 
+      This function is called when the :attr:`timeout` attribute has been set to a
+      value other than :const:`None` and the timeout period has passed with no
+      requests being received.  The default action for forking servers is
+      to collect the status of any child processes that have exited, while
+      in threading servers this method does nothing.
 
-.. Is there any point in documenting the following two functions?
-   What would the purpose of overriding them be: initializing server
-   instance variables, adding new network families?
 
-.. method:: BaseServer.server_activate()
+   .. method:: process_request(request, client_address)
 
-   Called by the server's constructor to activate the server.  The default behavior
-   just :meth:`listen`\ s to the server's socket. May be overridden.
+      Calls :meth:`finish_request` to create an instance of the
+      :attr:`RequestHandlerClass`.  If desired, this function can create a new process
+      or thread to handle the request; the :class:`ForkingMixIn` and
+      :class:`ThreadingMixIn` classes do this.
 
 
-.. method:: BaseServer.server_bind()
+   .. Is there any point in documenting the following two functions?
+      What would the purpose of overriding them be: initializing server
+      instance variables, adding new network families?
 
-   Called by the server's constructor to bind the socket to the desired address.
-   May be overridden.
+   .. method:: server_activate()
 
+      Called by the server's constructor to activate the server.  The default behavior
+      for a TCP server just invokes :meth:`~socket.socket.listen`
+      on the server's socket. May be overridden.
 
-.. method:: BaseServer.verify_request(request, client_address)
 
-   Must return a Boolean value; if the value is :const:`True`, the request will be
-   processed, and if it's :const:`False`, the request will be denied. This function
-   can be overridden to implement access controls for a server. The default
-   implementation always returns :const:`True`.
+   .. method:: server_bind()
 
+      Called by the server's constructor to bind the socket to the desired address.
+      May be overridden.
 
-RequestHandler Objects
-----------------------
 
-The request handler class must define a new :meth:`handle` method, and can
-override any of the following methods.  A new instance is created for each
-request.
+   .. method:: verify_request(request, client_address)
 
+      Must return a Boolean value; if the value is :const:`True`, the request will be
+      processed, and if it's :const:`False`, the request will be denied. This function
+      can be overridden to implement access controls for a server. The default
+      implementation always returns :const:`True`.
 
-.. method:: RequestHandler.finish()
 
-   Called after the :meth:`handle` method to perform any clean-up actions
-   required.  The default implementation does nothing.  If :meth:`setup` or
-   :meth:`handle` raise an exception, this function will not be called.
+Request Handler Objects
+-----------------------
 
+.. class:: BaseRequestHandler
 
-.. method:: RequestHandler.handle()
+   This is the superclass of all request handler objects.  It defines
+   the interface, given below.  A concrete request handler subclass must
+   define a new :meth:`handle` method, and can override any of
+   the other methods.  A new instance of the subclass is created for each
+   request.
 
-   This function must do all the work required to service a request.  The
-   default implementation does nothing.  Several instance attributes are
-   available to it; the request is available as :attr:`self.request`; the client
-   address as :attr:`self.client_address`; and the server instance as
-   :attr:`self.server`, in case it needs access to per-server information.
 
-   The type of :attr:`self.request` is different for datagram or stream
-   services.  For stream services, :attr:`self.request` is a socket object; for
-   datagram services, :attr:`self.request` is a pair of string and socket.
-   However, this can be hidden by using the request handler subclasses
-   :class:`StreamRequestHandler` or :class:`DatagramRequestHandler`, which
-   override the :meth:`setup` and :meth:`finish` methods, and provide
-   :attr:`self.rfile` and :attr:`self.wfile` attributes.  :attr:`self.rfile` and
-   :attr:`self.wfile` can be read or written, respectively, to get the request
-   data or return data to the client.
+   .. method:: setup()
 
+      Called before the :meth:`handle` method to perform any initialization actions
+      required.  The default implementation does nothing.
 
-.. method:: RequestHandler.setup()
 
-   Called before the :meth:`handle` method to perform any initialization actions
-   required.  The default implementation does nothing.
+   .. method:: handle()
+
+      This function must do all the work required to service a request.  The
+      default implementation does nothing.  Several instance attributes are
+      available to it; the request is available as :attr:`self.request`; the client
+      address as :attr:`self.client_address`; and the server instance as
+      :attr:`self.server`, in case it needs access to per-server information.
+
+      The type of :attr:`self.request` is different for datagram or stream
+      services.  For stream services, :attr:`self.request` is a socket object; for
+      datagram services, :attr:`self.request` is a pair of string and socket.
+
+
+   .. method:: finish()
+
+      Called after the :meth:`handle` method to perform any clean-up actions
+      required.  The default implementation does nothing.  If :meth:`setup`
+      raises an exception, this function will not be called.
+
+
+.. class:: StreamRequestHandler
+           DatagramRequestHandler
+
+   These :class:`BaseRequestHandler` subclasses override the
+   :meth:`~BaseRequestHandler.setup` and :meth:`~BaseRequestHandler.finish`
+   methods, and provide :attr:`self.rfile` and :attr:`self.wfile` attributes.
+   The :attr:`self.rfile` and :attr:`self.wfile` attributes can be
+   read or written, respectively, to get the request data or return data
+   to the client.
 
 
 Examples
@@ -344,7 +408,7 @@ This is the server side::
 
    class MyTCPHandler(SocketServer.BaseRequestHandler):
        """
-       The RequestHandler class for our server.
+       The request handler class for our server.
 
        It is instantiated once per connection to the server, and must
        override the handle() method to implement communication to the
@@ -354,10 +418,10 @@ This is the server side::
        def handle(self):
            # self.request is the TCP socket connected to the client
            self.data = self.request.recv(1024).strip()
-           print "%s wrote:" % self.client_address[0]
+           print "{} wrote:".format(self.client_address[0])
            print self.data
            # just send back the same data, but upper-cased
-           self.request.send(self.data.upper())
+           self.request.sendall(self.data.upper())
 
    if __name__ == "__main__":
        HOST, PORT = "localhost", 9999
@@ -378,7 +442,7 @@ objects that simplify communication by providing the standard file interface)::
            # self.rfile is a file-like object created by the handler;
            # we can now use e.g. readline() instead of raw recv() calls
            self.data = self.rfile.readline().strip()
-           print "%s wrote:" % self.client_address[0]
+           print "{} wrote:".format(self.client_address[0])
            print self.data
            # Likewise, self.wfile is a file-like object used to write back
            # to the client
@@ -387,7 +451,7 @@ objects that simplify communication by providing the standard file interface)::
 The difference is that the ``readline()`` call in the second handler will call
 ``recv()`` multiple times until it encounters a newline character, while the
 single ``recv()`` call in the first handler will just return what has been sent
-from the client in one ``send()`` call.
+from the client in one ``sendall()`` call.
 
 
 This is the client side::
@@ -401,21 +465,25 @@ This is the client side::
    # Create a socket (SOCK_STREAM means a TCP socket)
    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-   # Connect to server and send data
-   sock.connect((HOST, PORT))
-   sock.send(data + "\n")
+   try:
+       # Connect to server and send data
+       sock.connect((HOST, PORT))
+       sock.sendall(data + "\n")
 
-   # Receive data from the server and shut down
-   received = sock.recv(1024)
-   sock.close()
+       # Receive data from the server and shut down
+       received = sock.recv(1024)
+   finally:
+       sock.close()
 
-   print "Sent:     %s" % data
-   print "Received: %s" % received
+   print "Sent:     {}".format(data)
+   print "Received: {}".format(received)
 
 
 The output of the example should look something like this:
 
-Server::
+Server:
+
+.. code-block:: shell-session
 
    $ python TCPServer.py
    127.0.0.1 wrote:
@@ -423,7 +491,9 @@ Server::
    127.0.0.1 wrote:
    python is nice
 
-Client::
+Client:
+
+.. code-block:: shell-session
 
    $ python TCPClient.py hello world with TCP
    Sent:     hello world with TCP
@@ -451,7 +521,7 @@ This is the server side::
        def handle(self):
            data = self.request[0].strip()
            socket = self.request[1]
-           print "%s wrote:" % self.client_address[0]
+           print "{} wrote:".format(self.client_address[0])
            print data
            socket.sendto(data.upper(), self.client_address)
 
@@ -476,8 +546,8 @@ This is the client side::
    sock.sendto(data + "\n", (HOST, PORT))
    received = sock.recv(1024)
 
-   print "Sent:     %s" % data
-   print "Received: %s" % received
+   print "Sent:     {}".format(data)
+   print "Received: {}".format(received)
 
 The output of the example should look exactly like for the TCP server example.
 
@@ -498,9 +568,9 @@ An example for the :class:`ThreadingMixIn` class::
 
        def handle(self):
            data = self.request.recv(1024)
-           cur_thread = threading.currentThread()
-           response = "%s: %s" % (cur_thread.getName(), data)
-           self.request.send(response)
+           cur_thread = threading.current_thread()
+           response = "{}: {}".format(cur_thread.name, data)
+           self.request.sendall(response)
 
    class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
        pass
@@ -508,10 +578,12 @@ An example for the :class:`ThreadingMixIn` class::
    def client(ip, port, message):
        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
        sock.connect((ip, port))
-       sock.send(message)
-       response = sock.recv(1024)
-       print "Received: %s" % response
-       sock.close()
+       try:
+           sock.sendall(message)
+           response = sock.recv(1024)
+           print "Received: {}".format(response)
+       finally:
+           sock.close()
 
    if __name__ == "__main__":
        # Port 0 means to select an arbitrary unused port
@@ -524,17 +596,21 @@ An example for the :class:`ThreadingMixIn` class::
        # more thread for each request
        server_thread = threading.Thread(target=server.serve_forever)
        # Exit the server thread when the main thread terminates
-       server_thread.setDaemon(True)
+       server_thread.daemon = True
        server_thread.start()
-       print "Server loop running in thread:", server_thread.getName()
+       print "Server loop running in thread:", server_thread.name
 
        client(ip, port, "Hello World 1")
        client(ip, port, "Hello World 2")
        client(ip, port, "Hello World 3")
 
        server.shutdown()
+       server.server_close()
 
-The output of the example should look something like this::
+
+The output of the example should look something like this:
+
+.. code-block:: shell-session
 
    $ python ThreadedTCPServer.py
    Server loop running in thread: Thread-1
@@ -545,3 +621,4 @@ The output of the example should look something like this::
 
 The :class:`ForkingMixIn` class is used in the same way, except that the server
 will spawn a new process for each request.
+Available only on POSIX platforms that support :func:`~os.fork`.

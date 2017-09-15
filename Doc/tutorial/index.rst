@@ -4,9 +4,6 @@
   The Python Tutorial
 ######################
 
-:Release: |version|
-:Date: |today|
-
 Python is an easy to learn, powerful programming language. It has efficient
 high-level data structures and a simple but effective approach to
 object-oriented programming. Python's elegant syntax and dynamic typing,
@@ -15,7 +12,7 @@ and rapid application development in many areas on most platforms.
 
 The Python interpreter and the extensive standard library are freely available
 in source or binary form for all major platforms from the Python Web site,
-http://www.python.org/, and may be freely distributed. The same site also
+https://www.python.org/, and may be freely distributed. The same site also
 contains distributions of and pointers to many free third party Python modules,
 programs and tools, and additional documentation.
 
@@ -59,3 +56,4 @@ The :ref:`glossary` is also worth going through.
    whatnow.rst
    interactive.rst
    floatingpoint.rst
+   appendix.rst

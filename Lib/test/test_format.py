@@ -10,11 +10,7 @@ maxsize = test_support.MAX_Py_ssize_t
 # they crash python)
 # test on unicode strings as well
 
-overflowok = 1
-overflowrequired = 0
-
-
-def testformat(formatstr, args, output=None, limit=None):
+def testformat(formatstr, args, output=None, limit=None, overflowok=False):
     if verbose:
         if output:
             print "%s %% %s =? %s ..." %\
@@ -29,16 +25,11 @@ def testformat(formatstr, args, output=None, limit=None):
         if verbose:
             print 'overflow (this is fine)'
     else:
-        if overflowrequired:
+        if output and limit is None and result != output:
             if verbose:
                 print 'no'
-            print "overflow expected on %s %% %s" % \
-                  (repr(formatstr), repr(args))
-        elif output and limit is None and result != output:
-            if verbose:
-                print 'no'
-            print "%s %% %s == %s != %s" % \
-                  (repr(formatstr), repr(args), repr(result), repr(output))
+            raise AssertionError("%r %% %r == %r != %r" %
+                                (formatstr, args, result, output))
         # when 'limit' is specified, it determines how many characters
         # must match exactly; lengths must always match.
         # ex: limit=5, '12345678' matches '12345___'
@@ -55,19 +46,27 @@ def testformat(formatstr, args, output=None, limit=None):
                 print 'yes'
 
 
-def testboth(formatstr, *args):
-    testformat(formatstr, *args)
+def testboth(formatstr, *args, **kwargs):
+    testformat(formatstr, *args, **kwargs)
     if have_unicode:
-        testformat(unicode(formatstr), *args)
+        testformat(unicode(formatstr), *args, **kwargs)
 
 
 class FormatTest(unittest.TestCase):
     def test_format(self):
         testboth("%.1d", (1,), "1")
-        testboth("%.*d", (sys.maxint,1))  # expect overflow
-        testboth("%.100d", (1,), '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')
-        testboth("%#.117x", (1,), '0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')
-        testboth("%#.118x", (1,), '0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001')
+        testboth("%.*d", (sys.maxint,1), overflowok=True)  # expect overflow
+        testboth("%.100d", (1,), '00000000000000000000000000000000000000'
+                 '000000000000000000000000000000000000000000000000000000'
+                 '00000001', overflowok=True)
+        testboth("%#.117x", (1,), '0x00000000000000000000000000000000000'
+                 '000000000000000000000000000000000000000000000000000000'
+                 '0000000000000000000000000001',
+                 overflowok=True)
+        testboth("%#.118x", (1,), '0x00000000000000000000000000000000000'
+                 '000000000000000000000000000000000000000000000000000000'
+                 '00000000000000000000000000001',
+                 overflowok=True)
 
         testboth("%f", (1.0,), "1.000000")
         # these are trying to test the limits of the internal magic-number-length
@@ -81,15 +80,14 @@ class FormatTest(unittest.TestCase):
         testboth('%12.*f', (123456, 1.0))
 
         # check for internal overflow validation on length of precision
-        overflowrequired = 1
+        # these tests should no longer cause overflow in Python
+        # 2.7/3.1 and later.
         testboth("%#.*g", (110, -1.e+100/3.))
         testboth("%#.*G", (110, -1.e+100/3.))
         testboth("%#.*f", (110, -1.e+100/3.))
         testboth("%#.*F", (110, -1.e+100/3.))
-        overflowrequired = 0
 
         # Formatting of long integers. Overflow is not ok
-        overflowok = 0
         testboth("%x", 10L, "a")
         testboth("%x", 100000000000L, "174876e800")
         testboth("%o", 10L, "12")
@@ -232,6 +230,21 @@ class FormatTest(unittest.TestCase):
         testboth("%o", -042L, "-42")
         testboth("%o", float(042), "42")
 
+        # alternate float formatting
+        testformat('%g', 1.1, '1.1')
+        testformat('%#g', 1.1, '1.10000')
+
+        # Regression test for http://bugs.python.org/issue15516.
+        class IntFails(object):
+            def __int__(self):
+                raise TestFailed
+            def __long__(self):
+                return 0
+
+        fst = IntFails()
+        testformat("%x", fst, '0')
+        testformat(u"%x", fst, '0')
+
         # Test exception for unknown format characters
         if verbose:
             print 'Testing exceptions'
@@ -287,8 +300,73 @@ class FormatTest(unittest.TestCase):
             else:
                 raise TestFailed, '"%*d"%(maxsize, -127) should fail'
 
+    def test_invalid_special_methods(self):
+        tests = []
+        for f in 'sriduoxXfge':
+            tests.append(('%' + f, 1, TypeError))
+            tests.append(('%#' + f, 1, TypeError))
+        for r in ['', '-', 'L', '-L']:
+            for f in 'iduoxX':
+                tests.append(('%' + f, r, ValueError))
+                tests.append(('%#' + f, r, ValueError))
+        tests.append(('%o', 'abc', ValueError))
+        for r in ('abc', '0abc', '0x', '0xL'):
+            for f in 'xX':
+                tests.append(('%' + f, r, ValueError))
+        for r in ('0x', '0xL'):
+            for f in 'xX':
+                tests.append(('%#' + f, r, ValueError))
+
+        class X(long):
+            def __repr__(self):
+                return result
+            def __str__(self):
+                return result
+            def __oct__(self):
+                return result
+            def __hex__(self):
+                return result
+            def __float__(self):
+                return result
+        for fmt, result, exc in tests:
+            try:
+                fmt % X()
+            except exc:
+                pass
+            else:
+                self.fail('%s not raised for %r format of %r' %
+                          (exc.__name__, fmt, result))
+
+
 def test_main():
     test_support.run_unittest(FormatTest)
+
+    def test_precision(self):
+        f = 1.2
+        self.assertEqual(format(f, ".0f"), "1")
+        self.assertEqual(format(f, ".3f"), "1.200")
+        with self.assertRaises(ValueError) as cm:
+            format(f, ".%sf" % (sys.maxsize + 1))
+        self.assertEqual(str(cm.exception), "precision too big")
+
+        c = complex(f)
+        self.assertEqual(format(c, ".0f"), "1+0j")
+        self.assertEqual(format(c, ".3f"), "1.200+0.000j")
+        with self.assertRaises(ValueError) as cm:
+            format(c, ".%sf" % (sys.maxsize + 1))
+        self.assertEqual(str(cm.exception), "precision too big")
+
+    @test_support.cpython_only
+    def test_precision_c_limits(self):
+        from _testcapi import INT_MAX
+
+        f = 1.2
+        with self.assertRaises(ValueError) as cm:
+            format(f, ".%sf" % (INT_MAX + 1))
+
+        c = complex(f)
+        with self.assertRaises(ValueError) as cm:
+            format(c, ".%sf" % (INT_MAX + 1))
 
 
 if __name__ == "__main__":

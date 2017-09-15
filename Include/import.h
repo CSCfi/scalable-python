@@ -40,8 +40,8 @@ PyAPI_FUNC(struct filedescr *) _PyImport_FindModule(
 PyAPI_FUNC(int) _PyImport_IsScript(struct filedescr *);
 PyAPI_FUNC(void) _PyImport_ReInitLock(void);
 
-PyAPI_FUNC(PyObject *)_PyImport_FindExtension(char *, char *);
-PyAPI_FUNC(PyObject *)_PyImport_FixupExtension(char *, char *);
+PyAPI_FUNC(PyObject *) _PyImport_FindExtension(char *, char *);
+PyAPI_FUNC(PyObject *) _PyImport_FixupExtension(char *, char *);
 
 struct _inittab {
     char *name;
@@ -51,7 +51,7 @@ struct _inittab {
 PyAPI_DATA(PyTypeObject) PyNullImporter_Type;
 PyAPI_DATA(struct _inittab *) PyImport_Inittab;
 
-PyAPI_FUNC(int) PyImport_AppendInittab(char *name, void (*initfunc)(void));
+PyAPI_FUNC(int) PyImport_AppendInittab(const char *name, void (*initfunc)(void));
 PyAPI_FUNC(int) PyImport_ExtendInittab(struct _inittab *newtab);
 
 struct _frozen {

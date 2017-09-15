@@ -42,6 +42,11 @@ which cannot be checked or controlled by the operating system are not defined in
 this module for those platforms.
 
 
+.. data:: RLIM_INFINITY
+
+   Constant used to represent the limit for an unlimited resource.
+
+
 .. function:: getrlimit(resource)
 
    Returns a tuple ``(soft, hard)`` with the current soft and hard limits of
@@ -53,12 +58,20 @@ this module for those platforms.
 
    Sets new limits of consumption of *resource*. The *limits* argument must be a
    tuple ``(soft, hard)`` of two integers describing the new limits. A value of
-   ``-1`` can be used to specify the maximum possible upper limit.
+   :data:`~resource.RLIM_INFINITY` can be used to request a limit that is
+   unlimited.
 
    Raises :exc:`ValueError` if an invalid resource is specified, if the new soft
-   limit exceeds the hard limit, or if a process tries to raise its hard limit
-   (unless the process has an effective UID of super-user).  Can also raise
-   :exc:`error` if the underlying system call fails.
+   limit exceeds the hard limit, or if a process tries to raise its hard limit.
+   Specifying a limit of :data:`~resource.RLIM_INFINITY` when the hard or
+   system limit for that resource is not unlimited will result in a
+   :exc:`ValueError`.  A process with the effective UID of super-user can
+   request any valid limit value, including unlimited, but :exc:`ValueError`
+   will still be raised if the requested limit exceeds the system imposed
+   limit.
+
+   ``setrlimit`` may also raise :exc:`error` if the underlying system call
+   fails.
 
 These symbols define resources whose consumption can be controlled using the
 :func:`setrlimit` and :func:`getrlimit` functions described below. The values of
@@ -88,8 +101,7 @@ platform.
 
 .. data:: RLIMIT_FSIZE
 
-   The maximum size of a file which the process may create.  This only affects the
-   stack of the main thread in a multi-threaded process.
+   The maximum size of a file which the process may create.
 
 
 .. data:: RLIMIT_DATA
@@ -99,7 +111,8 @@ platform.
 
 .. data:: RLIMIT_STACK
 
-   The maximum size (in bytes) of the call stack for the current process.
+   The maximum size (in bytes) of the call stack for the current process.  This only
+   affects the stack of the main thread in a multi-threaded process.
 
 
 .. data:: RLIMIT_RSS
@@ -210,10 +223,7 @@ These functions are used to retrieve resource usage information:
 .. function:: getpagesize()
 
    Returns the number of bytes in a system page. (This need not be the same as the
-   hardware page size.) This function is useful for determining the number of bytes
-   of memory a process is using. The third element of the tuple returned by
-   :func:`getrusage` describes memory usage in pages; multiplying by page size
-   produces number of bytes.
+   hardware page size.)
 
 The following :const:`RUSAGE_\*` symbols are passed to the :func:`getrusage`
 function to specify which processes information should be provided for.

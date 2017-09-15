@@ -9,7 +9,6 @@
 #include "structmember.h"
 #include "osdefs.h"
 
-#define MAKE_IT_NONE(x) (x) = Py_None; Py_INCREF(Py_None);
 #define EXC_MODULE_NAME "exceptions."
 
 /* NOTE: If the exception class hierarchy changes, don't forget to update
@@ -59,14 +58,12 @@ BaseException_init(PyBaseExceptionObject *self, PyObject *args, PyObject *kwds)
     if (!_PyArg_NoKeywords(Py_TYPE(self)->tp_name, kwds))
         return -1;
 
-    Py_DECREF(self->args);
-    self->args = args;
-    Py_INCREF(self->args);
+    Py_INCREF(args);
+    Py_SETREF(self->args, args);
 
     if (PyTuple_GET_SIZE(self->args) == 1) {
-        Py_CLEAR(self->message);
-        self->message = PyTuple_GET_ITEM(self->args, 0);
-        Py_INCREF(self->message);
+        Py_INCREF(PyTuple_GET_ITEM(self->args, 0));
+        Py_XSETREF(self->message, PyTuple_GET_ITEM(self->args, 0));
     }
     return 0;
 }
@@ -281,9 +278,8 @@ BaseException_set_dict(PyBaseExceptionObject *self, PyObject *val)
         PyErr_SetString(PyExc_TypeError, "__dict__ must be a dictionary");
         return -1;
     }
-    Py_CLEAR(self->dict);
     Py_INCREF(val);
-    self->dict = val;
+    Py_XSETREF(self->dict, val);
     return 0;
 }
 
@@ -307,9 +303,9 @@ BaseException_set_args(PyBaseExceptionObject *self, PyObject *val)
         return -1;
     }
     seq = PySequence_Tuple(val);
-    if (!seq) return -1;
-    Py_CLEAR(self->args);
-    self->args = seq;
+    if (!seq)
+        return -1;
+    Py_XSETREF(self->args, seq);
     return 0;
 }
 
@@ -349,8 +345,7 @@ BaseException_set_message(PyBaseExceptionObject *self, PyObject *val)
             if (PyDict_DelItemString(self->dict, "message") < 0)
                 return -1;
         }
-        Py_XDECREF(self->message);
-        self->message = NULL;
+        Py_CLEAR(self->message);
         return 0;
     }
 
@@ -522,12 +517,14 @@ SystemExit_init(PySystemExitObject *self, PyObject *args, PyObject *kwds)
 
     if (size == 0)
         return 0;
-    Py_CLEAR(self->code);
-    if (size == 1)
-        self->code = PyTuple_GET_ITEM(args, 0);
-    else if (size > 1)
-        self->code = args;
-    Py_INCREF(self->code);
+    if (size == 1) {
+        Py_INCREF(PyTuple_GET_ITEM(args, 0));
+        Py_XSETREF(self->code, PyTuple_GET_ITEM(args, 0));
+    }
+    else { /* size > 1 */
+        Py_INCREF(args);
+        Py_XSETREF(self->code, args);
+    }
     return 0;
 }
 
@@ -610,26 +607,22 @@ EnvironmentError_init(PyEnvironmentErrorObject *self, PyObject *args,
                            &myerrno, &strerror, &filename)) {
         return -1;
     }
-    Py_CLEAR(self->myerrno);       /* replacing */
-    self->myerrno = myerrno;
-    Py_INCREF(self->myerrno);
+    Py_INCREF(myerrno);
+    Py_XSETREF(self->myerrno, myerrno);
 
-    Py_CLEAR(self->strerror);      /* replacing */
-    self->strerror = strerror;
-    Py_INCREF(self->strerror);
+    Py_INCREF(strerror);
+    Py_XSETREF(self->strerror, strerror);
 
     /* self->filename will remain Py_None otherwise */
     if (filename != NULL) {
-        Py_CLEAR(self->filename);      /* replacing */
-        self->filename = filename;
-        Py_INCREF(self->filename);
+        Py_INCREF(filename);
+        Py_XSETREF(self->filename, filename);
 
         subslice = PyTuple_GetSlice(args, 0, 2);
         if (!subslice)
             return -1;
 
-        Py_DECREF(self->args);  /* replacing args */
-        self->args = subslice;
+        Py_SETREF(self->args, subslice);
     }
     return 0;
 }
@@ -774,7 +767,8 @@ EnvironmentError_reduce(PyEnvironmentErrorObject *self)
      * file name given to EnvironmentError. */
     if (PyTuple_GET_SIZE(args) == 2 && self->filename) {
         args = PyTuple_New(3);
-        if (!args) return NULL;
+        if (!args)
+            return NULL;
 
         tmp = PyTuple_GET_ITEM(self->args, 0);
         Py_INCREF(tmp);
@@ -879,8 +873,7 @@ WindowsError_init(PyWindowsErrorObject *self, PyObject *args, PyObject *kwds)
         return -1;
     posix_errno = winerror_to_errno(errcode);
 
-    Py_CLEAR(self->winerror);
-    self->winerror = self->myerrno;
+    Py_XSETREF(self->winerror, self->myerrno);
 
     o_errcode = PyInt_FromLong(posix_errno);
     if (!o_errcode)
@@ -1065,14 +1058,14 @@ SyntaxError_init(PySyntaxErrorObject *self, PyObject *args, PyObject *kwds)
         return -1;
 
     if (lenargs >= 1) {
-        Py_CLEAR(self->msg);
-        self->msg = PyTuple_GET_ITEM(args, 0);
-        Py_INCREF(self->msg);
+        Py_INCREF(PyTuple_GET_ITEM(args, 0));
+        Py_XSETREF(self->msg, PyTuple_GET_ITEM(args, 0));
     }
     if (lenargs == 2) {
         info = PyTuple_GET_ITEM(args, 1);
         info = PySequence_Tuple(info);
-        if (!info) return -1;
+        if (!info)
+            return -1;
 
         if (PyTuple_GET_SIZE(info) != 4) {
             /* not a very good error message, but it's what Python 2.4 gives */
@@ -1081,21 +1074,17 @@ SyntaxError_init(PySyntaxErrorObject *self, PyObject *args, PyObject *kwds)
             return -1;
         }
 
-        Py_CLEAR(self->filename);
-        self->filename = PyTuple_GET_ITEM(info, 0);
-        Py_INCREF(self->filename);
+        Py_INCREF(PyTuple_GET_ITEM(info, 0));
+        Py_XSETREF(self->filename, PyTuple_GET_ITEM(info, 0));
 
-        Py_CLEAR(self->lineno);
-        self->lineno = PyTuple_GET_ITEM(info, 1);
-        Py_INCREF(self->lineno);
+        Py_INCREF(PyTuple_GET_ITEM(info, 1));
+        Py_XSETREF(self->lineno, PyTuple_GET_ITEM(info, 1));
 
-        Py_CLEAR(self->offset);
-        self->offset = PyTuple_GET_ITEM(info, 2);
-        Py_INCREF(self->offset);
+        Py_INCREF(PyTuple_GET_ITEM(info, 2));
+        Py_XSETREF(self->offset, PyTuple_GET_ITEM(info, 2));
 
-        Py_CLEAR(self->text);
-        self->text = PyTuple_GET_ITEM(info, 3);
-        Py_INCREF(self->text);
+        Py_INCREF(PyTuple_GET_ITEM(info, 3));
+        Py_XSETREF(self->text, PyTuple_GET_ITEM(info, 3));
 
         Py_DECREF(info);
     }
@@ -1168,9 +1157,11 @@ SyntaxError_str(PySyntaxErrorObject *self)
         str = PyObject_Str(self->msg);
     else
         str = PyObject_Str(Py_None);
-    if (!str) return NULL;
+    if (!str)
+        return NULL;
     /* Don't fiddle with non-string return (shouldn't happen anyway) */
-    if (!PyString_Check(str)) return str;
+    if (!PyString_Check(str))
+        return str;
 
     /* XXX -- do all the additional formatting with filename and
        lineno here */
@@ -1326,8 +1317,7 @@ set_string(PyObject **attr, const char *value)
     PyObject *obj = PyString_FromString(value);
     if (!obj)
         return -1;
-    Py_CLEAR(*attr);
-    *attr = obj;
+    Py_XSETREF(*attr, obj);
     return 0;
 }
 
@@ -1645,8 +1635,12 @@ UnicodeEncodeError_str(PyObject *self)
     PyObject *reason_str = NULL;
     PyObject *encoding_str = NULL;
 
+    if (!uself->object)
+        /* Not properly initialized. */
+        return PyUnicode_FromString("");
+
     /* Get reason and encoding as strings, which they might not be if
-       they've been modified after we were contructed. */
+       they've been modified after we were constructed. */
     reason_str = PyObject_Str(uself->reason);
     if (reason_str == NULL)
         goto done;
@@ -1730,8 +1724,12 @@ UnicodeDecodeError_str(PyObject *self)
     PyObject *reason_str = NULL;
     PyObject *encoding_str = NULL;
 
+    if (!uself->object)
+        /* Not properly initialized. */
+        return PyUnicode_FromString("");
+
     /* Get reason and encoding as strings, which they might not be if
-       they've been modified after we were contructed. */
+       they've been modified after we were constructed. */
     reason_str = PyObject_Str(uself->reason);
     if (reason_str == NULL)
         goto done;
@@ -1827,8 +1825,12 @@ UnicodeTranslateError_str(PyObject *self)
     PyObject *result = NULL;
     PyObject *reason_str = NULL;
 
+    if (!uself->object)
+        /* Not properly initialized. */
+        return PyUnicode_FromString("");
+
     /* Get reason as a string, which it might not be if it's been
-       modified after we were contructed. */
+       modified after we were constructed. */
     reason_str = PyObject_Str(uself->reason);
     if (reason_str == NULL)
         goto done;
@@ -2047,28 +2049,6 @@ static PyMethodDef functions[] = {
     if (PyDict_SetItemString(bdict, # TYPE, PyExc_ ## TYPE)) \
         Py_FatalError("Module dictionary insertion problem.");
 
-#if defined _MSC_VER && _MSC_VER >= 1400 && defined(__STDC_SECURE_LIB__)
-/* crt variable checking in VisualStudio .NET 2005 */
-#include <crtdbg.h>
-
-static int      prevCrtReportMode;
-static _invalid_parameter_handler       prevCrtHandler;
-
-/* Invalid parameter handler.  Sets a ValueError exception */
-static void
-InvalidParameterHandler(
-    const wchar_t * expression,
-    const wchar_t * function,
-    const wchar_t * file,
-    unsigned int line,
-    uintptr_t pReserved)
-{
-    /* Do nothing, allow execution to continue.  Usually this
-     * means that the CRT will set errno to EINVAL
-     */
-}
-#endif
-
 
 PyMODINIT_FUNC
 _PyExc_Init(void)
@@ -2134,7 +2114,8 @@ _PyExc_Init(void)
 
     m = Py_InitModule4("exceptions", functions, exceptions_doc,
         (PyObject *)NULL, PYTHON_API_VERSION);
-    if (m == NULL) return;
+    if (m == NULL)
+        return;
 
     bltinmod = PyImport_ImportModule("__builtin__");
     if (bltinmod == NULL)
@@ -2202,7 +2183,7 @@ _PyExc_Init(void)
 
     PyExc_MemoryErrorInst = BaseException_new(&_PyExc_MemoryError, NULL, NULL);
     if (!PyExc_MemoryErrorInst)
-        Py_FatalError("Cannot pre-allocate MemoryError instance\n");
+        Py_FatalError("Cannot pre-allocate MemoryError instance");
 
     PyExc_RecursionErrorInst = BaseException_new(&_PyExc_RuntimeError, NULL, NULL);
     if (!PyExc_RecursionErrorInst)
@@ -2226,25 +2207,12 @@ _PyExc_Init(void)
             Py_FatalError("init of pre-allocated RuntimeError failed");
         Py_DECREF(args_tuple);
     }
-
     Py_DECREF(bltinmod);
-
-#if defined _MSC_VER && _MSC_VER >= 1400 && defined(__STDC_SECURE_LIB__)
-    /* Set CRT argument error handler */
-    prevCrtHandler = _set_invalid_parameter_handler(InvalidParameterHandler);
-    /* turn off assertions in debug mode */
-    prevCrtReportMode = _CrtSetReportMode(_CRT_ASSERT, 0);
-#endif
 }
 
 void
 _PyExc_Fini(void)
 {
-    Py_XDECREF(PyExc_MemoryErrorInst);
-    PyExc_MemoryErrorInst = NULL;
-#if defined _MSC_VER && _MSC_VER >= 1400 && defined(__STDC_SECURE_LIB__)
-    /* reset CRT error handling */
-    _set_invalid_parameter_handler(prevCrtHandler);
-    _CrtSetReportMode(_CRT_ASSERT, prevCrtReportMode);
-#endif
+    Py_CLEAR(PyExc_MemoryErrorInst);
+    Py_CLEAR(PyExc_RecursionErrorInst);
 }

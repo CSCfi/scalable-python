@@ -16,14 +16,14 @@ class Test(unittest.TestCase):
 
         y = X.from_buffer(a)
         self.assertEqual(y.c_int, a[0])
-        self.failIf(y.init_called)
+        self.assertFalse(y.init_called)
 
         self.assertEqual(x[:], a.tolist())
 
         a[0], a[-1] = 200, -200
         self.assertEqual(x[:], a.tolist())
 
-        self.assert_(a in x._objects.values())
+        self.assertIn(a, x._objects.values())
 
         self.assertRaises(ValueError,
                           c_int.from_buffer, a, -1)
@@ -49,7 +49,7 @@ class Test(unittest.TestCase):
 
         y = X.from_buffer_copy(a)
         self.assertEqual(y.c_int, a[0])
-        self.failIf(y.init_called)
+        self.assertFalse(y.init_called)
 
         self.assertEqual(x[:], range(16))
 
@@ -76,6 +76,14 @@ class Test(unittest.TestCase):
                           (c_int * 16).from_buffer_copy, a, sizeof(c_int))
         self.assertRaises(ValueError,
                           (c_int * 1).from_buffer_copy, a, 16 * sizeof(c_int))
+
+    def test_abstract(self):
+        self.assertRaises(TypeError, Array.from_buffer, bytearray(10))
+        self.assertRaises(TypeError, Structure.from_buffer, bytearray(10))
+        self.assertRaises(TypeError, Union.from_buffer, bytearray(10))
+        self.assertRaises(TypeError, Array.from_buffer_copy, b"123")
+        self.assertRaises(TypeError, Structure.from_buffer_copy, b"123")
+        self.assertRaises(TypeError, Union.from_buffer_copy, b"123")
 
 if __name__ == '__main__':
     unittest.main()

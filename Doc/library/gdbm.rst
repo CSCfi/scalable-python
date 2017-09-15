@@ -6,9 +6,9 @@
    :synopsis: GNU's reinterpretation of dbm.
 
 .. note::
-   The :mod:`gdbm` module has been renamed to :mod:`dbm.gnu` in Python 3.0.  The
+   The :mod:`gdbm` module has been renamed to :mod:`dbm.gnu` in Python 3.  The
    :term:`2to3` tool will automatically adapt imports when converting your
-   sources to 3.0.
+   sources to Python 3.
 
 
 .. index:: module: dbm
@@ -114,6 +114,11 @@ methods:
 
    When the database has been opened in fast mode, this method forces any
    unwritten data to be written to the disk.
+
+
+.. function:: close()
+
+   Close the ``gdbm`` database.
 
 
 .. seealso::

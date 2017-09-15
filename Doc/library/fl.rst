@@ -9,7 +9,7 @@
 
 
 .. deprecated:: 2.6
-    The :mod:`fl` module has been deprecated for removal in Python 3.0.
+    The :mod:`fl` module has been removed in Python 3.
 
 
 .. index::
@@ -17,7 +17,7 @@
    single: Overmars, Mark
 
 This module provides an interface to the FORMS Library by Mark Overmars.  The
-source for the library can be retrieved by anonymous ftp from host
+source for the library can be retrieved by anonymous FTP from host
 ``ftp.cs.ruu.nl``, directory :file:`SGI/FORMS`.  It was last tested with version
 2.0b.
 
@@ -29,8 +29,8 @@ The creation of objects is a little different in Python than in C: instead of
 the 'current form' maintained by the library to which new FORMS objects are
 added, all functions that add a FORMS object to a form are methods of the Python
 object representing the form. Consequently, there are no Python equivalents for
-the C functions :cfunc:`fl_addto_form` and :cfunc:`fl_end_form`, and the
-equivalent of :cfunc:`fl_bgn_form` is called :func:`fl.make_form`.
+the C functions :c:func:`fl_addto_form` and :c:func:`fl_end_form`, and the
+equivalent of :c:func:`fl_bgn_form` is called :func:`fl.make_form`.
 
 Watch out for the somewhat confusing terminology: FORMS uses the word
 :dfn:`object` for the buttons, sliders etc. that you can place in a form. In
@@ -44,7 +44,7 @@ easy way to add object classes written in Python.  The FORMS interface to GL
 event handling is available, though, so you can mix FORMS with pure GL windows.
 
 **Please note:** importing :mod:`fl` implies a call to the GL function
-:cfunc:`foreground` and to the FORMS routine :cfunc:`fl_init`.
+:c:func:`foreground` and to the FORMS routine :c:func:`fl_init`.
 
 
 .. _fl-functions:
@@ -88,7 +88,7 @@ documentation:
 .. function:: get_rgbmode()
 
    Return the current rgb mode.  This is the value of the C global variable
-   :cdata:`fl_rgbmode`.
+   :c:data:`fl_rgbmode`.
 
 
 .. function:: show_message(str1, str2, str3)
@@ -153,8 +153,8 @@ documentation:
               mapcolor()
               getmcolor()
 
-   See the description in the FORMS documentation of :cfunc:`fl_color`,
-   :cfunc:`fl_mapcolor` and :cfunc:`fl_getmcolor`.
+   See the description in the FORMS documentation of :c:func:`fl_color`,
+   :c:func:`fl_mapcolor` and :c:func:`fl_getmcolor`.
 
 
 .. _form-objects:
@@ -310,7 +310,7 @@ here.
 
 .. method:: form.add_input(type, x, y, w, h, name)
 
-   Add a input object to the form.  ---  Methods: :meth:`set_input`,
+   Add an input object to the form.  ---  Methods: :meth:`set_input`,
    :meth:`get_input`, :meth:`set_input_color`, :meth:`set_input_return`.
 
 
@@ -487,7 +487,7 @@ FORMS objects have these data attributes; see the FORMS documentation:
 
 
 .. deprecated:: 2.6
-    The :mod:`FL` module has been deprecated for removal in Python 3.0.
+    The :mod:`FL` module has been removed in Python 3.
 
 
 This module defines symbolic constants needed to use the built-in module
@@ -509,7 +509,7 @@ source for a complete list of the defined names.  Suggested use::
 
 
 .. deprecated:: 2.6
-    The :mod:`flp` module has been deprecated for removal in Python 3.0.
+    The :mod:`flp` module has been removed in Python 3.
 
 
 This module defines functions that can read form definitions created by the

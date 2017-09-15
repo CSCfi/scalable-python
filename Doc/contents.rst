@@ -11,9 +11,8 @@
    library/index.rst
    extending/index.rst
    c-api/index.rst
-   distutils/index.rst
-   install/index.rst
-   documenting/index.rst
+   distributing/index.rst
+   installing/index.rst
    howto/index.rst
    faq/index.rst
    glossary.rst
@@ -22,3 +21,11 @@
    bugs.rst
    copyright.rst
    license.rst
+
+.. to include legacy packaging docs in build
+
+.. toctree::
+   :hidden:
+
+   distutils/index.rst
+   install/index.rst

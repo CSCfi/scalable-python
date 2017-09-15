@@ -1,7 +1,3 @@
-/*****************************************************************
-  This file should be kept compatible with Python 2.3, see PEP 291.
- *****************************************************************/
-
 #include <Python.h>
 #include <ffi.h>
 #ifdef MS_WIN32
@@ -93,7 +89,7 @@ static void more_core(void)
 /******************************************************************/
 
 /* put the item back into the free list */
-void FreeClosure(void *p)
+void ffi_closure_free(void *p)
 {
     ITEM *item = (ITEM *)p;
     item->next = free_list;
@@ -101,7 +97,7 @@ void FreeClosure(void *p)
 }
 
 /* return one item from the free list, allocating more if needed */
-void *MallocClosure(void)
+void *ffi_closure_alloc(size_t ignored, void** codeloc)
 {
     ITEM *item;
     if (!free_list)
@@ -110,5 +106,6 @@ void *MallocClosure(void)
         return NULL;
     item = free_list;
     free_list = item->next;
-    return item;
+    *codeloc = (void *)item;
+    return (void *)item;
 }

@@ -24,7 +24,7 @@
 #include <stdlib.h>
 
 #ifdef __sgi
-#ifndef HAVE_PTHREAD_H /* XXX Need to check in configure.in */
+#ifndef HAVE_PTHREAD_H /* XXX Need to check in configure.ac */
 #undef _POSIX_THREADS
 #endif
 #endif
@@ -46,11 +46,11 @@
 #endif
 
 /* Check if we're running on HP-UX and _SC_THREADS is defined. If so, then
-   enough of the Posix threads package is implimented to support python
+   enough of the Posix threads package is implemented to support python
    threads.
 
    This is valid for HP-UX 11.23 running on an ia64 system. If needed, add
-   a check of __ia64 to verify that we're running on a ia64 system instead
+   a check of __ia64 to verify that we're running on an ia64 system instead
    of a pa-risc system.
 */
 #ifdef __hpux
@@ -135,10 +135,6 @@ static size_t _pythread_stacksize = 0;
 
 #ifdef BEOS_THREADS
 #include "thread_beos.h"
-#endif
-
-#ifdef WINCE_THREADS
-#include "thread_wince.h"
 #endif
 
 #ifdef PLAN9_THREADS
@@ -275,7 +271,7 @@ find_key(int key, void *value)
         if (p->id == id && p->key == key)
             goto Done;
         /* Sanity check.  These states should never happen but if
-         * they do we must abort.  Otherwise we'll end up spinning in
+         * they do we must abort.  Otherwise we'll end up spinning
          * in a tight loop with the lock held.  A similar check is done
          * in pystate.c tstate_delete_common().  */
         if (p == prev_p)

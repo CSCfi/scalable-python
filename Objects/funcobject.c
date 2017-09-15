@@ -116,8 +116,7 @@ PyFunction_SetDefaults(PyObject *op, PyObject *defaults)
         PyErr_SetString(PyExc_SystemError, "non-tuple default args");
         return -1;
     }
-    Py_XDECREF(((PyFunctionObject *) op) -> func_defaults);
-    ((PyFunctionObject *) op) -> func_defaults = defaults;
+    Py_XSETREF(((PyFunctionObject *)op)->func_defaults, defaults);
     return 0;
 }
 
@@ -149,8 +148,7 @@ PyFunction_SetClosure(PyObject *op, PyObject *closure)
                      closure->ob_type->tp_name);
         return -1;
     }
-    Py_XDECREF(((PyFunctionObject *) op) -> func_closure);
-    ((PyFunctionObject *) op) -> func_closure = closure;
+    Py_XSETREF(((PyFunctionObject *)op)->func_closure, closure);
     return 0;
 }
 
@@ -430,8 +428,7 @@ func_new(PyTypeObject* type, PyObject* args, PyObject* kw)
 
     if (name != Py_None) {
         Py_INCREF(name);
-        Py_DECREF(newfunc->func_name);
-        newfunc->func_name = name;
+        Py_SETREF(newfunc->func_name, name);
     }
     if (defaults != Py_None) {
         Py_INCREF(defaults);
@@ -489,13 +486,14 @@ function_call(PyObject *func, PyObject *arg, PyObject *kw)
 {
     PyObject *result;
     PyObject *argdefs;
+    PyObject *kwtuple = NULL;
     PyObject **d, **k;
     Py_ssize_t nk, nd;
 
     argdefs = PyFunction_GET_DEFAULTS(func);
     if (argdefs != NULL && PyTuple_Check(argdefs)) {
         d = &PyTuple_GET_ITEM((PyTupleObject *)argdefs, 0);
-        nd = PyTuple_Size(argdefs);
+        nd = PyTuple_GET_SIZE(argdefs);
     }
     else {
         d = NULL;
@@ -505,16 +503,17 @@ function_call(PyObject *func, PyObject *arg, PyObject *kw)
     if (kw != NULL && PyDict_Check(kw)) {
         Py_ssize_t pos, i;
         nk = PyDict_Size(kw);
-        k = PyMem_NEW(PyObject *, 2*nk);
-        if (k == NULL) {
-            PyErr_NoMemory();
+        kwtuple = PyTuple_New(2*nk);
+        if (kwtuple == NULL)
             return NULL;
-        }
+        k = &PyTuple_GET_ITEM(kwtuple, 0);
         pos = i = 0;
-        while (PyDict_Next(kw, &pos, &k[i], &k[i+1]))
+        while (PyDict_Next(kw, &pos, &k[i], &k[i+1])) {
+            Py_INCREF(k[i]);
+            Py_INCREF(k[i+1]);
             i += 2;
+        }
         nk = i/2;
-        /* XXX This is broken if the caller deletes dict items! */
     }
     else {
         k = NULL;
@@ -524,12 +523,11 @@ function_call(PyObject *func, PyObject *arg, PyObject *kw)
     result = PyEval_EvalCodeEx(
         (PyCodeObject *)PyFunction_GET_CODE(func),
         PyFunction_GET_GLOBALS(func), (PyObject *)NULL,
-        &PyTuple_GET_ITEM(arg, 0), PyTuple_Size(arg),
+        &PyTuple_GET_ITEM(arg, 0), PyTuple_GET_SIZE(arg),
         k, nk, d, nd,
         PyFunction_GET_CLOSURE(func));
 
-    if (k != NULL)
-        PyMem_DEL(k);
+    Py_XDECREF(kwtuple);
 
     return result;
 }
@@ -592,8 +590,9 @@ PyTypeObject PyFunction_Type = {
    To declare a class method, use this idiom:
 
      class C:
-     def f(cls, arg1, arg2, ...): ...
-     f = classmethod(f)
+         @classmethod
+         def f(cls, arg1, arg2, ...):
+             ...
 
    It can be called either on the class (e.g. C.f()) or on an instance
    (e.g. C().f()); the instance is ignored except for its class.
@@ -658,16 +657,15 @@ cm_init(PyObject *self, PyObject *args, PyObject *kwds)
         return -1;
     if (!_PyArg_NoKeywords("classmethod", kwds))
         return -1;
-    if (!PyCallable_Check(callable)) {
-        PyErr_Format(PyExc_TypeError, "'%s' object is not callable",
-             callable->ob_type->tp_name);
-        return -1;
-    }
-
     Py_INCREF(callable);
     cm->cm_callable = callable;
     return 0;
 }
+
+static PyMemberDef cm_memberlist[] = {
+    {"__func__", T_OBJECT, offsetof(classmethod, cm_callable), READONLY},
+    {NULL}  /* Sentinel */
+};
 
 PyDoc_STRVAR(classmethod_doc,
 "classmethod(function) -> method\n\
@@ -679,8 +677,9 @@ just like an instance method receives the instance.\n\
 To declare a class method, use this idiom:\n\
 \n\
   class C:\n\
-      def f(cls, arg1, arg2, ...): ...\n\
-      f = classmethod(f)\n\
+      @classmethod\n\
+      def f(cls, arg1, arg2, ...):\n\
+          ...\n\
 \n\
 It can be called either on the class (e.g. C.f()) or on an instance\n\
 (e.g. C().f()).  The instance is ignored except for its class.\n\
@@ -719,7 +718,7 @@ PyTypeObject PyClassMethod_Type = {
     0,                                          /* tp_iter */
     0,                                          /* tp_iternext */
     0,                                          /* tp_methods */
-    0,                                          /* tp_members */
+    cm_memberlist,              /* tp_members */
     0,                                          /* tp_getset */
     0,                                          /* tp_base */
     0,                                          /* tp_dict */
@@ -751,8 +750,9 @@ PyClassMethod_New(PyObject *callable)
    To declare a static method, use this idiom:
 
      class C:
-     def f(arg1, arg2, ...): ...
-     f = staticmethod(f)
+         @staticmethod
+         def f(arg1, arg2, ...):
+             ....
 
    It can be called either on the class (e.g. C.f()) or on an instance
    (e.g. C().f()); the instance is ignored except for its class.
@@ -784,9 +784,7 @@ sm_traverse(staticmethod *sm, visitproc visit, void *arg)
 static int
 sm_clear(staticmethod *sm)
 {
-    Py_XDECREF(sm->sm_callable);
-    sm->sm_callable = NULL;
-
+    Py_CLEAR(sm->sm_callable);
     return 0;
 }
 
@@ -819,6 +817,11 @@ sm_init(PyObject *self, PyObject *args, PyObject *kwds)
     return 0;
 }
 
+static PyMemberDef sm_memberlist[] = {
+    {"__func__", T_OBJECT, offsetof(staticmethod, sm_callable), READONLY},
+    {NULL}  /* Sentinel */
+};
+
 PyDoc_STRVAR(staticmethod_doc,
 "staticmethod(function) -> method\n\
 \n\
@@ -828,8 +831,9 @@ A static method does not receive an implicit first argument.\n\
 To declare a static method, use this idiom:\n\
 \n\
      class C:\n\
-     def f(arg1, arg2, ...): ...\n\
-     f = staticmethod(f)\n\
+         @staticmethod\n\
+         def f(arg1, arg2, ...):\n\
+             ...\n\
 \n\
 It can be called either on the class (e.g. C.f()) or on an instance\n\
 (e.g. C().f()).  The instance is ignored except for its class.\n\
@@ -866,7 +870,7 @@ PyTypeObject PyStaticMethod_Type = {
     0,                                          /* tp_iter */
     0,                                          /* tp_iternext */
     0,                                          /* tp_methods */
-    0,                                          /* tp_members */
+    sm_memberlist,              /* tp_members */
     0,                                          /* tp_getset */
     0,                                          /* tp_base */
     0,                                          /* tp_dict */

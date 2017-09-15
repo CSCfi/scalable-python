@@ -1,10 +1,11 @@
 # Copyright (C) 2003 Python Software Foundation
 
 import unittest
-import aepack
-import aetypes
 import os
 from test import test_support
+
+aetypes = test_support.import_module('aetypes')
+aepack = test_support.import_module('aepack')
 
 class TestAepack(unittest.TestCase):
     OBJECTS = [
@@ -58,10 +59,10 @@ class TestAepack(unittest.TestCase):
         try:
             import Carbon.File
         except:
-            return
+            self.skipTest('Carbon.File not available')
 
         if not hasattr(Carbon.File, "FSSpec"):
-            return
+            self.skipTest('Carbon.File.FSSpec not available')
         o = Carbon.File.FSSpec(os.curdir)
         packed = aepack.pack(o)
         unpacked = aepack.unpack(packed)
@@ -71,9 +72,9 @@ class TestAepack(unittest.TestCase):
         try:
             import Carbon.File
         except:
-            return
+            self.skipTest('Carbon.File not available')
         if not hasattr(Carbon.File, "FSSpec"):
-            return
+            self.skipTest('Carbon.File.FSSpec not available')
         o = Carbon.File.FSSpec(os.curdir).NewAliasMinimal()
         packed = aepack.pack(o)
         unpacked = aepack.unpack(packed)

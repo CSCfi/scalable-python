@@ -41,7 +41,7 @@ class FixerTestCase(support.TestCase):
 
     def warns(self, before, after, message, unchanged=False):
         tree = self._check(before, after)
-        self.assertTrue(message in "".join(self.fixer_log))
+        self.assertIn(message, "".join(self.fixer_log))
         if not unchanged:
             self.assertTrue(tree.was_changed)
 
@@ -258,6 +258,10 @@ class Test_apply(FixerTestCase):
 
     def test_unchanged_6(self):
         s = """apply(f, *args)"""
+        self.unchanged(s)
+
+    def test_unchanged_6b(self):
+        s = """apply(f, **kwds)"""
         self.unchanged(s)
 
     def test_unchanged_7(self):
@@ -868,6 +872,11 @@ class Test_raise(FixerTestCase):
                     raise Exception(5).with_traceback(6) # foo"""
         self.check(b, a)
 
+    def test_None_value(self):
+        b = """raise Exception(5), None, tb"""
+        a = """raise Exception(5).with_traceback(tb)"""
+        self.check(b, a)
+
     def test_tuple_value(self):
         b = """raise Exception, (5, 6, 7)"""
         a = """raise Exception(5, 6, 7)"""
@@ -1400,27 +1409,27 @@ class Test_dict(FixerTestCase):
         a = "d.values()"
         self.check(b, a)
 
-    def test_14(self):
+    def test_28(self):
         b = "[i for i in d.viewkeys()]"
         a = "[i for i in d.keys()]"
         self.check(b, a)
 
-    def test_15(self):
+    def test_29(self):
         b = "(i for i in d.viewkeys())"
         a = "(i for i in d.keys())"
         self.check(b, a)
 
-    def test_17(self):
+    def test_30(self):
         b = "iter(d.viewkeys())"
         a = "iter(d.keys())"
         self.check(b, a)
 
-    def test_18(self):
+    def test_31(self):
         b = "list(d.viewkeys())"
         a = "list(d.keys())"
         self.check(b, a)
 
-    def test_19(self):
+    def test_32(self):
         b = "sorted(d.viewkeys())"
         a = "sorted(d.keys())"
         self.check(b, a)
@@ -1812,11 +1821,41 @@ class Test_urllib(FixerTestCase):
                     b = "from %s import %s as foo_bar" % (old, member)
                     a = "from %s import %s as foo_bar" % (new, member)
                     self.check(b, a)
+                    b = "from %s import %s as blah, %s" % (old, member, member)
+                    a = "from %s import %s as blah, %s" % (new, member, member)
+                    self.check(b, a)
 
     def test_star(self):
         for old in self.modules:
             s = "from %s import *" % old
             self.warns_unchanged(s, "Cannot handle star imports")
+
+    def test_indented(self):
+        b = """
+def foo():
+    from urllib import urlencode, urlopen
+"""
+        a = """
+def foo():
+    from urllib.parse import urlencode
+    from urllib.request import urlopen
+"""
+        self.check(b, a)
+
+        b = """
+def foo():
+    other()
+    from urllib import urlencode, urlopen
+"""
+        a = """
+def foo():
+    other()
+    from urllib.parse import urlencode
+    from urllib.request import urlopen
+"""
+        self.check(b, a)
+
+
 
     def test_import_module_usage(self):
         for old, changes in self.modules.items():
@@ -2789,98 +2828,43 @@ class Test_unicode(FixerTestCase):
         a = """R'''x''' """
         self.check(b, a)
 
-class Test_callable(FixerTestCase):
-    fixer = "callable"
-
-    def test_prefix_preservation(self):
-        b = """callable(    x)"""
-        a = """import collections\nisinstance(    x, collections.Callable)"""
+    def test_native_literal_escape_u(self):
+        b = """'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
+        a = """'\\\\\\\\u20ac\\\\U0001d121\\\\u20ac'"""
         self.check(b, a)
 
-        b = """if     callable(x): pass"""
-        a = """import collections
-if     isinstance(x, collections.Callable): pass"""
+        b = """r'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
+        a = """r'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
         self.check(b, a)
 
-    def test_callable_call(self):
-        b = """callable(x)"""
-        a = """import collections\nisinstance(x, collections.Callable)"""
+    def test_bytes_literal_escape_u(self):
+        b = """b'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
+        a = """b'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
         self.check(b, a)
 
-    def test_global_import(self):
-        b = """
-def spam(foo):
-    callable(foo)"""[1:]
-        a = """
-import collections
-def spam(foo):
-    isinstance(foo, collections.Callable)"""[1:]
+        b = """br'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
+        a = """br'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
         self.check(b, a)
 
-        b = """
-import collections
-def spam(foo):
-    callable(foo)"""[1:]
-        # same output if it was already imported
+    def test_unicode_literal_escape_u(self):
+        b = """u'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
+        a = """'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
         self.check(b, a)
 
-        b = """
-from collections import *
-def spam(foo):
-    callable(foo)"""[1:]
-        a = """
-from collections import *
-import collections
-def spam(foo):
-    isinstance(foo, collections.Callable)"""[1:]
+        b = """ur'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
+        a = """r'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
         self.check(b, a)
 
-        b = """
-do_stuff()
-do_some_other_stuff()
-assert callable(do_stuff)"""[1:]
-        a = """
-import collections
-do_stuff()
-do_some_other_stuff()
-assert isinstance(do_stuff, collections.Callable)"""[1:]
+    def test_native_unicode_literal_escape_u(self):
+        f = 'from __future__ import unicode_literals\n'
+        b = f + """'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
+        a = f + """'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
         self.check(b, a)
 
-        b = """
-if isinstance(do_stuff, Callable):
-    assert callable(do_stuff)
-    do_stuff(do_stuff)
-    if not callable(do_stuff):
-        exit(1)
-    else:
-        assert callable(do_stuff)
-else:
-    assert not callable(do_stuff)"""[1:]
-        a = """
-import collections
-if isinstance(do_stuff, Callable):
-    assert isinstance(do_stuff, collections.Callable)
-    do_stuff(do_stuff)
-    if not isinstance(do_stuff, collections.Callable):
-        exit(1)
-    else:
-        assert isinstance(do_stuff, collections.Callable)
-else:
-    assert not isinstance(do_stuff, collections.Callable)"""[1:]
+        b = f + """r'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
+        a = f + """r'\\\\\\u20ac\\U0001d121\\\\u20ac'"""
         self.check(b, a)
 
-    def test_callable_should_not_change(self):
-        a = """callable(*x)"""
-        self.unchanged(a)
-
-        a = """callable(x, y)"""
-        self.unchanged(a)
-
-        a = """callable(x, kw=y)"""
-        self.unchanged(a)
-
-        a = """callable()"""
-        self.unchanged(a)
 
 class Test_filter(FixerTestCase):
     fixer = "filter"
@@ -2945,6 +2929,10 @@ class Test_filter(FixerTestCase):
         a = """sorted(filter(f, 'abc'), key=blah)"""
         self.unchanged(a)
         a = """sorted(filter(f, 'abc'), key=blah)[0]"""
+        self.unchanged(a)
+        a = """enumerate(filter(f, 'abc'))"""
+        self.unchanged(a)
+        a = """enumerate(filter(f, 'abc'), start=1)"""
         self.unchanged(a)
         a = """for i in filter(f, 'abc'): pass"""
         self.unchanged(a)
@@ -3054,6 +3042,10 @@ class Test_map(FixerTestCase):
         self.unchanged(a)
         a = """sorted(map(f, 'abc'), key=blah)[0]"""
         self.unchanged(a)
+        a = """enumerate(map(f, 'abc'))"""
+        self.unchanged(a)
+        a = """enumerate(map(f, 'abc'), start=1)"""
+        self.unchanged(a)
         a = """for i in map(f, 'abc'): pass"""
         self.unchanged(a)
         a = """[x for x in map(f, 'abc')]"""
@@ -3117,6 +3109,10 @@ class Test_zip(FixerTestCase):
         self.unchanged(a)
         a = """sorted(zip(a, b), key=blah)[0]"""
         self.unchanged(a)
+        a = """enumerate(zip(a, b))"""
+        self.unchanged(a)
+        a = """enumerate(zip(a, b), start=1)"""
+        self.unchanged(a)
         a = """for i in zip(a, b): pass"""
         self.unchanged(a)
         a = """[x for x in zip(a, b)]"""
@@ -3177,6 +3173,10 @@ class Test_types(FixerTestCase):
 
         b = """types.NoneType"""
         a = """type(None)"""
+        self.check(b, a)
+
+        b = "types.StringTypes"
+        a = "(str,)"
         self.check(b, a)
 
 class Test_idioms(FixerTestCase):
@@ -3588,14 +3588,22 @@ class Test_itertools(FixerTestCase):
         a = """%s(f, a)"""
         self.checkall(b, a)
 
-    def test_2(self):
+    def test_qualified(self):
         b = """itertools.ifilterfalse(a, b)"""
         a = """itertools.filterfalse(a, b)"""
         self.check(b, a)
 
-    def test_4(self):
+        b = """itertools.izip_longest(a, b)"""
+        a = """itertools.zip_longest(a, b)"""
+        self.check(b, a)
+
+    def test_2(self):
         b = """ifilterfalse(a, b)"""
         a = """filterfalse(a, b)"""
+        self.check(b, a)
+
+        b = """izip_longest(a, b)"""
+        a = """zip_longest(a, b)"""
         self.check(b, a)
 
     def test_space_1(self):
@@ -3608,8 +3616,13 @@ class Test_itertools(FixerTestCase):
         a = """    itertools.filterfalse(a, b)"""
         self.check(b, a)
 
+        b = """    itertools.izip_longest(a, b)"""
+        a = """    itertools.zip_longest(a, b)"""
+        self.check(b, a)
+
     def test_run_order(self):
         self.assert_runs_after('map', 'zip', 'filter')
+
 
 class Test_itertools_imports(FixerTestCase):
     fixer = 'itertools_imports'
@@ -3621,6 +3634,10 @@ class Test_itertools_imports(FixerTestCase):
 
         b = "from itertools import bar, imap, izip, foo"
         a = "from itertools import bar, foo"
+        self.check(b, a)
+
+        b = "from itertools import chain, imap, izip"
+        a = "from itertools import chain"
         self.check(b, a)
 
     def test_comments(self):
@@ -3657,18 +3674,23 @@ class Test_itertools_imports(FixerTestCase):
         s = "from itertools import bar as bang"
         self.unchanged(s)
 
-    def test_ifilter(self):
-        b = "from itertools import ifilterfalse"
-        a = "from itertools import filterfalse"
-        self.check(b, a)
+    def test_ifilter_and_zip_longest(self):
+        for name in "filterfalse", "zip_longest":
+            b = "from itertools import i%s" % (name,)
+            a = "from itertools import %s" % (name,)
+            self.check(b, a)
 
-        b = "from itertools import imap, ifilterfalse, foo"
-        a = "from itertools import filterfalse, foo"
-        self.check(b, a)
+            b = "from itertools import imap, i%s, foo" % (name,)
+            a = "from itertools import %s, foo" % (name,)
+            self.check(b, a)
 
-        b = "from itertools import bar, ifilterfalse, foo"
-        a = "from itertools import bar, filterfalse, foo"
-        self.check(b, a)
+            b = "from itertools import bar, i%s, foo" % (name,)
+            a = "from itertools import bar, %s, foo" % (name,)
+            self.check(b, a)
+
+    def test_import_star(self):
+        s = "from itertools import *"
+        self.unchanged(s)
 
 
     def test_unchanged(self):
@@ -4299,13 +4321,89 @@ class Test_operator(FixerTestCase):
         a = "operator.contains(x, y)"
         self.check(b, a)
 
+        b = "operator .sequenceIncludes(x, y)"
+        a = "operator .contains(x, y)"
+        self.check(b, a)
+
+        b = "operator.  sequenceIncludes(x, y)"
+        a = "operator.  contains(x, y)"
+        self.check(b, a)
+
+    def test_operator_isSequenceType(self):
+        b = "operator.isSequenceType(x)"
+        a = "import collections\nisinstance(x, collections.Sequence)"
+        self.check(b, a)
+
+    def test_operator_isMappingType(self):
+        b = "operator.isMappingType(x)"
+        a = "import collections\nisinstance(x, collections.Mapping)"
+        self.check(b, a)
+
+    def test_operator_isNumberType(self):
+        b = "operator.isNumberType(x)"
+        a = "import numbers\nisinstance(x, numbers.Number)"
+        self.check(b, a)
+
+    def test_operator_repeat(self):
+        b = "operator.repeat(x, n)"
+        a = "operator.mul(x, n)"
+        self.check(b, a)
+
+        b = "operator .repeat(x, n)"
+        a = "operator .mul(x, n)"
+        self.check(b, a)
+
+        b = "operator.  repeat(x, n)"
+        a = "operator.  mul(x, n)"
+        self.check(b, a)
+
+    def test_operator_irepeat(self):
+        b = "operator.irepeat(x, n)"
+        a = "operator.imul(x, n)"
+        self.check(b, a)
+
+        b = "operator .irepeat(x, n)"
+        a = "operator .imul(x, n)"
+        self.check(b, a)
+
+        b = "operator.  irepeat(x, n)"
+        a = "operator.  imul(x, n)"
+        self.check(b, a)
+
     def test_bare_isCallable(self):
         s = "isCallable(x)"
-        self.warns_unchanged(s, "You should use hasattr(x, '__call__') here.")
+        t = "You should use 'hasattr(x, '__call__')' here."
+        self.warns_unchanged(s, t)
 
     def test_bare_sequenceIncludes(self):
         s = "sequenceIncludes(x, y)"
-        self.warns_unchanged(s, "You should use operator.contains here.")
+        t = "You should use 'operator.contains(x, y)' here."
+        self.warns_unchanged(s, t)
+
+    def test_bare_operator_isSequenceType(self):
+        s = "isSequenceType(z)"
+        t = "You should use 'isinstance(z, collections.Sequence)' here."
+        self.warns_unchanged(s, t)
+
+    def test_bare_operator_isMappingType(self):
+        s = "isMappingType(x)"
+        t = "You should use 'isinstance(x, collections.Mapping)' here."
+        self.warns_unchanged(s, t)
+
+    def test_bare_operator_isNumberType(self):
+        s = "isNumberType(y)"
+        t = "You should use 'isinstance(y, numbers.Number)' here."
+        self.warns_unchanged(s, t)
+
+    def test_bare_operator_repeat(self):
+        s = "repeat(x, n)"
+        t = "You should use 'operator.mul(x, n)' here."
+        self.warns_unchanged(s, t)
+
+    def test_bare_operator_irepeat(self):
+        s = "irepeat(y, 187)"
+        t = "You should use 'operator.imul(y, 187)' here."
+        self.warns_unchanged(s, t)
 
 
 class Test_exitfunc(FixerTestCase):
@@ -4394,3 +4492,53 @@ class Test_exitfunc(FixerTestCase):
     def test_unchanged(self):
         s = """f(sys.exitfunc)"""
         self.unchanged(s)
+
+
+class Test_asserts(FixerTestCase):
+
+    fixer = "asserts"
+
+    def test_deprecated_names(self):
+        tests = [
+            ('self.assert_(True)', 'self.assertTrue(True)'),
+            ('self.assertEquals(2, 2)', 'self.assertEqual(2, 2)'),
+            ('self.assertNotEquals(2, 3)', 'self.assertNotEqual(2, 3)'),
+            ('self.assertAlmostEquals(2, 3)', 'self.assertAlmostEqual(2, 3)'),
+            ('self.assertNotAlmostEquals(2, 8)', 'self.assertNotAlmostEqual(2, 8)'),
+            ('self.failUnlessEqual(2, 2)', 'self.assertEqual(2, 2)'),
+            ('self.failIfEqual(2, 3)', 'self.assertNotEqual(2, 3)'),
+            ('self.failUnlessAlmostEqual(2, 3)', 'self.assertAlmostEqual(2, 3)'),
+            ('self.failIfAlmostEqual(2, 8)', 'self.assertNotAlmostEqual(2, 8)'),
+            ('self.failUnless(True)', 'self.assertTrue(True)'),
+            ('self.failUnlessRaises(foo)', 'self.assertRaises(foo)'),
+            ('self.failIf(False)', 'self.assertFalse(False)'),
+        ]
+        for b, a in tests:
+            self.check(b, a)
+
+    def test_variants(self):
+        b = 'eq = self.assertEquals'
+        a = 'eq = self.assertEqual'
+        self.check(b, a)
+        b = 'self.assertEquals(2, 3, msg="fail")'
+        a = 'self.assertEqual(2, 3, msg="fail")'
+        self.check(b, a)
+        b = 'self.assertEquals(2, 3, msg="fail") # foo'
+        a = 'self.assertEqual(2, 3, msg="fail") # foo'
+        self.check(b, a)
+        b = 'self.assertEquals (2, 3)'
+        a = 'self.assertEqual (2, 3)'
+        self.check(b, a)
+        b = '  self.assertEquals (2, 3)'
+        a = '  self.assertEqual (2, 3)'
+        self.check(b, a)
+        b = 'with self.failUnlessRaises(Explosion): explode()'
+        a = 'with self.assertRaises(Explosion): explode()'
+        self.check(b, a)
+        b = 'with self.failUnlessRaises(Explosion) as cm: explode()'
+        a = 'with self.assertRaises(Explosion) as cm: explode()'
+        self.check(b, a)
+
+    def test_unchanged(self):
+        self.unchanged('self.assertEqualsOnSaturday')
+        self.unchanged('self.assertEqualsOnSaturday(3, 5)')

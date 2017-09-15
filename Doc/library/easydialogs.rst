@@ -90,13 +90,13 @@ The :mod:`EasyDialogs` module defines the following functions:
    +----------------------+------------------------------------------+
    | *optstr* format      | Command-line format                      |
    +======================+==========================================+
-   | ``x``                | :option:`-x` (short option)              |
+   | ``x``                | :option:`!-x` (short option)             |
    +----------------------+------------------------------------------+
-   | ``x:`` or ``x=``     | :option:`-x` (short option with value)   |
+   | ``x:`` or ``x=``     | :option:`!-x` (short option with value)  |
    +----------------------+------------------------------------------+
-   | ``xyz``              | :option:`--xyz` (long option)            |
+   | ``xyz``              | :option:`!--xyz` (long option)           |
    +----------------------+------------------------------------------+
-   | ``xyz:`` or ``xyz=`` | :option:`--xyz` (long option with value) |
+   | ``xyz:`` or ``xyz=`` | :option:`!--xyz` (long option with value)|
    +----------------------+------------------------------------------+
 
    *commandlist* is a list of items of the form *cmdstr* or ``(cmdstr, descr)``,
@@ -143,7 +143,7 @@ The :mod:`EasyDialogs` module defines the following functions:
 
 .. seealso::
 
-   `Navigation Services Reference <http://developer.apple.com/documentation/Carbon/Reference/Navigation_Services_Ref/>`_
+   `Navigation Services Reference <http://developer.apple.com/legacy/mac/library/#documentation/Carbon/Conceptual/NavServicesIntro/ns_intro_carb/ns_into_carb.html>`_
       Programmer's reference documentation for the Navigation Services, a part of the
       Carbon framework.
 

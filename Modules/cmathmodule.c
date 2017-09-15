@@ -3,6 +3,7 @@
 /* much code borrowed from mathmodule.c */
 
 #include "Python.h"
+#include "_math.h"
 /* we need DBL_MAX, DBL_MIN, DBL_EPSILON, DBL_MANT_DIG and FLT_RADIX from
    float.h.  We assume that FLT_RADIX is either 2 or 16. */
 #include <float.h>
@@ -22,7 +23,7 @@
 /*
    CM_LARGE_DOUBLE is used to avoid spurious overflow in the sqrt, log,
    inverse trig and inverse hyperbolic trig functions.  Its log is used in the
-   evaluation of exp, cos, cosh, sin, sinh, tan, and tanh to avoid unecessary
+   evaluation of exp, cos, cosh, sin, sinh, tan, and tanh to avoid unnecessary
    overflow.
  */
 
@@ -149,7 +150,7 @@ c_acos(Py_complex z)
         s2.imag = z.imag;
         s2 = c_sqrt(s2);
         r.real = 2.*atan2(s1.real, s2.real);
-        r.imag = asinh(s2.real*s1.imag - s2.imag*s1.real);
+        r.imag = m_asinh(s2.real*s1.imag - s2.imag*s1.real);
     }
     errno = 0;
     return r;
@@ -181,7 +182,7 @@ c_acosh(Py_complex z)
         s2.real = z.real + 1.;
         s2.imag = z.imag;
         s2 = c_sqrt(s2);
-        r.real = asinh(s1.real*s2.real + s1.imag*s2.imag);
+        r.real = m_asinh(s1.real*s2.real + s1.imag*s2.imag);
         r.imag = 2.*atan2(s1.imag, s2.real);
     }
     errno = 0;
@@ -191,7 +192,7 @@ c_acosh(Py_complex z)
 PyDoc_STRVAR(c_acosh_doc,
 "acosh(x)\n"
 "\n"
-"Return the hyperbolic arccosine of x.");
+"Return the inverse hyperbolic cosine of x.");
 
 
 static Py_complex
@@ -238,7 +239,7 @@ c_asinh(Py_complex z)
         s2.real = 1.-z.imag;
         s2.imag = z.real;
         s2 = c_sqrt(s2);
-        r.real = asinh(s1.real*s2.imag-s2.real*s1.imag);
+        r.real = m_asinh(s1.real*s2.imag-s2.real*s1.imag);
         r.imag = atan2(z.imag, s1.real*s2.real-s1.imag*s2.imag);
     }
     errno = 0;
@@ -248,7 +249,7 @@ c_asinh(Py_complex z)
 PyDoc_STRVAR(c_asinh_doc,
 "asinh(x)\n"
 "\n"
-"Return the hyperbolic arc sine of x.");
+"Return the inverse hyperbolic sine of x.");
 
 
 static Py_complex
@@ -342,7 +343,7 @@ c_atanh(Py_complex z)
             errno = 0;
         }
     } else {
-        r.real = log1p(4.*z.real/((1-z.real)*(1-z.real) + ay*ay))/4.;
+        r.real = m_log1p(4.*z.real/((1-z.real)*(1-z.real) + ay*ay))/4.;
         r.imag = -atan2(-2.*z.imag, (1-z.real)*(1+z.real) - ay*ay)/2.;
         errno = 0;
     }
@@ -352,7 +353,7 @@ c_atanh(Py_complex z)
 PyDoc_STRVAR(c_atanh_doc,
 "atanh(x)\n"
 "\n"
-"Return the hyperbolic arc tangent of x.");
+"Return the inverse hyperbolic tangent of x.");
 
 
 static Py_complex
@@ -552,7 +553,7 @@ c_log(Py_complex z)
         if (0.71 <= h && h <= 1.73) {
             am = ax > ay ? ax : ay;  /* max(ax, ay) */
             an = ax > ay ? ay : ax;  /* min(ax, ay) */
-            r.real = log1p((am-1)*(am+1)+an*an)/2.;
+            r.real = m_log1p((am-1)*(am+1)+an*an)/2.;
         } else {
             r.real = log(h);
         }
@@ -940,9 +941,10 @@ cmath_polar(PyObject *self, PyObject *args)
     double r, phi;
     if (!PyArg_ParseTuple(args, "D:polar", &z))
         return NULL;
+    errno = 0;
     PyFPE_START_PROTECT("polar function", return 0)
     phi = c_atan2(z); /* should not cause any exception */
-    r = c_abs(z); /* sets errno to ERANGE on overflow;  otherwise 0 */
+    r = c_abs(z); /* sets errno to ERANGE on overflow */
     PyFPE_END_PROTECT(r)
     if (errno != 0)
         return math_error();
@@ -1004,6 +1006,13 @@ cmath_rect(PyObject *self, PyObject *args)
             errno = EDOM;
         else
             errno = 0;
+    }
+    else if (phi == 0.0) {
+        /* Workaround for buggy results with phi=-0.0 on OS X 10.8.  See
+           bugs.python.org/issue18513. */
+        z.real = r;
+        z.imag = r * phi;
+        errno = 0;
     }
     else {
         z.real = r * cos(phi);

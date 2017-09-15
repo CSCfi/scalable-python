@@ -191,6 +191,11 @@ PyCursesPanel_New(PANEL *pan, PyCursesWindowObject *wo)
 static void
 PyCursesPanel_Dealloc(PyCursesPanelObject *po)
 {
+    PyObject *obj = (PyObject *) panel_userptr(po->pan);
+    if (obj) {
+        (void)set_panel_userptr(po->pan, NULL);
+        Py_DECREF(obj);
+    }
     (void)del_panel(po->pan);
     if (po->wo != NULL) {
         Py_DECREF(po->wo);
@@ -283,9 +288,8 @@ PyCursesPanel_replace_panel(PyCursesPanelObject *self, PyObject *args)
         PyErr_SetString(PyCursesError, "replace_panel() returned ERR");
         return NULL;
     }
-    Py_DECREF(po->wo);
-    po->wo = temp;
-    Py_INCREF(po->wo);
+    Py_INCREF(temp);
+    Py_SETREF(po->wo, temp);
     Py_INCREF(Py_None);
     return Py_None;
 }
@@ -293,9 +297,18 @@ PyCursesPanel_replace_panel(PyCursesPanelObject *self, PyObject *args)
 static PyObject *
 PyCursesPanel_set_panel_userptr(PyCursesPanelObject *self, PyObject *obj)
 {
+    PyObject *oldobj;
+    int rc;
+    PyCursesInitialised;
     Py_INCREF(obj);
-    return PyCursesCheckERR(set_panel_userptr(self->pan, (void*)obj),
-                            "set_panel_userptr");
+    oldobj = (PyObject *) panel_userptr(self->pan);
+    rc = set_panel_userptr(self->pan, (void*)obj);
+    if (rc == ERR) {
+        /* In case of an ncurses error, decref the new object again */
+        Py_DECREF(obj);
+    }
+    Py_XDECREF(oldobj);
+    return PyCursesCheckERR(rc, "set_panel_userptr");
 }
 
 static PyObject *

@@ -1,13 +1,31 @@
 import unittest
-from test import test_support
+from test import test_support, test_genericpath
+from test import test_support as support
 
-import posixpath, os, sys
+import posixpath
+import os
+import sys
 from posixpath import realpath, abspath, dirname, basename
+
+try:
+    import posix
+except ImportError:
+    posix = None
 
 # An absolute path to a temporary filename for testing. We can't rely on TESTFN
 # being an absolute path, so we need this.
 
 ABSTFN = abspath(test_support.TESTFN)
+
+def skip_if_ABSTFN_contains_backslash(test):
+    """
+    On Windows, posixpath.abspath still returns paths with backslashes
+    instead of posix forward slashes. If this is the case, several tests
+    fail, so skip them.
+    """
+    found_backslash = '\\' in ABSTFN
+    msg = "ABSTFN is not a posix path - tests fail"
+    return [test, unittest.skip(msg)(test)][found_backslash]
 
 def safe_rmdir(dirname):
     try:
@@ -25,28 +43,10 @@ class PosixPathTest(unittest.TestCase):
             test_support.unlink(test_support.TESTFN + suffix)
             safe_rmdir(test_support.TESTFN + suffix)
 
-    def assertIs(self, a, b):
-        self.assert_(a is b)
-
-    def test_normcase(self):
-        # Check that normcase() is idempotent
-        p = "FoO/./BaR"
-        p = posixpath.normcase(p)
-        self.assertEqual(p, posixpath.normcase(p))
-
-        self.assertRaises(TypeError, posixpath.normcase)
-
     def test_join(self):
         self.assertEqual(posixpath.join("/foo", "bar", "/bar", "baz"), "/bar/baz")
         self.assertEqual(posixpath.join("/foo", "bar", "baz"), "/foo/bar/baz")
         self.assertEqual(posixpath.join("/foo/", "bar/", "baz/"), "/foo/bar/baz/")
-
-        self.assertRaises(TypeError, posixpath.join)
-
-    def test_splitdrive(self):
-        self.assertEqual(posixpath.splitdrive("/foo/bar"), ("", "/foo/bar"))
-
-        self.assertRaises(TypeError, posixpath.splitdrive)
 
     def test_split(self):
         self.assertEqual(posixpath.split("/foo/bar"), ("/foo", "bar"))
@@ -54,8 +54,6 @@ class PosixPathTest(unittest.TestCase):
         self.assertEqual(posixpath.split("foo"), ("", "foo"))
         self.assertEqual(posixpath.split("////foo"), ("////", "foo"))
         self.assertEqual(posixpath.split("//foo//bar"), ("//foo", "bar"))
-
-        self.assertRaises(TypeError, posixpath.split)
 
     def splitextTest(self, path, filename, ext):
         self.assertEqual(posixpath.splitext(path), (filename, ext))
@@ -78,7 +76,6 @@ class PosixPathTest(unittest.TestCase):
         self.splitextTest("..", "..", "")
         self.splitextTest("........", "........", "")
         self.splitextTest("", "", "")
-        self.assertRaises(TypeError, posixpath.splitext)
 
     def test_isabs(self):
         self.assertIs(posixpath.isabs(""), False)
@@ -87,16 +84,12 @@ class PosixPathTest(unittest.TestCase):
         self.assertIs(posixpath.isabs("/foo/bar"), True)
         self.assertIs(posixpath.isabs("foo/bar"), False)
 
-        self.assertRaises(TypeError, posixpath.isabs)
-
     def test_basename(self):
         self.assertEqual(posixpath.basename("/foo/bar"), "bar")
         self.assertEqual(posixpath.basename("/"), "")
         self.assertEqual(posixpath.basename("foo"), "foo")
         self.assertEqual(posixpath.basename("////foo"), "foo")
         self.assertEqual(posixpath.basename("//foo//bar"), "bar")
-
-        self.assertRaises(TypeError, posixpath.basename)
 
     def test_dirname(self):
         self.assertEqual(posixpath.dirname("/foo/bar"), "/foo")
@@ -105,67 +98,6 @@ class PosixPathTest(unittest.TestCase):
         self.assertEqual(posixpath.dirname("////foo"), "////")
         self.assertEqual(posixpath.dirname("//foo//bar"), "//foo")
 
-        self.assertRaises(TypeError, posixpath.dirname)
-
-    def test_commonprefix(self):
-        self.assertEqual(
-            posixpath.commonprefix([]),
-            ""
-        )
-        self.assertEqual(
-            posixpath.commonprefix(["/home/swenson/spam", "/home/swen/spam"]),
-            "/home/swen"
-        )
-        self.assertEqual(
-            posixpath.commonprefix(["/home/swen/spam", "/home/swen/eggs"]),
-            "/home/swen/"
-        )
-        self.assertEqual(
-            posixpath.commonprefix(["/home/swen/spam", "/home/swen/spam"]),
-            "/home/swen/spam"
-        )
-
-        testlist = ['', 'abc', 'Xbcd', 'Xb', 'XY', 'abcd', 'aXc', 'abd', 'ab', 'aX', 'abcX']
-        for s1 in testlist:
-            for s2 in testlist:
-                p = posixpath.commonprefix([s1, s2])
-                self.assert_(s1.startswith(p))
-                self.assert_(s2.startswith(p))
-                if s1 != s2:
-                    n = len(p)
-                    self.assertNotEqual(s1[n:n+1], s2[n:n+1])
-
-    def test_getsize(self):
-        f = open(test_support.TESTFN, "wb")
-        try:
-            f.write("foo")
-            f.close()
-            self.assertEqual(posixpath.getsize(test_support.TESTFN), 3)
-        finally:
-            if not f.closed:
-                f.close()
-
-    def test_time(self):
-        f = open(test_support.TESTFN, "wb")
-        try:
-            f.write("foo")
-            f.close()
-            f = open(test_support.TESTFN, "ab")
-            f.write("bar")
-            f.close()
-            f = open(test_support.TESTFN, "rb")
-            d = f.read()
-            f.close()
-            self.assertEqual(d, "foobar")
-
-            self.assert_(
-                posixpath.getctime(test_support.TESTFN) <=
-                posixpath.getmtime(test_support.TESTFN)
-            )
-        finally:
-            if not f.closed:
-                f.close()
-
     def test_islink(self):
         self.assertIs(posixpath.islink(test_support.TESTFN + "1"), False)
         f = open(test_support.TESTFN + "1", "wb")
@@ -173,7 +105,7 @@ class PosixPathTest(unittest.TestCase):
             f.write("foo")
             f.close()
             self.assertIs(posixpath.islink(test_support.TESTFN + "1"), False)
-            if hasattr(os, "symlink"):
+            if hasattr(os, 'symlink'):
                 os.symlink(test_support.TESTFN + "1", test_support.TESTFN + "2")
                 self.assertIs(posixpath.islink(test_support.TESTFN + "2"), True)
                 os.remove(test_support.TESTFN + "1")
@@ -183,56 +115,6 @@ class PosixPathTest(unittest.TestCase):
         finally:
             if not f.close():
                 f.close()
-
-        self.assertRaises(TypeError, posixpath.islink)
-
-    def test_exists(self):
-        self.assertIs(posixpath.exists(test_support.TESTFN), False)
-        f = open(test_support.TESTFN, "wb")
-        try:
-            f.write("foo")
-            f.close()
-            self.assertIs(posixpath.exists(test_support.TESTFN), True)
-            self.assertIs(posixpath.lexists(test_support.TESTFN), True)
-        finally:
-            if not f.close():
-                f.close()
-
-        self.assertRaises(TypeError, posixpath.exists)
-
-    def test_isdir(self):
-        self.assertIs(posixpath.isdir(test_support.TESTFN), False)
-        f = open(test_support.TESTFN, "wb")
-        try:
-            f.write("foo")
-            f.close()
-            self.assertIs(posixpath.isdir(test_support.TESTFN), False)
-            os.remove(test_support.TESTFN)
-            os.mkdir(test_support.TESTFN)
-            self.assertIs(posixpath.isdir(test_support.TESTFN), True)
-            os.rmdir(test_support.TESTFN)
-        finally:
-            if not f.close():
-                f.close()
-
-        self.assertRaises(TypeError, posixpath.isdir)
-
-    def test_isfile(self):
-        self.assertIs(posixpath.isfile(test_support.TESTFN), False)
-        f = open(test_support.TESTFN, "wb")
-        try:
-            f.write("foo")
-            f.close()
-            self.assertIs(posixpath.isfile(test_support.TESTFN), True)
-            os.remove(test_support.TESTFN)
-            os.mkdir(test_support.TESTFN)
-            self.assertIs(posixpath.isfile(test_support.TESTFN), False)
-            os.rmdir(test_support.TESTFN)
-        finally:
-            if not f.close():
-                f.close()
-
-        self.assertRaises(TypeError, posixpath.isdir)
 
     def test_samefile(self):
         f = open(test_support.TESTFN + "1", "wb")
@@ -246,8 +128,10 @@ class PosixPathTest(unittest.TestCase):
                 ),
                 True
             )
-            # If we don't have links, assume that os.stat doesn't return resonable
-            # inode information and thus, that samefile() doesn't work
+
+            # If we don't have links, assume that os.stat doesn't return
+            # reasonable inode information and thus, that samefile() doesn't
+            # work.
             if hasattr(os, "symlink"):
                 os.symlink(
                     test_support.TESTFN + "1",
@@ -275,8 +159,6 @@ class PosixPathTest(unittest.TestCase):
             if not f.close():
                 f.close()
 
-        self.assertRaises(TypeError, posixpath.samefile)
-
     def test_samestat(self):
         f = open(test_support.TESTFN + "1", "wb")
         try:
@@ -289,19 +171,19 @@ class PosixPathTest(unittest.TestCase):
                 ),
                 True
             )
-            # If we don't have links, assume that os.stat() doesn't return resonable
-            # inode information and thus, that samefile() doesn't work
+            # If we don't have links, assume that os.stat() doesn't return
+            # reasonable inode information and thus, that samestat() doesn't
+            # work.
             if hasattr(os, "symlink"):
-                if hasattr(os, "symlink"):
-                    os.symlink(test_support.TESTFN + "1", test_support.TESTFN + "2")
-                    self.assertIs(
-                        posixpath.samestat(
-                            os.stat(test_support.TESTFN + "1"),
-                            os.stat(test_support.TESTFN + "2")
-                        ),
-                        True
-                    )
-                    os.remove(test_support.TESTFN + "2")
+                os.symlink(test_support.TESTFN + "1", test_support.TESTFN + "2")
+                self.assertIs(
+                    posixpath.samestat(
+                        os.stat(test_support.TESTFN + "1"),
+                        os.stat(test_support.TESTFN + "2")
+                    ),
+                    True
+                )
+                os.remove(test_support.TESTFN + "2")
                 f = open(test_support.TESTFN + "2", "wb")
                 f.write("bar")
                 f.close()
@@ -316,60 +198,98 @@ class PosixPathTest(unittest.TestCase):
             if not f.close():
                 f.close()
 
-        self.assertRaises(TypeError, posixpath.samestat)
-
     def test_ismount(self):
         self.assertIs(posixpath.ismount("/"), True)
 
-        self.assertRaises(TypeError, posixpath.ismount)
+    def test_ismount_non_existent(self):
+        # Non-existent mountpoint.
+        self.assertIs(posixpath.ismount(ABSTFN), False)
+        try:
+            os.mkdir(ABSTFN)
+            self.assertIs(posixpath.ismount(ABSTFN), False)
+        finally:
+            safe_rmdir(ABSTFN)
+
+    @unittest.skipUnless(hasattr(os, 'symlink'),
+                         'Requires functional symlink implementation')
+    def test_ismount_symlinks(self):
+        # Symlinks are never mountpoints.
+        try:
+            os.symlink("/", ABSTFN)
+            self.assertIs(posixpath.ismount(ABSTFN), False)
+        finally:
+            os.unlink(ABSTFN)
+
+    @unittest.skipIf(posix is None, "Test requires posix module")
+    def test_ismount_different_device(self):
+        # Simulate the path being on a different device from its parent by
+        # mocking out st_dev.
+        save_lstat = os.lstat
+        def fake_lstat(path):
+            st_ino = 0
+            st_dev = 0
+            if path == ABSTFN:
+                st_dev = 1
+                st_ino = 1
+            return posix.stat_result((0, st_ino, st_dev, 0, 0, 0, 0, 0, 0, 0))
+        try:
+            os.lstat = fake_lstat
+            self.assertIs(posixpath.ismount(ABSTFN), True)
+        finally:
+            os.lstat = save_lstat
+
+    @unittest.skipIf(posix is None, "Test requires posix module")
+    def test_ismount_directory_not_readable(self):
+        # issue #2466: Simulate ismount run on a directory that is not
+        # readable, which used to return False.
+        save_lstat = os.lstat
+        def fake_lstat(path):
+            st_ino = 0
+            st_dev = 0
+            if path.startswith(ABSTFN) and path != ABSTFN:
+                # ismount tries to read something inside the ABSTFN directory;
+                # simulate this being forbidden (no read permission).
+                raise OSError("Fake [Errno 13] Permission denied")
+            if path == ABSTFN:
+                st_dev = 1
+                st_ino = 1
+            return posix.stat_result((0, st_ino, st_dev, 0, 0, 0, 0, 0, 0, 0))
+        try:
+            os.lstat = fake_lstat
+            self.assertIs(posixpath.ismount(ABSTFN), True)
+        finally:
+            os.lstat = save_lstat
 
     def test_expanduser(self):
         self.assertEqual(posixpath.expanduser("foo"), "foo")
+        with test_support.EnvironmentVarGuard() as env:
+            for home in '/', '', '//', '///':
+                env['HOME'] = home
+                self.assertEqual(posixpath.expanduser("~"), "/")
+                self.assertEqual(posixpath.expanduser("~/"), "/")
+                self.assertEqual(posixpath.expanduser("~/foo"), "/foo")
         try:
             import pwd
         except ImportError:
             pass
         else:
-            self.assert_(isinstance(posixpath.expanduser("~/"), basestring))
+            self.assertIsInstance(posixpath.expanduser("~/"), basestring)
             # if home directory == root directory, this test makes no sense
             if posixpath.expanduser("~") != '/':
                 self.assertEqual(
                     posixpath.expanduser("~") + "/",
                     posixpath.expanduser("~/")
                 )
-            self.assert_(isinstance(posixpath.expanduser("~root/"), basestring))
-            self.assert_(isinstance(posixpath.expanduser("~foo/"), basestring))
+            self.assertIsInstance(posixpath.expanduser("~root/"), basestring)
+            self.assertIsInstance(posixpath.expanduser("~foo/"), basestring)
 
             with test_support.EnvironmentVarGuard() as env:
-                env.set('HOME', '/')
-                self.assertEqual(posixpath.expanduser("~"), "/")
-
-        self.assertRaises(TypeError, posixpath.expanduser)
-
-    def test_expandvars(self):
-        oldenv = os.environ.copy()
-        try:
-            os.environ.clear()
-            os.environ["foo"] = "bar"
-            os.environ["{foo"] = "baz1"
-            os.environ["{foo}"] = "baz2"
-            self.assertEqual(posixpath.expandvars("foo"), "foo")
-            self.assertEqual(posixpath.expandvars("$foo bar"), "bar bar")
-            self.assertEqual(posixpath.expandvars("${foo}bar"), "barbar")
-            self.assertEqual(posixpath.expandvars("$[foo]bar"), "$[foo]bar")
-            self.assertEqual(posixpath.expandvars("$bar bar"), "$bar bar")
-            self.assertEqual(posixpath.expandvars("$?bar"), "$?bar")
-            self.assertEqual(posixpath.expandvars("${foo}bar"), "barbar")
-            self.assertEqual(posixpath.expandvars("$foo}bar"), "bar}bar")
-            self.assertEqual(posixpath.expandvars("${foo"), "${foo")
-            self.assertEqual(posixpath.expandvars("${{foo}}"), "baz1}")
-            self.assertEqual(posixpath.expandvars("$foo$foo"), "barbar")
-            self.assertEqual(posixpath.expandvars("$bar$bar"), "$bar$bar")
-        finally:
-            os.environ.clear()
-            os.environ.update(oldenv)
-
-        self.assertRaises(TypeError, posixpath.expandvars)
+                # expanduser should fall back to using the password database
+                del env['HOME']
+                home = pwd.getpwuid(os.getuid()).pw_dir
+                # $HOME can end with a trailing /, so strip it (see #17809)
+                home = home.rstrip("/") or '/'
+                self.assertEqual(posixpath.expanduser("~"), home)
 
     def test_normpath(self):
         self.assertEqual(posixpath.normpath(""), ".")
@@ -380,42 +300,17 @@ class PosixPathTest(unittest.TestCase):
         self.assertEqual(posixpath.normpath("///foo/.//bar//.//..//.//baz"), "/foo/baz")
         self.assertEqual(posixpath.normpath("///..//./foo/.//bar"), "/foo/bar")
 
-        # Issue 5827: Make sure normpath preserves unicode
-        for path in (u'', u'.', u'/', u'\\', u'///foo/.//bar//'):
-            self.assertTrue(isinstance(posixpath.normpath(path), unicode),
-                            'normpath() returned str instead of unicode')
+    @skip_if_ABSTFN_contains_backslash
+    def test_realpath_curdir(self):
+        self.assertEqual(realpath('.'), os.getcwd())
+        self.assertEqual(realpath('./.'), os.getcwd())
+        self.assertEqual(realpath('/'.join(['.'] * 100)), os.getcwd())
 
-        self.assertRaises(TypeError, posixpath.normpath)
-
-    def test_abspath(self):
-        self.assert_("foo" in posixpath.abspath("foo"))
-
-        # Issue 3426: check that abspath retuns unicode when the arg is unicode
-        # and str when it's str, with both ASCII and non-ASCII cwds
-        saved_cwd = os.getcwd()
-        cwds = ['cwd']
-        try:
-            cwds.append(u'\xe7w\xf0'.encode(sys.getfilesystemencoding()
-                                            or 'ascii'))
-        except UnicodeEncodeError:
-            pass # the cwd can't be encoded -- test with ascii cwd only
-        for cwd in cwds:
-            try:
-                os.mkdir(cwd)
-                os.chdir(cwd)
-                for path in ('', 'foo', 'f\xf2\xf2', '/foo', 'C:\\'):
-                    self.assertTrue(isinstance(posixpath.abspath(path), str))
-                for upath in (u'', u'fuu', u'f\xf9\xf9', u'/fuu', u'U:\\'):
-                    self.assertTrue(isinstance(posixpath.abspath(upath), unicode))
-            finally:
-                os.chdir(saved_cwd)
-                os.rmdir(cwd)
-
-        self.assertRaises(TypeError, posixpath.abspath)
-
-    def test_realpath(self):
-        self.assert_("foo" in realpath("foo"))
-        self.assertRaises(TypeError, posixpath.realpath)
+    @skip_if_ABSTFN_contains_backslash
+    def test_realpath_pardir(self):
+        self.assertEqual(realpath('..'), dirname(os.getcwd()))
+        self.assertEqual(realpath('../..'), dirname(dirname(os.getcwd())))
+        self.assertEqual(realpath('/'.join(['..'] * 100)), '/')
 
     if hasattr(os, "symlink"):
         def test_realpath_basic(self):
@@ -430,7 +325,6 @@ class PosixPathTest(unittest.TestCase):
             # Bug #930024, return the path unchanged if we get into an infinite
             # symlink loop.
             try:
-                old_path = abspath('.')
                 os.symlink(ABSTFN, ABSTFN)
                 self.assertEqual(realpath(ABSTFN), ABSTFN)
 
@@ -439,14 +333,61 @@ class PosixPathTest(unittest.TestCase):
                 self.assertEqual(realpath(ABSTFN+"1"), ABSTFN+"1")
                 self.assertEqual(realpath(ABSTFN+"2"), ABSTFN+"2")
 
+                self.assertEqual(realpath(ABSTFN+"1/x"), ABSTFN+"1/x")
+                self.assertEqual(realpath(ABSTFN+"1/.."), dirname(ABSTFN))
+                self.assertEqual(realpath(ABSTFN+"1/../x"), dirname(ABSTFN) + "/x")
+                os.symlink(ABSTFN+"x", ABSTFN+"y")
+                self.assertEqual(realpath(ABSTFN+"1/../" + basename(ABSTFN) + "y"),
+                                ABSTFN + "y")
+                self.assertEqual(realpath(ABSTFN+"1/../" + basename(ABSTFN) + "1"),
+                                ABSTFN + "1")
+
+                os.symlink(basename(ABSTFN) + "a/b", ABSTFN+"a")
+                self.assertEqual(realpath(ABSTFN+"a"), ABSTFN+"a/b")
+
+                os.symlink("../" + basename(dirname(ABSTFN)) + "/" +
+                        basename(ABSTFN) + "c", ABSTFN+"c")
+                self.assertEqual(realpath(ABSTFN+"c"), ABSTFN+"c")
+
                 # Test using relative path as well.
-                os.chdir(dirname(ABSTFN))
-                self.assertEqual(realpath(basename(ABSTFN)), ABSTFN)
+                with support.change_cwd(dirname(ABSTFN)):
+                    self.assertEqual(realpath(basename(ABSTFN)), ABSTFN)
             finally:
-                os.chdir(old_path)
                 test_support.unlink(ABSTFN)
                 test_support.unlink(ABSTFN+"1")
                 test_support.unlink(ABSTFN+"2")
+                test_support.unlink(ABSTFN+"y")
+                test_support.unlink(ABSTFN+"c")
+                test_support.unlink(ABSTFN+"a")
+
+        def test_realpath_repeated_indirect_symlinks(self):
+            # Issue #6975.
+            try:
+                os.mkdir(ABSTFN)
+                os.symlink('../' + basename(ABSTFN), ABSTFN + '/self')
+                os.symlink('self/self/self', ABSTFN + '/link')
+                self.assertEqual(realpath(ABSTFN + '/link'), ABSTFN)
+            finally:
+                test_support.unlink(ABSTFN + '/self')
+                test_support.unlink(ABSTFN + '/link')
+                safe_rmdir(ABSTFN)
+
+        def test_realpath_deep_recursion(self):
+            depth = 10
+            try:
+                os.mkdir(ABSTFN)
+                for i in range(depth):
+                    os.symlink('/'.join(['%d' % i] * 10), ABSTFN + '/%d' % (i + 1))
+                os.symlink('.', ABSTFN + '/0')
+                self.assertEqual(realpath(ABSTFN + '/%d' % depth), ABSTFN)
+
+                # Test using relative path as well.
+                with support.change_cwd(ABSTFN):
+                    self.assertEqual(realpath('%d' % depth), ABSTFN)
+            finally:
+                for i in range(depth + 1):
+                    test_support.unlink(ABSTFN + '/%d' % i)
+                safe_rmdir(ABSTFN)
 
         def test_realpath_resolve_parents(self):
             # We also need to resolve any symlinks in the parents of a relative
@@ -454,15 +395,13 @@ class PosixPathTest(unittest.TestCase):
             # /usr/doc with 'doc' being a symlink to /usr/share/doc. We call
             # realpath("a"). This should return /usr/share/doc/a/.
             try:
-                old_path = abspath('.')
                 os.mkdir(ABSTFN)
                 os.mkdir(ABSTFN + "/y")
                 os.symlink(ABSTFN + "/y", ABSTFN + "/k")
 
-                os.chdir(ABSTFN + "/k")
-                self.assertEqual(realpath("a"), ABSTFN + "/y/a")
+                with support.change_cwd(ABSTFN + "/k"):
+                    self.assertEqual(realpath("a"), ABSTFN + "/y/a")
             finally:
-                os.chdir(old_path)
                 test_support.unlink(ABSTFN + "/k")
                 safe_rmdir(ABSTFN + "/y")
                 safe_rmdir(ABSTFN)
@@ -476,7 +415,6 @@ class PosixPathTest(unittest.TestCase):
             # and a symbolic link 'link-y' pointing to 'y' in directory 'a',
             # then realpath("link-y/..") should return 'k', not 'a'.
             try:
-                old_path = abspath('.')
                 os.mkdir(ABSTFN)
                 os.mkdir(ABSTFN + "/k")
                 os.mkdir(ABSTFN + "/k/y")
@@ -485,10 +423,10 @@ class PosixPathTest(unittest.TestCase):
                 # Absolute path.
                 self.assertEqual(realpath(ABSTFN + "/link-y/.."), ABSTFN + "/k")
                 # Relative path.
-                os.chdir(dirname(ABSTFN))
-                self.assertEqual(realpath(basename(ABSTFN) + "/link-y/.."), ABSTFN + "/k")
+                with support.change_cwd(dirname(ABSTFN)):
+                    self.assertEqual(realpath(basename(ABSTFN) + "/link-y/.."),
+                                     ABSTFN + "/k")
             finally:
-                os.chdir(old_path)
                 test_support.unlink(ABSTFN + "/link-y")
                 safe_rmdir(ABSTFN + "/k/y")
                 safe_rmdir(ABSTFN + "/k")
@@ -499,17 +437,14 @@ class PosixPathTest(unittest.TestCase):
             # must be resolved too.
 
             try:
-                old_path = abspath('.')
                 os.mkdir(ABSTFN)
                 os.mkdir(ABSTFN + "/k")
                 os.symlink(ABSTFN, ABSTFN + "link")
-                os.chdir(dirname(ABSTFN))
-
-                base = basename(ABSTFN)
-                self.assertEqual(realpath(base + "link"), ABSTFN)
-                self.assertEqual(realpath(base + "link/k"), ABSTFN + "/k")
+                with support.change_cwd(dirname(ABSTFN)):
+                    base = basename(ABSTFN)
+                    self.assertEqual(realpath(base + "link"), ABSTFN)
+                    self.assertEqual(realpath(base + "link/k"), ABSTFN + "/k")
             finally:
-                os.chdir(old_path)
                 test_support.unlink(ABSTFN + "link")
                 safe_rmdir(ABSTFN + "/k")
                 safe_rmdir(ABSTFN)
@@ -527,11 +462,42 @@ class PosixPathTest(unittest.TestCase):
             self.assertEqual(posixpath.relpath("a/b", "../c"), "../"+curdir+"/a/b")
             self.assertEqual(posixpath.relpath("a", "b/c"), "../../a")
             self.assertEqual(posixpath.relpath("a", "a"), ".")
+            self.assertEqual(posixpath.relpath("/foo/bar/bat", "/x/y/z"), '../../../foo/bar/bat')
+            self.assertEqual(posixpath.relpath("/foo/bar/bat", "/foo/bar"), 'bat')
+            self.assertEqual(posixpath.relpath("/foo/bar/bat", "/"), 'foo/bar/bat')
+            self.assertEqual(posixpath.relpath("/", "/foo/bar/bat"), '../../..')
+            self.assertEqual(posixpath.relpath("/foo/bar/bat", "/x"), '../foo/bar/bat')
+            self.assertEqual(posixpath.relpath("/x", "/foo/bar/bat"), '../../../x')
+            self.assertEqual(posixpath.relpath("/", "/"), '.')
+            self.assertEqual(posixpath.relpath("/a", "/a"), '.')
+            self.assertEqual(posixpath.relpath("/a/b", "/a/b"), '.')
         finally:
             os.getcwd = real_getcwd
 
+    @test_support.requires_unicode
+    def test_expandvars_nonascii_word(self):
+        encoding = sys.getfilesystemencoding()
+        # Non-ASCII word characters
+        letters = test_support.u(r'\xe6\u0130\u0141\u03c6\u041a\u05d0\u062a\u0e01')
+        uwnonascii = letters.encode(encoding, 'ignore').decode(encoding)[:3]
+        swnonascii = uwnonascii.encode(encoding)
+        if not swnonascii:
+            self.skipTest('Needs non-ASCII word characters')
+        with test_support.EnvironmentVarGuard() as env:
+            env.clear()
+            env[swnonascii] = 'baz' + swnonascii
+            self.assertEqual(posixpath.expandvars(u'$%s bar' % uwnonascii),
+                             u'baz%s bar' % uwnonascii)
+
+
+class PosixCommonTest(test_genericpath.CommonTest):
+    pathmodule = posixpath
+    attributes = ['relpath', 'samefile', 'sameopenfile', 'samestat']
+
+
 def test_main():
-    test_support.run_unittest(PosixPathTest)
+    test_support.run_unittest(PosixPathTest, PosixCommonTest)
+
 
 if __name__=="__main__":
     test_main()

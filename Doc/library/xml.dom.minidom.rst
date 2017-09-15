@@ -1,9 +1,8 @@
-
-:mod:`xml.dom.minidom` --- Lightweight DOM implementation
-=========================================================
+:mod:`xml.dom.minidom` --- Minimal DOM implementation
+=====================================================
 
 .. module:: xml.dom.minidom
-   :synopsis: Lightweight Document Object Model (DOM) implementation.
+   :synopsis: Minimal Document Object Model (DOM) implementation.
 .. moduleauthor:: Paul Prescod <paul@prescod.net>
 .. sectionauthor:: Paul Prescod <paul@prescod.net>
 .. sectionauthor:: Martin v. Löwis <martin@v.loewis.de>
@@ -11,19 +10,33 @@
 
 .. versionadded:: 2.0
 
-:mod:`xml.dom.minidom` is a light-weight implementation of the Document Object
-Model interface.  It is intended to be simpler than the full DOM and also
-significantly smaller.
+**Source code:** :source:`Lib/xml/dom/minidom.py`
+
+--------------
+
+:mod:`xml.dom.minidom` is a minimal implementation of the Document Object
+Model interface, with an API similar to that in other languages.  It is intended
+to be simpler than the full DOM and also significantly smaller.  Users who are
+not already proficient with the DOM should consider using the
+:mod:`xml.etree.ElementTree` module for their XML processing instead.
+
+
+.. warning::
+
+   The :mod:`xml.dom.minidom` module is not secure against
+   maliciously constructed data.  If you need to parse untrusted or
+   unauthenticated data see :ref:`xml-vulnerabilities`.
+
 
 DOM applications typically start by parsing some XML into a DOM.  With
 :mod:`xml.dom.minidom`, this is done through the parse functions::
 
    from xml.dom.minidom import parse, parseString
 
-   dom1 = parse('c:\\temp\\mydata.xml') # parse an XML file by name
+   dom1 = parse('c:\\temp\\mydata.xml')  # parse an XML file by name
 
    datasource = open('c:\\temp\\mydata.xml')
-   dom2 = parse(datasource)   # parse an open file
+   dom2 = parse(datasource)  # parse an open file
 
    dom3 = parseString('<myxml>Some data<empty/> some more data</myxml>')
 
@@ -45,7 +58,7 @@ instead:
 .. function:: parseString(string[, parser])
 
    Return a :class:`Document` that represents the *string*. This method creates a
-   :class:`StringIO` object for the string and passes that on to :func:`parse`.
+   :class:`~StringIO.StringIO` object for the string and passes that on to :func:`parse`.
 
 Both functions return a :class:`Document` object representing the content of the
 document.
@@ -87,14 +100,14 @@ document: the one that holds all others.  Here is an example program::
 
 When you are finished with a DOM tree, you may optionally call the
 :meth:`unlink` method to encourage early cleanup of the now-unneeded
-objects.  :meth:`unlink` is a :mod:`xml.dom.minidom`\ -specific
+objects.  :meth:`unlink` is an :mod:`xml.dom.minidom`\ -specific
 extension to the DOM API that renders the node and its descendants are
 essentially useless.  Otherwise, Python's garbage collector will
 eventually take care of the objects in the tree.
 
 .. seealso::
 
-   `Document Object Model (DOM) Level 1 Specification <http://www.w3.org/TR/REC-DOM-Level-1/>`_
+   `Document Object Model (DOM) Level 1 Specification <https://www.w3.org/TR/REC-DOM-Level-1/>`_
       The W3C recommendation for the DOM supported by :mod:`xml.dom.minidom`.
 
 
@@ -118,13 +131,16 @@ module documentation.  This section lists the differences between the API and
    to discard children of that node.
 
 
-.. method:: Node.writexml(writer[, indent=""[, addindent=""[, newl=""[, encoding=""]]]])
+.. method:: Node.writexml(writer, indent="", addindent="", newl="")
 
    Write XML to the writer object.  The writer should have a :meth:`write` method
    which matches that of the file object interface.  The *indent* parameter is the
    indentation of the current node.  The *addindent* parameter is the incremental
    indentation to use for subnodes of the current one.  The *newl* parameter
    specifies the string to use to terminate newlines.
+
+   For the :class:`Document` node, an additional keyword argument *encoding* can
+   be used to specify the encoding field of the XML header.
 
    .. versionchanged:: 2.1
       The optional keyword parameters *indent*, *addindent*, and *newl* were added to
@@ -259,5 +275,5 @@ utility to most DOM users.
 
 .. [#] The encoding string included in XML output should conform to the
    appropriate standards. For example, "UTF-8" is valid, but "UTF8" is
-   not. See http://www.w3.org/TR/2006/REC-xml11-20060816/#NT-EncodingDecl
-   and http://www.iana.org/assignments/character-sets .
+   not. See https://www.w3.org/TR/2006/REC-xml11-20060816/#NT-EncodingDecl
+   and https://www.iana.org/assignments/character-sets/character-sets.xhtml.

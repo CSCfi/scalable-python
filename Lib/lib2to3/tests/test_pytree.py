@@ -160,12 +160,12 @@ class TestNodes(support.TestCase):
         l3 = pytree.Leaf(100, "bar")
         n1 = pytree.Node(1000, [l1, l2, l3])
         self.assertEqual(n1.children, [l1, l2, l3])
-        self.assertTrue(isinstance(n1.children, list))
+        self.assertIsInstance(n1.children, list)
         self.assertFalse(n1.was_changed)
         l2new = pytree.Leaf(100, "-")
         l2.replace(l2new)
         self.assertEqual(n1.children, [l1, l2new, l3])
-        self.assertTrue(isinstance(n1.children, list))
+        self.assertIsInstance(n1.children, list)
         self.assertTrue(n1.was_changed)
 
     def test_replace_with_list(self):
@@ -176,19 +176,44 @@ class TestNodes(support.TestCase):
 
         l2.replace([pytree.Leaf(100, "*"), pytree.Leaf(100, "*")])
         self.assertEqual(str(n1), "foo**bar")
-        self.assertTrue(isinstance(n1.children, list))
+        self.assertIsInstance(n1.children, list)
+
+    def test_leaves(self):
+        l1 = pytree.Leaf(100, "foo")
+        l2 = pytree.Leaf(100, "bar")
+        l3 = pytree.Leaf(100, "fooey")
+        n2 = pytree.Node(1000, [l1, l2])
+        n3 = pytree.Node(1000, [l3])
+        n1 = pytree.Node(1000, [n2, n3])
+
+        self.assertEqual(list(n1.leaves()), [l1, l2, l3])
+
+    def test_depth(self):
+        l1 = pytree.Leaf(100, "foo")
+        l2 = pytree.Leaf(100, "bar")
+        n2 = pytree.Node(1000, [l1, l2])
+        n3 = pytree.Node(1000, [])
+        n1 = pytree.Node(1000, [n2, n3])
+
+        self.assertEqual(l1.depth(), 2)
+        self.assertEqual(n3.depth(), 1)
+        self.assertEqual(n1.depth(), 0)
 
     def test_post_order(self):
         l1 = pytree.Leaf(100, "foo")
         l2 = pytree.Leaf(100, "bar")
-        n1 = pytree.Node(1000, [l1, l2])
-        self.assertEqual(list(n1.post_order()), [l1, l2, n1])
+        l3 = pytree.Leaf(100, "fooey")
+        c1 = pytree.Node(1000, [l1, l2])
+        n1 = pytree.Node(1000, [c1, l3])
+        self.assertEqual(list(n1.post_order()), [l1, l2, c1, l3, n1])
 
     def test_pre_order(self):
         l1 = pytree.Leaf(100, "foo")
         l2 = pytree.Leaf(100, "bar")
-        n1 = pytree.Node(1000, [l1, l2])
-        self.assertEqual(list(n1.pre_order()), [n1, l1, l2])
+        l3 = pytree.Leaf(100, "fooey")
+        c1 = pytree.Node(1000, [l1, l2])
+        n1 = pytree.Node(1000, [c1, l3])
+        self.assertEqual(list(n1.pre_order()), [n1, c1, l1, l2, l3])
 
     def test_changed(self):
         l1 = pytree.Leaf(100, "f")
@@ -322,7 +347,7 @@ class TestNodes(support.TestCase):
         n2 = pytree.Node(1000, [])
         p1 = pytree.Node(1000, [n1, n2])
 
-        self.assertTrue(n1.next_sibling is n2)
+        self.assertIs(n1.next_sibling, n2)
         self.assertEqual(n2.next_sibling, None)
         self.assertEqual(p1.next_sibling, None)
 
@@ -331,7 +356,7 @@ class TestNodes(support.TestCase):
         l2 = pytree.Leaf(100, "b")
         p1 = pytree.Node(1000, [l1, l2])
 
-        self.assertTrue(l1.next_sibling is l2)
+        self.assertIs(l1.next_sibling, l2)
         self.assertEqual(l2.next_sibling, None)
         self.assertEqual(p1.next_sibling, None)
 
@@ -340,7 +365,7 @@ class TestNodes(support.TestCase):
         n2 = pytree.Node(1000, [])
         p1 = pytree.Node(1000, [n1, n2])
 
-        self.assertTrue(n2.prev_sibling is n1)
+        self.assertIs(n2.prev_sibling, n1)
         self.assertEqual(n1.prev_sibling, None)
         self.assertEqual(p1.prev_sibling, None)
 
@@ -349,7 +374,7 @@ class TestNodes(support.TestCase):
         l2 = pytree.Leaf(100, "b")
         p1 = pytree.Node(1000, [l1, l2])
 
-        self.assertTrue(l2.prev_sibling is l1)
+        self.assertIs(l2.prev_sibling, l1)
         self.assertEqual(l1.prev_sibling, None)
         self.assertEqual(p1.prev_sibling, None)
 
@@ -422,7 +447,7 @@ class TestPatterns(support.TestCase):
         r = {}
         self.assertTrue(pw.match_seq([l1, l3], r))
         self.assertEqual(r, {"pl": l3, "pw": [l1, l3]})
-        self.assertTrue(r["pl"] is l3)
+        self.assertIs(r["pl"], l3)
         r = {}
 
     def test_generate_matches(self):

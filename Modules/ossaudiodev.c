@@ -129,6 +129,7 @@ newossobject(PyObject *arg)
     }
 
     if (ioctl(fd, SNDCTL_DSP_GETFMTS, &afmts) == -1) {
+        close(fd);
         PyErr_SetFromErrnoWithFilename(PyExc_IOError, devicename);
         return NULL;
     }
@@ -214,7 +215,7 @@ oss_mixer_dealloc(oss_mixer_t *self)
  */
 
 /* _do_ioctl_1() is a private helper function used for the OSS ioctls --
-   SNDCTL_DSP_{SETFMT,CHANNELS,SPEED} -- that that are called from C
+   SNDCTL_DSP_{SETFMT,CHANNELS,SPEED} -- that are called from C
    like this:
      ioctl(fd, SNDCTL_DSP_cmd, &arg)
 
@@ -425,6 +426,11 @@ oss_writeall(oss_audio_t *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "s#:write", &cp, &size))
         return NULL;
 
+    if (!_PyIsSelectable_fd(self->fd)) {
+        PyErr_SetString(PyExc_ValueError,
+                        "file descriptor out of range for select");
+        return NULL;
+    }
     /* use select to wait for audio device to be available */
     FD_ZERO(&write_set_fds);
     FD_SET(self->fd, &write_set_fds);
@@ -484,7 +490,6 @@ oss_setparameters(oss_audio_t *self, PyObject *args)
 {
     int wanted_fmt, wanted_channels, wanted_rate, strict=0;
     int fmt, channels, rate;
-    PyObject * rv;                    /* return tuple (fmt, channels, rate) */
 
     if (!PyArg_ParseTuple(args, "iii|i:setparameters",
                           &wanted_fmt, &wanted_channels, &wanted_rate,
@@ -526,13 +531,7 @@ oss_setparameters(oss_audio_t *self, PyObject *args)
 
     /* Construct the return value: a (fmt, channels, rate) tuple that
        tells what the audio hardware was actually set to. */
-    rv = PyTuple_New(3);
-    if (rv == NULL)
-        return NULL;
-    PyTuple_SET_ITEM(rv, 0, PyInt_FromLong(fmt));
-    PyTuple_SET_ITEM(rv, 1, PyInt_FromLong(channels));
-    PyTuple_SET_ITEM(rv, 2, PyInt_FromLong(rate));
-    return rv;
+    return Py_BuildValue("(iii)", fmt, channels, rate);
 }
 
 static int

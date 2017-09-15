@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """Doctest for method/function calls.
 
 We're going the use these types for extra testing
@@ -92,7 +93,7 @@ Verify clearing of SF bug #733667
     >>> g(*Nothing())
     Traceback (most recent call last):
       ...
-    TypeError: g() argument after * must be a sequence, not instance
+    TypeError: g() argument after * must be an iterable, not instance
 
     >>> class Nothing:
     ...     def __len__(self): return 5
@@ -101,7 +102,7 @@ Verify clearing of SF bug #733667
     >>> g(*Nothing())
     Traceback (most recent call last):
       ...
-    TypeError: g() argument after * must be a sequence, not instance
+    TypeError: g() argument after * must be an iterable, not instance
 
     >>> class Nothing():
     ...     def __len__(self): return 5
@@ -126,6 +127,17 @@ Verify clearing of SF bug #733667
 
     >>> g(*Nothing())
     0 (1, 2, 3) {}
+
+Check for issue #4806: Does a TypeError in a generator get propagated with the
+right error message?
+
+    >>> def broken(): raise TypeError("myerror")
+    ...
+
+    >>> g(*(broken() for i in range(1)))
+    Traceback (most recent call last):
+      ...
+    TypeError: myerror
 
 Make sure that the function doesn't stomp the dictionary
 
@@ -166,23 +178,43 @@ What about willful misconduct?
     >>> h(*h)
     Traceback (most recent call last):
       ...
-    TypeError: h() argument after * must be a sequence, not function
+    TypeError: h() argument after * must be an iterable, not function
+
+    >>> h(1, *h)
+    Traceback (most recent call last):
+      ...
+    TypeError: h() argument after * must be an iterable, not function
 
     >>> dir(*h)
     Traceback (most recent call last):
       ...
-    TypeError: dir() argument after * must be a sequence, not function
+    TypeError: dir() argument after * must be an iterable, not function
 
     >>> None(*h)
     Traceback (most recent call last):
       ...
-    TypeError: NoneType object argument after * must be a sequence, \
+    TypeError: NoneType object argument after * must be an iterable, \
 not function
 
     >>> h(**h)
     Traceback (most recent call last):
       ...
     TypeError: h() argument after ** must be a mapping, not function
+
+    >>> h(**[])
+    Traceback (most recent call last):
+      ...
+    TypeError: h() argument after ** must be a mapping, not list
+
+    >>> h(a=1, **h)
+    Traceback (most recent call last):
+      ...
+    TypeError: h() argument after ** must be a mapping, not function
+
+    >>> h(a=1, **[])
+    Traceback (most recent call last):
+      ...
+    TypeError: h() argument after ** must be a mapping, not list
 
     >>> dir(**h)
     Traceback (most recent call last):
@@ -235,7 +267,7 @@ first argument (got int instance instead)
     TypeError: unbound method method() must be called with Foo instance as \
 first argument (got int instance instead)
 
-A PyCFunction that takes only positional parameters shoud allow an
+A PyCFunction that takes only positional parameters should allow an
 empty keyword dictionary to pass without a complaint, but raise a
 TypeError if te dictionary is not empty
 
@@ -251,13 +283,50 @@ TypeError if te dictionary is not empty
       ...
     TypeError: id() takes no keyword arguments
 
+A corner case of keyword dictionary items being deleted during
+the function call setup. See <http://bugs.python.org/issue2016>.
+
+    >>> class Name(str):
+    ...     def __eq__(self, other):
+    ...         try:
+    ...              del x[self]
+    ...         except KeyError:
+    ...              pass
+    ...         return str.__eq__(self, other)
+    ...     def __hash__(self):
+    ...         return str.__hash__(self)
+
+    >>> x = {Name("a"):1, Name("b"):2}
+    >>> def f(a, b):
+    ...     print a,b
+    >>> f(**x)
+    1 2
+
+An obscure message:
+
+    >>> def f(a, b):
+    ...    pass
+    >>> f(b=1)
+    Traceback (most recent call last):
+      ...
+    TypeError: f() takes exactly 2 arguments (1 given)
+
+The number of arguments passed in includes keywords:
+
+    >>> def f(a):
+    ...    pass
+    >>> f(6, a=4, *(1, 2, 3))
+    Traceback (most recent call last):
+      ...
+    TypeError: f() takes exactly 1 argument (5 given)
 """
 
 import unittest
+import sys
 from test import test_support
 
 
-class UnicodeKeywordArgsTest(unittest.TestCase):
+class ExtCallTest(unittest.TestCase):
 
     def test_unicode_keywords(self):
         def f(a):
@@ -274,9 +343,8 @@ class UnicodeKeywordArgsTest(unittest.TestCase):
 
 
 def test_main():
-    from test import test_extcall # self import
-    test_support.run_doctest(test_extcall, True)
-    test_support.run_unittest(UnicodeKeywordArgsTest)
+    test_support.run_doctest(sys.modules[__name__], True)
+    test_support.run_unittest(ExtCallTest)
 
 if __name__ == '__main__':
     test_main()

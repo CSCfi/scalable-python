@@ -30,6 +30,9 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include <Carbon/Carbon.h>
 #include <ApplicationServices/ApplicationServices.h>
 
+#include <arpa/inet.h>  /* for ntohl, htonl */
+
+
 #ifndef HAVE_OSX105_SDK
 typedef SInt16  FSIORefNum;
 #endif
@@ -296,7 +299,7 @@ MacOS_GetCreatorAndType(PyObject *self, PyObject *args)
     FileInfo* finfo;
 
     if (!PyArg_ParseTuple(args, "O&", PyMac_GetFSRef, &ref)) {
-#ifndef __LP64__
+#if APPLE_SUPPORTS_QUICKTIME
         /* This function is documented to take an FSSpec as well,
          * which only works in 32-bit mode.
          */
@@ -310,6 +313,10 @@ MacOS_GetCreatorAndType(PyObject *self, PyObject *args)
         if ((err = FSpGetFInfo(&fss, &info)) != noErr) {
             return PyErr_Mac(MacOS_Error, err);
         }
+
+        info.fdCreator = ntohl(info.fdCreator);
+        info.fdType = ntohl(info.fdType);
+
         creator = PyString_FromStringAndSize(
                         (char *)&info.fdCreator, 4);
         type = PyString_FromStringAndSize((char *)&info.fdType, 4);
@@ -317,9 +324,9 @@ MacOS_GetCreatorAndType(PyObject *self, PyObject *args)
         Py_DECREF(creator);
         Py_DECREF(type);
         return res;
-#else   /* __LP64__ */
+#else   /* APPLE_SUPPORTS_QUICKTIME */
         return NULL;
-#endif  /* __LP64__ */
+#endif  /* APPLE_SUPPORTS_QUICKTIME */
     }
 
     err = FSGetCatalogInfo(&ref,
@@ -341,6 +348,8 @@ MacOS_GetCreatorAndType(PyObject *self, PyObject *args)
 
     }
     finfo = (FileInfo*)&(cataloginfo.finderInfo);
+    finfo->fileCreator = ntohl(finfo->fileCreator);
+    finfo->fileType = ntohl(finfo->fileType);
     creator = PyString_FromStringAndSize((char*)&(finfo->fileCreator), 4);
     type = PyString_FromStringAndSize((char*)&(finfo->fileType), 4);
 
@@ -363,7 +372,7 @@ MacOS_SetCreatorAndType(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "O&O&O&",
                     PyMac_GetFSRef, &ref, PyMac_GetOSType, &creator, PyMac_GetOSType, &type)) {
-#ifndef __LP64__
+#if APPLE_SUPPORTS_QUICKTIME
         /* Try to handle FSSpec arguments, for backward compatibility */
         FSSpec fss;
         FInfo info;
@@ -382,9 +391,9 @@ MacOS_SetCreatorAndType(PyObject *self, PyObject *args)
             return PyErr_Mac(MacOS_Error, err);
         Py_INCREF(Py_None);
         return Py_None;
-#else /* __LP64__ */
+#else /* APPLE_SUPPORTS_QUICKTIME */
         return NULL;
-#endif /* __LP64__ */
+#endif /* APPLE_SUPPORTS_QUICKTIME */
     }
 
     err = FSGetCatalogInfo(&ref,
@@ -686,7 +695,7 @@ initMacOS(void)
 {
     PyObject *m, *d;
 
-    if (PyErr_WarnPy3k("In 3.x, MacOS is removed.", 1))
+    if (PyErr_WarnPy3k("In 3.x, the MacOS module is removed.", 1))
         return;
 
     m = Py_InitModule("MacOS", MacOS_Methods);

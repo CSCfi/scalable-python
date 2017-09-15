@@ -1,33 +1,56 @@
-#! /usr/bin/env python
 """Test the arraymodule.
    Roger E. Masse
 """
 
 import unittest
+import warnings
 from test import test_support
 from weakref import proxy
 import array, cStringIO
 from cPickle import loads, dumps, HIGHEST_PROTOCOL
+import sys
 
 class ArraySubclass(array.array):
     pass
 
 class ArraySubclassWithKwargs(array.array):
     def __init__(self, typecode, newarg=None):
-        array.array.__init__(typecode)
+        array.array.__init__(self, typecode)
 
 tests = [] # list to accumulate all tests
-typecodes = "cubBhHiIlLfd"
+typecodes = "cbBhHiIlLfd"
+if test_support.have_unicode:
+    typecodes += "u"
 
-class BadConstructorTest(unittest.TestCase):
+class MiscTest(unittest.TestCase):
 
-    def test_constructor(self):
+    def test_bad_constructor(self):
         self.assertRaises(TypeError, array.array)
         self.assertRaises(TypeError, array.array, spam=42)
         self.assertRaises(TypeError, array.array, 'xx')
+        self.assertRaises(TypeError, array.array, '')
+        self.assertRaises(TypeError, array.array, 1)
         self.assertRaises(ValueError, array.array, 'x')
+        self.assertRaises(ValueError, array.array, '\x80')
 
-tests.append(BadConstructorTest)
+    @test_support.requires_unicode
+    def test_unicode_constructor(self):
+        self.assertRaises(TypeError, array.array, u'xx')
+        self.assertRaises(TypeError, array.array, u'')
+        self.assertRaises(ValueError, array.array, u'x')
+        self.assertRaises(ValueError, array.array, u'\x80')
+
+    def test_empty(self):
+        # Exercise code for handling zero-length arrays
+        a = array.array('B')
+        a[:] = a
+        self.assertEqual(len(a), 0)
+        self.assertEqual(len(a + a), 0)
+        self.assertEqual(len(a * 3), 0)
+        a += a
+        self.assertEqual(len(a), 0)
+
+tests.append(MiscTest)
 
 class BaseTest(unittest.TestCase):
     # Required class attributes (provided by subclasses
@@ -48,7 +71,7 @@ class BaseTest(unittest.TestCase):
     def test_constructor(self):
         a = array.array(self.typecode)
         self.assertEqual(a.typecode, self.typecode)
-        self.assert_(a.itemsize>=self.minitemsize)
+        self.assertGreaterEqual(a.itemsize, self.minitemsize)
         self.assertRaises(TypeError, array.array, self.typecode, None)
 
     def test_len(self):
@@ -63,10 +86,10 @@ class BaseTest(unittest.TestCase):
         a = array.array(self.typecode, self.example)
         self.assertRaises(TypeError, a.buffer_info, 42)
         bi = a.buffer_info()
-        self.assert_(isinstance(bi, tuple))
+        self.assertIsInstance(bi, tuple)
         self.assertEqual(len(bi), 2)
-        self.assert_(isinstance(bi[0], (int, long)))
-        self.assert_(isinstance(bi[1], int))
+        self.assertIsInstance(bi[0], (int, long))
+        self.assertIsInstance(bi[1], int)
         self.assertEqual(bi[1], len(a))
 
     def test_byteswap(self):
@@ -199,6 +222,25 @@ class BaseTest(unittest.TestCase):
             f.close()
             test_support.unlink(test_support.TESTFN)
 
+    def test_filewrite(self):
+        a = array.array(self.typecode, 2*self.example)
+        f = open(test_support.TESTFN, 'wb')
+        try:
+            f.write(a)
+            f.close()
+            b = array.array(self.typecode)
+            f = open(test_support.TESTFN, 'rb')
+            b.fromfile(f, len(self.example))
+            self.assertEqual(b, array.array(self.typecode, self.example))
+            self.assertNotEqual(a, b)
+            b.fromfile(f, len(self.example))
+            self.assertEqual(a, b)
+            f.close()
+        finally:
+            if not f.closed:
+                f.close()
+            test_support.unlink(test_support.TESTFN)
+
     def test_tofromlist(self):
         a = array.array(self.typecode, 2*self.example)
         b = array.array(self.typecode)
@@ -215,6 +257,7 @@ class BaseTest(unittest.TestCase):
         self.assertRaises(TypeError, a.tostring, 42)
         self.assertRaises(TypeError, b.fromstring)
         self.assertRaises(TypeError, b.fromstring, 42)
+        self.assertRaises(ValueError, a.fromstring, a)
         b.fromstring(a.tostring())
         self.assertEqual(a, b)
         if a.itemsize>1:
@@ -233,39 +276,39 @@ class BaseTest(unittest.TestCase):
 
     def test_cmp(self):
         a = array.array(self.typecode, self.example)
-        self.assert_((a == 42) is False)
-        self.assert_((a != 42) is True)
+        self.assertIs(a == 42, False)
+        self.assertIs(a != 42, True)
 
-        self.assert_((a == a) is True)
-        self.assert_((a != a) is False)
-        self.assert_((a < a) is False)
-        self.assert_((a <= a) is True)
-        self.assert_((a > a) is False)
-        self.assert_((a >= a) is True)
+        self.assertIs(a == a, True)
+        self.assertIs(a != a, False)
+        self.assertIs(a < a, False)
+        self.assertIs(a <= a, True)
+        self.assertIs(a > a, False)
+        self.assertIs(a >= a, True)
 
         al = array.array(self.typecode, self.smallerexample)
         ab = array.array(self.typecode, self.biggerexample)
 
-        self.assert_((a == 2*a) is False)
-        self.assert_((a != 2*a) is True)
-        self.assert_((a < 2*a) is True)
-        self.assert_((a <= 2*a) is True)
-        self.assert_((a > 2*a) is False)
-        self.assert_((a >= 2*a) is False)
+        self.assertIs(a == 2*a, False)
+        self.assertIs(a != 2*a, True)
+        self.assertIs(a < 2*a, True)
+        self.assertIs(a <= 2*a, True)
+        self.assertIs(a > 2*a, False)
+        self.assertIs(a >= 2*a, False)
 
-        self.assert_((a == al) is False)
-        self.assert_((a != al) is True)
-        self.assert_((a < al) is False)
-        self.assert_((a <= al) is False)
-        self.assert_((a > al) is True)
-        self.assert_((a >= al) is True)
+        self.assertIs(a == al, False)
+        self.assertIs(a != al, True)
+        self.assertIs(a < al, False)
+        self.assertIs(a <= al, False)
+        self.assertIs(a > al, True)
+        self.assertIs(a >= al, True)
 
-        self.assert_((a == ab) is False)
-        self.assert_((a != ab) is True)
-        self.assert_((a < ab) is True)
-        self.assert_((a <= ab) is True)
-        self.assert_((a > ab) is False)
-        self.assert_((a >= ab) is False)
+        self.assertIs(a == ab, False)
+        self.assertIs(a != ab, True)
+        self.assertIs(a < ab, True)
+        self.assertIs(a <= ab, True)
+        self.assertIs(a > ab, False)
+        self.assertIs(a >= ab, False)
 
     def test_add(self):
         a = array.array(self.typecode, self.example) \
@@ -284,10 +327,16 @@ class BaseTest(unittest.TestCase):
         a = array.array(self.typecode, self.example[::-1])
         b = a
         a += array.array(self.typecode, 2*self.example)
-        self.assert_(a is b)
+        self.assertIs(a, b)
         self.assertEqual(
             a,
             array.array(self.typecode, self.example[::-1]+2*self.example)
+        )
+        a = array.array(self.typecode, self.example)
+        a += a
+        self.assertEqual(
+            a,
+            array.array(self.typecode, self.example + self.example)
         )
 
         b = array.array(self.badtypecode())
@@ -327,22 +376,22 @@ class BaseTest(unittest.TestCase):
         b = a
 
         a *= 5
-        self.assert_(a is b)
+        self.assertIs(a, b)
         self.assertEqual(
             a,
             array.array(self.typecode, 5*self.example)
         )
 
         a *= 0
-        self.assert_(a is b)
+        self.assertIs(a, b)
         self.assertEqual(a, array.array(self.typecode))
 
         a *= 1000
-        self.assert_(a is b)
+        self.assertIs(a, b)
         self.assertEqual(a, array.array(self.typecode))
 
         a *= -1
-        self.assert_(a is b)
+        self.assertIs(a, b)
         self.assertEqual(a, array.array(self.typecode))
 
         a = array.array(self.typecode, self.example)
@@ -603,11 +652,11 @@ class BaseTest(unittest.TestCase):
                     data.reverse()
                     L[start:stop:step] = data
                     a[start:stop:step] = array.array(self.typecode, data)
-                    self.assertEquals(a, array.array(self.typecode, L))
+                    self.assertEqual(a, array.array(self.typecode, L))
 
                     del L[start:stop:step]
                     del a[start:stop:step]
-                    self.assertEquals(a, array.array(self.typecode, L))
+                    self.assertEqual(a, array.array(self.typecode, L))
 
     def test_index(self):
         example = 2*self.example
@@ -686,6 +735,13 @@ class BaseTest(unittest.TestCase):
             array.array(self.typecode, self.example+self.example[::-1])
         )
 
+        a = array.array(self.typecode, self.example)
+        a.extend(a)
+        self.assertEqual(
+            a,
+            array.array(self.typecode, self.example+self.example)
+        )
+
         b = array.array(self.badtypecode())
         self.assertRaises(TypeError, a.extend, b)
 
@@ -720,7 +776,7 @@ class BaseTest(unittest.TestCase):
         try:
             import gc
         except ImportError:
-            return
+            self.skipTest('gc module not available')
         a = array.array(self.typecode)
         l = [iter(a)]
         l.append(l)
@@ -728,7 +784,7 @@ class BaseTest(unittest.TestCase):
 
     def test_buffer(self):
         a = array.array(self.typecode, self.example)
-        with test_support._check_py3k_warnings():
+        with test_support.check_py3k_warnings():
             b = buffer(a)
         self.assertEqual(b[0], a.tostring()[0])
 
@@ -739,19 +795,21 @@ class BaseTest(unittest.TestCase):
         s = None
         self.assertRaises(ReferenceError, len, p)
 
+    @unittest.skipUnless(hasattr(sys, 'getrefcount'),
+                         'test needs sys.getrefcount()')
     def test_bug_782369(self):
-        import sys
-        if hasattr(sys, "getrefcount"):
-            for i in range(10):
-                b = array.array('B', range(64))
-            rc = sys.getrefcount(10)
-            for i in range(10):
-                b = array.array('B', range(64))
-            self.assertEqual(rc, sys.getrefcount(10))
+        for i in range(10):
+            b = array.array('B', range(64))
+        rc = sys.getrefcount(10)
+        for i in range(10):
+            b = array.array('B', range(64))
+        self.assertEqual(rc, sys.getrefcount(10))
 
     def test_subclass_with_kwargs(self):
         # SF bug #1486663 -- this used to erroneously raise a TypeError
-        ArraySubclassWithKwargs('b', newarg=1)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", '', DeprecationWarning)
+            ArraySubclassWithKwargs('b', newarg=1)
 
 
 class StringTest(BaseTest):
@@ -792,6 +850,7 @@ class CharacterTest(StringTest):
         self.assertEqual(s.color, "red")
         self.assertEqual(s.__dict__.keys(), ["color"])
 
+    @test_support.requires_unicode
     def test_nounicode(self):
         a = array.array(self.typecode, self.example)
         self.assertRaises(ValueError, a.fromunicode, unicode(''))
@@ -950,6 +1009,19 @@ class UnsignedNumberTest(NumberTest):
         upper = long(pow(2, a.itemsize * 8)) - 1L
         self.check_overflow(lower, upper)
 
+    @test_support.cpython_only
+    def test_sizeof_with_buffer(self):
+        a = array.array(self.typecode, self.example)
+        basesize = test_support.calcvobjsize('4P')
+        buffer_size = a.buffer_info()[1] * a.itemsize
+        test_support.check_sizeof(self, a, basesize + buffer_size)
+
+    @test_support.cpython_only
+    def test_sizeof_without_buffer(self):
+        a = array.array(self.typecode)
+        basesize = test_support.calcvobjsize('4P')
+        test_support.check_sizeof(self, a, basesize)
+
 
 class ByteTest(SignedNumberTest):
     typecode = 'b'
@@ -990,6 +1062,17 @@ class UnsignedLongTest(UnsignedNumberTest):
     typecode = 'L'
     minitemsize = 4
 tests.append(UnsignedLongTest)
+
+
+@test_support.requires_unicode
+class UnicodeTypecodeTest(unittest.TestCase):
+    def test_unicode_typecode(self):
+        for typecode in typecodes:
+            a = array.array(unicode(typecode))
+            self.assertEqual(a.typecode, typecode)
+            self.assertIs(type(a.typecode), str)
+tests.append(UnicodeTypecodeTest)
+
 
 class FPTest(NumberTest):
     example = [-42.0, 0, 42, 1e5, -1e10]

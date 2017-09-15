@@ -14,6 +14,14 @@
    directive.  Since they are attributes which are set by client code, in-text
    references to these attributes should be marked using the :member: role.
 
+
+.. warning::
+
+   The :mod:`pyexpat` module is not secure against maliciously
+   constructed data.  If you need to parse untrusted or unauthenticated data see
+   :ref:`xml-vulnerabilities`.
+
+
 .. versionadded:: 2.0
 
 .. index:: single: Expat
@@ -79,7 +87,9 @@ The :mod:`xml.parsers.expat` module contains two functions:
    separator.
 
    For example, if *namespace_separator* is set to a space character (``' '``) and
-   the following document is parsed::
+   the following document is parsed:
+
+   .. code-block:: xml
 
       <?xml version="1.0"?>
       <root xmlns    = "http://default-namespace.org/"
@@ -95,6 +105,10 @@ The :mod:`xml.parsers.expat` module contains two functions:
       http://www.python.org/ns/ elem1
       elem2
 
+   Due to limitations in the ``Expat`` library used by :mod:`pyexpat`,
+   the :class:`xmlparser` instance returned can only be used to parse a single
+   XML document.  Call ``ParserCreate`` for each document to provide unique
+   parser instances.
 
 .. seealso::
 
@@ -114,7 +128,9 @@ XMLParser Objects
 
    Parses the contents of the string *data*, calling the appropriate handler
    functions to process the parsed data.  *isfinal* must be true on the final call
-   to this method.  *data* can be the empty string at any time.
+   to this method; it allows the parsing of a single file in fragments,
+   not the submission of multiple files.
+   *data* can be the empty string at any time.
 
 
 .. method:: xmlparser.ParseFile(file)
@@ -157,6 +173,13 @@ XMLParser Objects
    :attr:`ordered_attributes`, :attr:`returns_unicode` and
    :attr:`specified_attributes` set to the values of this parser.
 
+.. method:: xmlparser.SetParamEntityParsing(flag)
+
+   Control parsing of parameter entities (including the external DTD subset).
+   Possible *flag* values are :const:`XML_PARAM_ENTITY_PARSING_NEVER`,
+   :const:`XML_PARAM_ENTITY_PARSING_UNLESS_STANDALONE` and
+   :const:`XML_PARAM_ENTITY_PARSING_ALWAYS`.  Return true if setting the flag
+   was successful.
 
 .. method:: xmlparser.UseForeignDTD([flag])
 
@@ -249,7 +272,7 @@ XMLParser Objects
 
 The following attributes contain values relating to the most recent error
 encountered by an :class:`xmlparser` object, and will only have correct values
-once a call to :meth:`Parse` or :meth:`ParseFile` has raised a
+once a call to :meth:`Parse` or :meth:`ParseFile` has raised an
 :exc:`xml.parsers.expat.ExpatError` exception.
 
 
@@ -430,7 +453,7 @@ otherwise stated.
 .. method:: xmlparser.CommentHandler(data)
 
    Called for comments.  *data* is the text of the comment, excluding the leading
-   '``<!-``\ ``-``' and trailing '``-``\ ``->``'.
+   ``'<!-``\ ``-'`` and trailing ``'-``\ ``->'``.
 
 
 .. method:: xmlparser.StartCdataSectionHandler()
@@ -464,7 +487,7 @@ otherwise stated.
    Called if the XML document hasn't been declared as being a standalone document.
    This happens when there is an external subset or a reference to a parameter
    entity, but the XML declaration does not set standalone to ``yes`` in an XML
-   declaration.  If this handler returns ``0``, then the parser will throw an
+   declaration.  If this handler returns ``0``, then the parser will raise an
    :const:`XML_ERROR_NOT_STANDALONE` error.  If this handler is not set, no
    exception is raised by the parser for this condition.
 
@@ -481,7 +504,7 @@ otherwise stated.
    responsible for creating the sub-parser using
    ``ExternalEntityParserCreate(context)``, initializing it with the appropriate
    callbacks, and parsing the entity.  This handler should return an integer; if it
-   returns ``0``, the parser will throw an
+   returns ``0``, the parser will raise an
    :const:`XML_ERROR_EXTERNAL_ENTITY_HANDLING` error, otherwise parsing will
    continue.
 
@@ -574,9 +597,9 @@ Content Model Descriptions
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 
 
-Content modules are described using nested tuples.  Each tuple contains four
+Content models are described using nested tuples.  Each tuple contains four
 values: the type, the quantifier, the name, and a tuple of children.  Children
-are simply additional content module descriptions.
+are simply additional content model descriptions.
 
 The values of the first two fields are constants defined in the ``model`` object
 of the :mod:`xml.parsers.expat` module.  These constants can be collected in two
@@ -767,7 +790,7 @@ The ``errors`` object has the following attributes:
 .. data:: XML_ERROR_UNDEFINED_ENTITY
    :noindex:
 
-   A reference was made to a entity which was not defined.
+   A reference was made to an entity which was not defined.
 
 
 .. data:: XML_ERROR_UNKNOWN_ENCODING
@@ -890,6 +913,6 @@ The ``errors`` object has the following attributes:
 
 .. [#] The encoding string included in XML output should conform to the
    appropriate standards. For example, "UTF-8" is valid, but "UTF8" is
-   not. See http://www.w3.org/TR/2006/REC-xml11-20060816/#NT-EncodingDecl
-   and http://www.iana.org/assignments/character-sets .
+   not. See https://www.w3.org/TR/2006/REC-xml11-20060816/#NT-EncodingDecl
+   and https://www.iana.org/assignments/character-sets/character-sets.xhtml.
 

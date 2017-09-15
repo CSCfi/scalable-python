@@ -33,8 +33,8 @@
 
 - (BOOL)shouldShowUI
 {
-    // if this call comes before applicationDidFinishLaunching: we 
-    // should terminate immedeately after starting the script.
+    // if this call comes before applicationDidFinishLaunching: we
+    // should terminate immediately after starting the script.
     if (!initial_action_done)
         should_terminate = YES;
     initial_action_done = YES;
@@ -62,7 +62,7 @@
     static NSString *extensions[] = { @"py", @"pyw", @"pyc", NULL};
     NSString **ext_p;
     int i;
-    
+
     if ([[NSUserDefaults standardUserDefaults] boolForKey: @"SkipFileBindingTest"])
         return;
     ourUrl = [NSURL fileURLWithPath: [[NSBundle mainBundle] bundlePath]];
@@ -92,5 +92,5 @@
         }
     }
 }
-        
+
 @end

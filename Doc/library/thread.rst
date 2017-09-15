@@ -5,9 +5,9 @@
    :synopsis: Create multiple threads of control within one interpreter.
 
 .. note::
-   The :mod:`thread` module has been renamed to :mod:`_thread` in Python 3.0.
+   The :mod:`thread` module has been renamed to :mod:`_thread` in Python 3.
    The :term:`2to3` tool will automatically adapt imports when converting your
-   sources to 3.0; however, you should consider using the high-level
+   sources to Python 3; however, you should consider using the high-level
    :mod:`threading` module instead.
 
 
@@ -98,7 +98,8 @@ It defines the following constant and functions:
    Return the thread stack size used when creating new threads.  The optional
    *size* argument specifies the stack size to be used for subsequently created
    threads, and must be 0 (use platform or configured default) or a positive
-   integer value of at least 32,768 (32kB). If changing the thread stack size is
+   integer value of at least 32,768 (32kB). If *size* is not specified,
+   0 is used. If changing the thread stack size is
    unsupported, the :exc:`error` exception is raised.  If the specified stack size is
    invalid, a :exc:`ValueError` is raised and the stack size is unmodified.  32kB
    is currently the minimum supported stack size value to guarantee sufficient
@@ -111,6 +112,7 @@ It defines the following constant and functions:
    Availability: Windows, systems with POSIX threads.
 
    .. versionadded:: 2.5
+
 
 Lock objects have the following methods:
 
@@ -157,10 +159,6 @@ In addition to these methods, lock objects can also be used via the
 
 * Calling :func:`sys.exit` or raising the :exc:`SystemExit` exception is
   equivalent to calling :func:`thread.exit`.
-
-* Not all built-in functions that may block waiting for I/O allow other threads
-  to run.  (The most popular ones (:func:`time.sleep`, :meth:`file.read`,
-  :func:`select.select`) work as expected.)
 
 * It is not possible to interrupt the :meth:`acquire` method on a lock --- the
   :exc:`KeyboardInterrupt` exception will happen after the lock has been acquired.

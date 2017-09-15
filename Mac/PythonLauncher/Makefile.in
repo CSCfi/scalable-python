@@ -21,7 +21,7 @@ MACOSX_DEPLOYMENT_TARGET=@CONFIGURE_MACOSX_DEPLOYMENT_TARGET@
 
 BUNDLEBULDER=$(srcdir)/../../Lib/plat-mac/bundlebuilder.py
 
-PYTHONAPPSDIR=/Applications/$(PYTHONFRAMEWORK) $(VERSION)
+PYTHONAPPSDIR=@FRAMEWORKINSTALLAPPSPREFIX@/$(PYTHONFRAMEWORK) $(VERSION)
 OBJECTS=FileSettings.o MyAppDelegate.o MyDocument.o PreferencesWindowController.o doscript.o main.o
 
 all: Python\ Launcher.app
@@ -54,8 +54,6 @@ Python\ Launcher.app:  Info.plist \
 		--resource=$(srcdir)/factorySettings.plist \
 		--plist Info.plist \
 		build
-	find "Python Launcher.app" -name '.svn' -print0 | xargs -0 rm -r
-		
 
 FileSettings.o: $(srcdir)/FileSettings.m
 	$(CC) $(CFLAGS) -o $@ -c $(srcdir)/FileSettings.m

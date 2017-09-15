@@ -3,7 +3,7 @@
 #include "Python.h"
 
 #ifdef __FreeBSD__
-#include <floatingpoint.h>
+#include <fenv.h>
 #endif
 
 int
@@ -15,17 +15,14 @@ main(int argc, char **argv)
      * exceptions by default.  Here we disable them.
      */
 #ifdef __FreeBSD__
-    fp_except_t m;
-
-    m = fpgetmask();
-    fpsetmask(m & ~FP_X_OFL);
+    fedisableexcept(FE_OVERFLOW);
 #endif
 #ifdef ENABLE_MPI
-        MPI_Init(&argc, &argv);
+    MPI_Init(&argc, &argv);
 #endif
     int status = Py_Main(argc, argv);
 #ifdef ENABLE_MPI
-        MPI_Finalize();
-        return status;
+    MPI_Finalize();
+    return status;
 #endif
 }

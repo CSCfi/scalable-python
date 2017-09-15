@@ -7,7 +7,7 @@
    :deprecated:
 
 .. deprecated:: 2.6
-   The :mod:`mutex` module has been removed in Python 3.0.
+   The :mod:`mutex` module has been removed in Python 3.
 
 .. sectionauthor:: Moshe Zadka <moshez@zadka.site.co.il>
 
@@ -40,7 +40,7 @@ The :mod:`mutex` module defines the following class:
 Mutex Objects
 -------------
 
-:class:`mutex` objects have following methods:
+:class:`~mutex.mutex` objects have following methods:
 
 
 .. method:: mutex.test()

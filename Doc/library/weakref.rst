@@ -11,6 +11,10 @@
 
 .. versionadded:: 2.1
 
+**Source code:** :source:`Lib/weakref.py`
+
+--------------
+
 The :mod:`weakref` module allows the Python programmer to create :dfn:`weak
 references` to objects.
 
@@ -49,20 +53,17 @@ own weak references directly.  The low-level machinery used by the weak
 dictionary implementations is exposed by the :mod:`weakref` module for the
 benefit of advanced uses.
 
-.. note::
-
-   Weak references to an object are cleared before the object's :meth:`__del__`
-   is called, to ensure that the weak reference callback (if any) finds the
-   object still alive.
-
 Not all objects can be weakly referenced; those objects which can include class
 instances, functions written in Python (but not in C), methods (both bound and
 unbound), sets, frozensets, file objects, :term:`generator`\s, type objects,
 :class:`DBcursor` objects from the :mod:`bsddb` module, sockets, arrays, deques,
-and regular expression pattern objects.
+regular expression pattern objects, and code objects.
 
 .. versionchanged:: 2.4
    Added support for files, sockets, arrays, and patterns.
+
+.. versionchanged:: 2.7
+   Added support for thread.lock, threading.Lock, and code objects.
 
 Several built-in types such as :class:`list` and :class:`dict` do not directly
 support weak references but can add support through subclassing::
@@ -162,7 +163,7 @@ than needed.
 
 .. method:: WeakKeyDictionary.iterkeyrefs()
 
-   Return an :term:`iterator` that yields the weak references to the keys.
+   Return an iterable of the weak references to the keys.
 
    .. versionadded:: 2.5
 
@@ -194,7 +195,7 @@ methods of :class:`WeakKeyDictionary` objects.
 
 .. method:: WeakValueDictionary.itervaluerefs()
 
-   Return an :term:`iterator` that yields the weak references to the values.
+   Return an iterable of the weak references to the values.
 
    .. versionadded:: 2.5
 
@@ -204,6 +205,14 @@ methods of :class:`WeakKeyDictionary` objects.
    Return a list of weak references to the values.
 
    .. versionadded:: 2.5
+
+
+.. class:: WeakSet([elements])
+
+   Set class that keeps weak references to its elements.  An element will be
+   discarded when no strong reference to it exists any more.
+
+   .. versionadded:: 2.7
 
 
 .. data:: ReferenceType
@@ -236,7 +245,7 @@ methods of :class:`WeakKeyDictionary` objects.
 
 .. seealso::
 
-   :pep:`0205` - Weak References
+   :pep:`205` - Weak References
       The proposal and rationale for this feature, including links to earlier
       implementations and information about similar features in other languages.
 
@@ -319,7 +328,7 @@ the referent is accessed::
 Example
 -------
 
-This simple example shows how an application can use objects IDs to retrieve
+This simple example shows how an application can use object IDs to retrieve
 objects that it has seen before.  The IDs of the objects can then be used in
 other data structures without forcing the objects to remain alive, but the
 objects can still be retrieved by ID if they do.

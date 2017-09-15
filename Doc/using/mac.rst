@@ -25,14 +25,14 @@ installers for the latest 2.3 release for Mac OS 9 and related documentation.
 Getting and Installing MacPython
 ================================
 
-Mac OS X 10.5 comes with Python 2.5.1 pre-installed by Apple.  If you wish, you
+Mac OS X 10.8 comes with Python 2.7 pre-installed by Apple.  If you wish, you
 are invited to install the most recent version of Python from the Python website
-(http://www.python.org).  A current "universal binary" build of Python, which
+(https://www.python.org).  A current "universal binary" build of Python, which
 runs natively on the Mac's new Intel and legacy PPC CPU's, is available there.
 
 What you get after installing is a number of things:
 
-* A :file:`MacPython 2.5` folder in your :file:`Applications` folder. In here
+* A :file:`MacPython 2.7` folder in your :file:`Applications` folder. In here
   you find IDLE, the development environment that is a standard part of official
   Python distributions; PythonLauncher, which handles double-clicking Python
   scripts from the Finder; and the "Build Applet" tool, which allows you to
@@ -71,8 +71,8 @@ the Finder you first need an editor to create your script. Mac OS X comes with a
 number of standard Unix command line editors, :program:`vim` and
 :program:`emacs` among them. If you want a more Mac-like editor,
 :program:`BBEdit` or :program:`TextWrangler` from Bare Bones Software (see
-http://www.barebones.com/products/bbedit/index.shtml) are good choices, as is
-:program:`TextMate` (see http://macromates.com/). Other editors include
+http://www.barebones.com/products/bbedit/index.html) are good choices, as is
+:program:`TextMate` (see https://macromates.com/). Other editors include
 :program:`Gvim` (http://macvim.org) and :program:`Aquamacs`
 (http://aquamacs.org/).
 
@@ -100,7 +100,7 @@ aware of: programs that talk to the Aqua window manager (in other words,
 anything that has a GUI) need to be run in a special way. Use :program:`pythonw`
 instead of :program:`python` to start such scripts.
 
-With Python 2.5, you can use either :program:`python` or :program:`pythonw`.
+With Python 2.7, you can use either :program:`python` or :program:`pythonw`.
 
 
 Configuration
@@ -109,8 +109,9 @@ Configuration
 Python on OS X honors all standard Unix environment variables such as
 :envvar:`PYTHONPATH`, but setting these variables for programs started from the
 Finder is non-standard as the Finder does not read your :file:`.profile` or
-:file:`.cshrc` at startup. You need to create a file :file:`~
-/.MacOSX/environment.plist`. See Apple's Technical Document QA1067 for details.
+:file:`.cshrc` at startup. You need to create a file
+:file:`~/.MacOSX/environment.plist`. See Apple's Technical Document QA1067 for
+details.
 
 For more information on installation Python packages in MacPython, see section
 :ref:`mac-package-manager`.
@@ -122,8 +123,8 @@ The IDE
 =======
 
 MacPython ships with the standard IDLE development environment. A good
-introduction to using IDLE can be found at http://hkn.eecs.berkeley.edu/
-dyoo/python/idle_intro/index.html.
+introduction to using IDLE can be found at
+https://hkn.eecs.berkeley.edu/~dyoo/python/idle_intro/index.html.
 
 
 .. _mac-package-manager:
@@ -133,13 +134,11 @@ Installing Additional Python Packages
 
 There are several methods to install additional Python packages:
 
-* http://pythonmac.org/packages/ contains selected compiled packages for Python
-  2.5, 2.4, and 2.3.
-
 * Packages can be installed via the standard Python distutils mode (``python
   setup.py install``).
 
-* Many packages can also be installed via the :program:`setuptools` extension.
+* Many packages can also be installed via the :program:`setuptools` extension
+  or :program:`pip` wrapper, see https://pip.pypa.io/.
 
 
 GUI Programming on the Mac
@@ -149,25 +148,25 @@ There are several options for building GUI applications on the Mac with Python.
 
 *PyObjC* is a Python binding to Apple's Objective-C/Cocoa framework, which is
 the foundation of most modern Mac development. Information on PyObjC is
-available from http://pyobjc.sourceforge.net.
+available from https://pythonhosted.org/pyobjc/.
 
 The standard Python GUI toolkit is :mod:`Tkinter`, based on the cross-platform
-Tk toolkit (http://www.tcl.tk). An Aqua-native version of Tk is bundled with OS
+Tk toolkit (https://www.tcl.tk). An Aqua-native version of Tk is bundled with OS
 X by Apple, and the latest version can be downloaded and installed from
-http://www.activestate.com; it can also be built from source.
+https://www.activestate.com; it can also be built from source.
 
 *wxPython* is another popular cross-platform GUI toolkit that runs natively on
 Mac OS X. Packages and documentation are available from http://www.wxpython.org.
 
 *PyQt* is another popular cross-platform GUI toolkit that runs natively on Mac
 OS X. More information can be found at
-http://www.riverbankcomputing.co.uk/software/pyqt/intro.
+https://riverbankcomputing.com/software/pyqt/intro.
 
 
 Distributing Python Applications on the Mac
 ===========================================
 
-The "Build Applet" tool that is placed in the MacPython 2.5 folder is fine for
+The "Build Applet" tool that is placed in the MacPython 2.7 folder is fine for
 packaging small Python scripts on your own machine to run as a standard Mac
 application. This tool, however, is not robust enough to distribute Python
 applications to other users.
@@ -177,29 +176,15 @@ The standard tool for deploying standalone Python applications on the Mac is
 at http://undefined.org/python/#py2app.
 
 
-Application Scripting
-=====================
-
-Python can also be used to script other Mac applications via Apple's Open
-Scripting Architecture (OSA); see http://appscript.sourceforge.net. Appscript is
-a high-level, user-friendly Apple event bridge that allows you to control
-scriptable Mac OS X applications using ordinary Python scripts. Appscript makes
-Python a serious alternative to Apple's own *AppleScript* language for
-automating your Mac. A related package, *PyOSA*, is an OSA language component
-for the Python scripting language, allowing Python code to be executed by any
-OSA-enabled application (Script Editor, Mail, iTunes, etc.). PyOSA makes Python
-a full peer to AppleScript.
-
-
 Other Resources
 ===============
 
 The MacPython mailing list is an excellent support resource for Python users and
 developers on the Mac:
 
-http://www.python.org/community/sigs/current/pythonmac-sig/
+https://www.python.org/community/sigs/current/pythonmac-sig/
 
 Another useful resource is the MacPython wiki:
 
-http://wiki.python.org/moin/MacPython
+https://wiki.python.org/moin/MacPython
 

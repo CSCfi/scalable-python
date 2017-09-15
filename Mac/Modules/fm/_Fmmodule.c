@@ -2,21 +2,21 @@
 /* =========================== Module _Fm =========================== */
 
 #include "Python.h"
+#include <Carbon/Carbon.h>
 
-#ifndef __LP64__
+#if !defined(__LP64__) && !defined(MAC_OS_X_VERSION_10_7)
 
 
 #include "pymactoolbox.h"
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-    PyErr_SetString(PyExc_NotImplementedError, \
-    "Not available in this shared library/OS version"); \
-    return NULL; \
+        PyErr_SetString(PyExc_NotImplementedError, \
+            "Not available in this shared library/OS version"); \
+        return NULL; \
     }} while(0)
 
 
-#include <Carbon/Carbon.h>
 
 
 /*
@@ -347,7 +347,7 @@ static PyMethodDef Fm_methods[] = {
 void init_Fm(void)
 {
     PyObject *m;
-#ifndef __LP64__
+#if !defined(__LP64__) && !defined(MAC_OS_X_VERSION_10_7)
     PyObject *d;
 #endif  /* __LP64__ */
 
@@ -355,7 +355,7 @@ void init_Fm(void)
 
 
     m = Py_InitModule("_Fm", Fm_methods);
-#ifndef __LP64__
+#if !defined(__LP64__) && !defined(MAC_OS_X_VERSION_10_7)
     d = PyModule_GetDict(m);
     Fm_Error = PyMac_GetOSErrException();
     if (Fm_Error == NULL ||

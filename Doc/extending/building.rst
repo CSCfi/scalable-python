@@ -24,7 +24,9 @@ packages, users don't necessarily need a compiler and distutils to install the
 extension.
 
 A distutils package contains a driver script, :file:`setup.py`. This is a plain
-Python file, which, in the most simple case, could look like this::
+Python file, which, in the most simple case, could look like this:
+
+.. code-block:: python
 
    from distutils.core import setup, Extension
 
@@ -56,14 +58,17 @@ documentation in :ref:`distutils-index` to learn more about the features of
 distutils; this section explains building extension modules only.
 
 It is common to pre-compute arguments to :func:`setup`, to better structure the
-driver script. In the example above, the\ ``ext_modules`` argument to
+driver script. In the example above, the ``ext_modules`` argument to
 :func:`setup` is a list of extension modules, each of which is an instance of
-the :class:`Extension`. In the example, the instance defines an extension named
-``demo`` which is build by compiling a single source file, :file:`demo.c`.
+the :class:`~distutils.extension.Extension`. In the example, the instance
+defines an extension named ``demo`` which is build by compiling a single source
+file, :file:`demo.c`.
 
 In many cases, building an extension is more complex, since additional
 preprocessor defines and libraries may be needed. This is demonstrated in the
-example below. ::
+example below.
+
+.. code-block:: python
 
    from distutils.core import setup, Extension
 
@@ -80,7 +85,7 @@ example below. ::
           description = 'This is a demo package',
           author = 'Martin v. Loewis',
           author_email = 'martin@v.loewis.de',
-          url = 'http://docs.python.org/extending/building',
+          url = 'https://docs.python.org/extending/building',
           long_description = '''
    This is really just a demo package.
    ''',
@@ -128,4 +133,3 @@ commands can be used to do so. ::
    python setup.py bdist_wininst
    python setup.py bdist_rpm
    python setup.py bdist_dumb
-

@@ -1,4 +1,3 @@
-
 :mod:`tokenize` --- Tokenizer for Python source
 ===============================================
 
@@ -7,11 +6,21 @@
 .. moduleauthor:: Ka Ping Yee
 .. sectionauthor:: Fred L. Drake, Jr. <fdrake@acm.org>
 
+**Source code:** :source:`Lib/tokenize.py`
+
+--------------
 
 The :mod:`tokenize` module provides a lexical scanner for Python source code,
 implemented in Python.  The scanner in this module returns comments as tokens as
 well, making it useful for implementing "pretty-printers," including colorizers
 for on-screen displays.
+
+To simplify token stream handling, all :ref:`operators` and :ref:`delimiters`
+tokens are returned using the generic :data:`token.OP` token type.  The exact
+type can be determined by checking the second field (containing the actual
+token string matched) of the tuple returned from
+:func:`tokenize.generate_tokens` for the character sequence that identifies a
+specific operator token.
 
 The primary entry point is a :term:`generator`:
 
@@ -19,9 +28,10 @@ The primary entry point is a :term:`generator`:
 
    The :func:`generate_tokens` generator requires one argument, *readline*,
    which must be a callable object which provides the same interface as the
-   :meth:`readline` method of built-in file objects (see section
+   :meth:`~file.readline` method of built-in file objects (see section
    :ref:`bltin-file-objects`).  Each call to the function should return one line
-   of input as a string.
+   of input as a string. Alternately, *readline* may be a callable object that
+   signals completion by raising :exc:`StopIteration`.
 
    The generator produces 5-tuples with these members: the token type; the token
    string; a 2-tuple ``(srow, scol)`` of ints specifying the row and column
@@ -37,11 +47,11 @@ An older entry point is retained for backward compatibility:
 
 .. function:: tokenize(readline[, tokeneater])
 
-   The :func:`tokenize` function accepts two parameters: one representing the input
-   stream, and one providing an output mechanism for :func:`tokenize`.
+   The :func:`.tokenize` function accepts two parameters: one representing the input
+   stream, and one providing an output mechanism for :func:`.tokenize`.
 
    The first parameter, *readline*, must be a callable object which provides the
-   same interface as the :meth:`readline` method of built-in file objects (see
+   same interface as the :meth:`~file.readline` method of built-in file objects (see
    section :ref:`bltin-file-objects`).  Each call to the function should return one
    line of input as a string. Alternately, *readline* may be a callable object that
    signals completion by raising :exc:`StopIteration`.
@@ -55,7 +65,7 @@ An older entry point is retained for backward compatibility:
 
 All constants from the :mod:`token` module are also exported from
 :mod:`tokenize`, as are two additional token type values that might be passed to
-the *tokeneater* function by :func:`tokenize`:
+the *tokeneater* function by :func:`.tokenize`:
 
 
 .. data:: COMMENT
@@ -87,6 +97,24 @@ back the modified script.
    change.
 
    .. versionadded:: 2.5
+
+.. exception:: TokenError
+
+   Raised when either a docstring or expression that may be split over several
+   lines is not completed anywhere in the file, for example::
+
+      """Beginning of
+      docstring
+
+   or::
+
+      [1,
+       2,
+       3
+
+Note that unclosed single-quoted strings do not cause an error to be
+raised. They are tokenized as ``ERRORTOKEN``, followed by the tokenization of
+their contents.
 
 Example of a script re-writer that transforms float literals into Decimal
 objects::

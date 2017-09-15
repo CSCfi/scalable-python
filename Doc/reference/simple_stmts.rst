@@ -72,6 +72,7 @@ Assignment statements
 =====================
 
 .. index::
+   single: =; assignment statement
    pair: assignment; statement
    pair: binding; name
    pair: rebinding; name
@@ -86,7 +87,7 @@ attributes or items of mutable objects:
    target_list: `target` ("," `target`)* [","]
    target: `identifier`
          : | "(" `target_list` ")"
-         : | "[" `target_list` "]"
+         : | "[" [`target_list`] "]"
          : | `attributeref`
          : | `subscription`
          : | `slicing`
@@ -121,9 +122,6 @@ Assignment of an object to a target list is recursively defined as follows.
 * If the target list is a comma-separated list of targets: The object must be an
   iterable with the same number of items as there are targets in the target list,
   and the items are assigned, from left to right, to the corresponding targets.
-  (This rule is relaxed as of Python 1.5; in earlier versions, the object had to
-  be a tuple.  Since strings are sequences, an assignment like ``a, b = "xy"`` is
-  now legal as long as the string has the right length.)
 
 Assignment of an object to a single target is recursively defined as follows.
 
@@ -244,6 +242,18 @@ Augmented assignment statements
 .. index::
    pair: augmented; assignment
    single: statement; assignment, augmented
+   single: +=; augmented assignment
+   single: -=; augmented assignment
+   single: *=; augmented assignment
+   single: /=; augmented assignment
+   single: %=; augmented assignment
+   single: &=; augmented assignment
+   single: ^=; augmented assignment
+   single: |=; augmented assignment
+   single: **=; augmented assignment
+   single: //=; augmented assignment
+   single: >>=; augmented assignment
+   single: <<=; augmented assignment
 
 Augmented assignment is the combination, in a single statement, of a binary
 operation and an assignment statement:
@@ -296,12 +306,12 @@ program:
 The simple form, ``assert expression``, is equivalent to ::
 
    if __debug__:
-      if not expression: raise AssertionError
+       if not expression: raise AssertionError
 
 The extended form, ``assert expression1, expression2``, is equivalent to ::
 
    if __debug__:
-      if not expression1: raise AssertionError(expression2)
+       if not expression1: raise AssertionError(expression2)
 
 .. index::
    single: __debug__
@@ -355,7 +365,7 @@ The :keyword:`del` statement
    del_stmt: "del" `target_list`
 
 Deletion is recursively defined very similar to the way assignment is defined.
-Rather that spelling it out in full details, here are some hints.
+Rather than spelling it out in full details, here are some hints.
 
 Deletion of a target list recursively deletes each target, from left to right.
 
@@ -496,16 +506,16 @@ create a generator function instead of a normal function.
 
 When a generator function is called, it returns an iterator known as a generator
 iterator, or more commonly, a generator.  The body of the generator function is
-executed by calling the generator's :meth:`next` method repeatedly until it
-raises an exception.
+executed by calling the generator's :meth:`~generator.next` method repeatedly
+until it raises an exception.
 
 When a :keyword:`yield` statement is executed, the state of the generator is
-frozen and the value of :token:`expression_list` is returned to :meth:`next`'s
-caller.  By "frozen" we mean that all local state is retained, including the
-current bindings of local variables, the instruction pointer, and the internal
-evaluation stack: enough information is saved so that the next time :meth:`next`
-is invoked, the function can proceed exactly as if the :keyword:`yield`
-statement were just another external call.
+frozen and the value of :token:`expression_list` is returned to
+:meth:`~generator.next`'s caller.  By "frozen" we mean that all local state is
+retained, including the current bindings of local variables, the instruction
+pointer, and the internal evaluation stack: enough information is saved so that
+the next time :meth:`~generator.next` is invoked, the function can proceed
+exactly as if the :keyword:`yield` statement were just another external call.
 
 As of Python version 2.5, the :keyword:`yield` statement is now allowed in the
 :keyword:`try` clause of a :keyword:`try` ...  :keyword:`finally` construct.  If
@@ -513,6 +523,9 @@ the generator is not resumed before it is finalized (by reaching a zero
 reference count or by being garbage collected), the generator-iterator's
 :meth:`close` method will be called, allowing any pending :keyword:`finally`
 clauses to execute.
+
+For full details of :keyword:`yield` semantics, refer to the :ref:`yieldexpr`
+section.
 
 .. note::
 
@@ -525,10 +538,10 @@ clauses to execute.
 
 .. seealso::
 
-   :pep:`0255` - Simple Generators
+   :pep:`255` - Simple Generators
       The proposal for adding generators and the :keyword:`yield` statement to Python.
 
-   :pep:`0342` - Coroutines via Enhanced Generators
+   :pep:`342` - Coroutines via Enhanced Generators
       The proposal that, among other generator enhancements, proposed allowing
       :keyword:`yield` to appear inside a :keyword:`try` ... :keyword:`finally` block.
 
@@ -653,6 +666,7 @@ The :keyword:`import` statement
    single: module; importing
    pair: name; binding
    keyword: from
+   single: as; import statement
 
 .. productionlist::
    import_stmt: "import" `module` ["as" `name`] ( "," `module` ["as" `name`] )*
@@ -681,9 +695,7 @@ hierarchical naming of modules. To help organize modules and provide a
 hierarchy in naming, Python has a concept of packages. A package can contain
 other packages and modules while modules cannot contain other modules or
 packages. From a file system perspective, packages are directories and modules
-are files. The original `specification for packages
-<http://www.python.org/doc/essays/packages.html>`_ is still available to read,
-although minor details have changed since the writing of that document.
+are files.
 
 .. index::
     single: sys.modules
@@ -709,7 +721,7 @@ within a package (as denoted by the existence of a dot in the name), then a
 second argument to :meth:`find_module` is given as the value of the
 :attr:`__path__` attribute from the parent package (everything up to the last
 dot in the name of the module being imported). If a finder can find the module
-it returns a :term:`loader` (discussed later) or returns :keyword:`None`.
+it returns a :term:`loader` (discussed later) or returns ``None``.
 
 .. index::
     single: sys.path_hooks
@@ -736,11 +748,11 @@ finder cached then :data:`sys.path_hooks` is searched by calling each object in
 the list with a single argument of the path, returning a finder or raises
 :exc:`ImportError`. If a finder is returned then it is cached in
 :data:`sys.path_importer_cache` and then used for that path entry. If no finder
-can be found but the path exists then a value of :keyword:`None` is
+can be found but the path exists then a value of ``None`` is
 stored in :data:`sys.path_importer_cache` to signify that an implicit,
 file-based finder that handles modules stored as individual files should be
 used for that path. If the path does not exist then a finder which always
-returns :keyword:`None` is placed in the cache for the path.
+returns ``None`` is placed in the cache for the path.
 
 .. index::
     single: loader
@@ -836,15 +848,11 @@ leading dot means the current package where the module making the import
 exists. Two dots means up one package level. Three dots is up two levels, etc.
 So if you execute ``from . import mod`` from a module in the ``pkg`` package
 then you will end up importing ``pkg.mod``. If you execute ``from ..subpkg2
-imprt mod`` from within ``pkg.subpkg1`` you will import ``pkg.subpkg2.mod``.
+import mod`` from within ``pkg.subpkg1`` you will import ``pkg.subpkg2.mod``.
 The specification for relative imports is contained within :pep:`328`.
 
-
-.. index:: builtin: __import__
-
-The built-in function :func:`__import__` is provided to support applications
-that determine which modules need to be loaded dynamically; refer to
-:ref:`built-in-funcs` for additional information.
+:func:`importlib.import_module` is provided to support applications that
+determine which modules need to be loaded dynamically.
 
 
 .. _future:
@@ -985,21 +993,32 @@ The :keyword:`exec` statement
    exec_stmt: "exec" `or_expr` ["in" `expression` ["," `expression`]]
 
 This statement supports dynamic execution of Python code.  The first expression
-should evaluate to either a string, an open file object, or a code object.  If
-it is a string, the string is parsed as a suite of Python statements which is
-then executed (unless a syntax error occurs). [#]_  If it is an open file, the file
-is parsed until EOF and executed.  If it is a code object, it is simply
-executed.  In all cases, the code that's executed is expected to be valid as
-file input (see section :ref:`file-input`).  Be aware that the
+should evaluate to either a Unicode string, a *Latin-1* encoded string, an open
+file object, a code object, or a tuple.  If it is a string, the string is parsed
+as a suite of Python statements which is then executed (unless a syntax error
+occurs). [#]_ If it is an open file, the file is parsed until EOF and executed.
+If it is a code object, it is simply executed.  For the interpretation of a
+tuple, see below.  In all cases, the code that's executed is expected to be
+valid as file input (see section :ref:`file-input`).  Be aware that the
 :keyword:`return` and :keyword:`yield` statements may not be used outside of
 function definitions even within the context of code passed to the
 :keyword:`exec` statement.
 
 In all cases, if the optional parts are omitted, the code is executed in the
-current scope.  If only the first expression after :keyword:`in` is specified,
+current scope.  If only the first expression after ``in`` is specified,
 it should be a dictionary, which will be used for both the global and the local
 variables.  If two expressions are given, they are used for the global and local
 variables, respectively. If provided, *locals* can be any mapping object.
+Remember that at module level, globals and locals are the same dictionary. If
+two separate objects are given as *globals* and *locals*, the code will be
+executed as if it were embedded in a class definition.
+
+The first expression may also be a tuple of length 2 or 3.  In this case, the
+optional parts must be omitted.  The form ``exec(expr, globals)`` is equivalent
+to ``exec expr in globals``, while the form ``exec(expr, globals, locals)`` is
+equivalent to ``exec expr in globals, locals``.  The tuple form of ``exec``
+provides compatibility with Python 3, where ``exec`` is a function rather than
+a statement.
 
 .. versionchanged:: 2.4
    Formerly, *locals* was required to be a dictionary.
@@ -1028,5 +1047,5 @@ which may be useful to pass around for use by :keyword:`exec`.
 .. rubric:: Footnotes
 
 .. [#] Note that the parser only accepts the Unix-style end of line convention.
-       If you are reading the code from a file, make sure to use universal
-       newline mode to convert Windows or Mac-style newlines.
+       If you are reading the code from a file, make sure to use
+       :term:`universal newlines` mode to convert Windows or Mac-style newlines.

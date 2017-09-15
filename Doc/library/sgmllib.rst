@@ -6,7 +6,7 @@
    :deprecated:
 
 .. deprecated:: 2.6
-    The :mod:`sgmllib` module has been removed in Python 3.0.
+    The :mod:`sgmllib` module has been removed in Python 3.
 
 .. index:: single: SGML
 
@@ -143,7 +143,7 @@ A single exception is defined as well:
 
    Convert a character reference to a string, or ``None``.  *ref* is the reference
    passed in as a string.  In the base implementation, *ref* must be a decimal
-   number in the range 0-255.  It converts the code point found using the
+   number in the range 0--255.  It converts the code point found using the
    :meth:`convert_codepoint` method. If *ref* is invalid or out of range, this
    method returns ``None``.  This method is called by the default
    :meth:`handle_charref` implementation and by the attribute value parser.
@@ -153,7 +153,7 @@ A single exception is defined as well:
 
 .. method:: SGMLParser.convert_codepoint(codepoint)
 
-   Convert a codepoint to a :class:`str` value.  Encodings can be handled here if
+   Convert a code point to a :class:`str` value.  Encodings can be handled here if
    appropriate, though the rest of :mod:`sgmllib` is oblivious on this matter.
 
    .. versionadded:: 2.5
@@ -162,7 +162,7 @@ A single exception is defined as well:
 .. method:: SGMLParser.handle_entityref(ref)
 
    This method is called to process a general entity reference of the form
-   ``&ref;`` where *ref* is an general entity reference.  It converts *ref* by
+   ``&ref;`` where *ref* is a general entity reference.  It converts *ref* by
    passing it to :meth:`convert_entityref`.  If a translation is returned, it calls
    the method :meth:`handle_data` with the translation; otherwise, it calls the
    method ``unknown_entityref(ref)``. The default :attr:`entitydefs` defines

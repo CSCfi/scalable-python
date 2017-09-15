@@ -2,7 +2,7 @@
 
 
 /*
-   __version__ .
+   __version__ 82160.
 
    This module must be committed separately after each AST grammar change;
    The __version__ number is set to the revision number of the commit
@@ -188,9 +188,24 @@ static char *Dict_fields[]={
         "keys",
         "values",
 };
+static PyTypeObject *Set_type;
+static char *Set_fields[]={
+        "elts",
+};
 static PyTypeObject *ListComp_type;
 static char *ListComp_fields[]={
         "elt",
+        "generators",
+};
+static PyTypeObject *SetComp_type;
+static char *SetComp_fields[]={
+        "elt",
+        "generators",
+};
+static PyTypeObject *DictComp_type;
+static char *DictComp_fields[]={
+        "key",
+        "value",
         "generators",
 };
 static PyTypeObject *GeneratorExp_type;
@@ -512,8 +527,9 @@ static int add_attributes(PyTypeObject* type, char**attrs, int num_fields)
 {
     int i, result;
     PyObject *s, *l = PyTuple_New(num_fields);
-    if (!l) return 0;
-    for(i = 0; i < num_fields; i++) {
+    if (!l)
+        return 0;
+    for (i = 0; i < num_fields; i++) {
         s = PyString_FromString(attrs[i]);
         if (!s) {
             Py_DECREF(l);
@@ -578,8 +594,25 @@ static int obj2ast_object(PyObject* obj, PyObject** out, PyArena* arena)
     return 0;
 }
 
-#define obj2ast_identifier obj2ast_object
-#define obj2ast_string obj2ast_object
+static int obj2ast_identifier(PyObject* obj, PyObject** out, PyArena* arena)
+{
+    if (!PyString_CheckExact(obj) && obj != Py_None) {
+        PyErr_Format(PyExc_TypeError,
+                    "AST identifier must be of type str");
+        return 1;
+    }
+    return obj2ast_object(obj, out, arena);
+}
+
+static int obj2ast_string(PyObject* obj, PyObject** out, PyArena* arena)
+{
+    if (!PyString_CheckExact(obj) && !PyUnicode_CheckExact(obj)) {
+        PyErr_SetString(PyExc_TypeError,
+                       "AST string must be of type str or unicode");
+        return 1;
+    }
+    return obj2ast_object(obj, out, arena);
+}
 
 static int obj2ast_int(PyObject* obj, int* out, PyArena* arena)
 {
@@ -718,8 +751,14 @@ static int init_types(void)
         if (!IfExp_type) return 0;
         Dict_type = make_type("Dict", expr_type, Dict_fields, 2);
         if (!Dict_type) return 0;
+        Set_type = make_type("Set", expr_type, Set_fields, 1);
+        if (!Set_type) return 0;
         ListComp_type = make_type("ListComp", expr_type, ListComp_fields, 2);
         if (!ListComp_type) return 0;
+        SetComp_type = make_type("SetComp", expr_type, SetComp_fields, 2);
+        if (!SetComp_type) return 0;
+        DictComp_type = make_type("DictComp", expr_type, DictComp_fields, 3);
+        if (!DictComp_type) return 0;
         GeneratorExp_type = make_type("GeneratorExp", expr_type,
                                       GeneratorExp_fields, 2);
         if (!GeneratorExp_type) return 0;
@@ -1330,11 +1369,6 @@ ImportFrom(identifier module, asdl_seq * names, int level, int lineno, int
            col_offset, PyArena *arena)
 {
         stmt_ty p;
-        if (!module) {
-                PyErr_SetString(PyExc_ValueError,
-                                "field module is required for ImportFrom");
-                return NULL;
-        }
         p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
         if (!p)
                 return NULL;
@@ -1595,6 +1629,20 @@ Dict(asdl_seq * keys, asdl_seq * values, int lineno, int col_offset, PyArena
 }
 
 expr_ty
+Set(asdl_seq * elts, int lineno, int col_offset, PyArena *arena)
+{
+        expr_ty p;
+        p = (expr_ty)PyArena_Malloc(arena, sizeof(*p));
+        if (!p)
+                return NULL;
+        p->kind = Set_kind;
+        p->v.Set.elts = elts;
+        p->lineno = lineno;
+        p->col_offset = col_offset;
+        return p;
+}
+
+expr_ty
 ListComp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset,
          PyArena *arena)
 {
@@ -1610,6 +1658,54 @@ ListComp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset,
         p->kind = ListComp_kind;
         p->v.ListComp.elt = elt;
         p->v.ListComp.generators = generators;
+        p->lineno = lineno;
+        p->col_offset = col_offset;
+        return p;
+}
+
+expr_ty
+SetComp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset, PyArena
+        *arena)
+{
+        expr_ty p;
+        if (!elt) {
+                PyErr_SetString(PyExc_ValueError,
+                                "field elt is required for SetComp");
+                return NULL;
+        }
+        p = (expr_ty)PyArena_Malloc(arena, sizeof(*p));
+        if (!p)
+                return NULL;
+        p->kind = SetComp_kind;
+        p->v.SetComp.elt = elt;
+        p->v.SetComp.generators = generators;
+        p->lineno = lineno;
+        p->col_offset = col_offset;
+        return p;
+}
+
+expr_ty
+DictComp(expr_ty key, expr_ty value, asdl_seq * generators, int lineno, int
+         col_offset, PyArena *arena)
+{
+        expr_ty p;
+        if (!key) {
+                PyErr_SetString(PyExc_ValueError,
+                                "field key is required for DictComp");
+                return NULL;
+        }
+        if (!value) {
+                PyErr_SetString(PyExc_ValueError,
+                                "field value is required for DictComp");
+                return NULL;
+        }
+        p = (expr_ty)PyArena_Malloc(arena, sizeof(*p));
+        if (!p)
+                return NULL;
+        p->kind = DictComp_kind;
+        p->v.DictComp.key = key;
+        p->v.DictComp.value = value;
+        p->v.DictComp.generators = generators;
         p->lineno = lineno;
         p->col_offset = col_offset;
         return p;
@@ -2571,6 +2667,15 @@ ast2obj_expr(void* _o)
                         goto failed;
                 Py_DECREF(value);
                 break;
+        case Set_kind:
+                result = PyType_GenericNew(Set_type, NULL, NULL);
+                if (!result) goto failed;
+                value = ast2obj_list(o->v.Set.elts, ast2obj_expr);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "elts", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                break;
         case ListComp_kind:
                 result = PyType_GenericNew(ListComp_type, NULL, NULL);
                 if (!result) goto failed;
@@ -2580,6 +2685,41 @@ ast2obj_expr(void* _o)
                         goto failed;
                 Py_DECREF(value);
                 value = ast2obj_list(o->v.ListComp.generators,
+                                     ast2obj_comprehension);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "generators", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                break;
+        case SetComp_kind:
+                result = PyType_GenericNew(SetComp_type, NULL, NULL);
+                if (!result) goto failed;
+                value = ast2obj_expr(o->v.SetComp.elt);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "elt", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                value = ast2obj_list(o->v.SetComp.generators,
+                                     ast2obj_comprehension);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "generators", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                break;
+        case DictComp_kind:
+                result = PyType_GenericNew(DictComp_type, NULL, NULL);
+                if (!result) goto failed;
+                value = ast2obj_expr(o->v.DictComp.key);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "key", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                value = ast2obj_expr(o->v.DictComp.value);
+                if (!value) goto failed;
+                if (PyObject_SetAttrString(result, "value", value) == -1)
+                        goto failed;
+                Py_DECREF(value);
+                value = ast2obj_list(o->v.DictComp.generators,
                                      ast2obj_comprehension);
                 if (!value) goto failed;
                 if (PyObject_SetAttrString(result, "generators", value) == -1)
@@ -3211,6 +3351,10 @@ obj2ast_mod(PyObject* obj, mod_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Module field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3247,6 +3391,10 @@ obj2ast_mod(PyObject* obj, mod_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Interactive field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3306,6 +3454,10 @@ obj2ast_mod(PyObject* obj, mod_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Suite field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3415,6 +3567,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "FunctionDef field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3440,6 +3596,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "FunctionDef field \"decorator_list\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(decorator_list, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3492,6 +3652,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "ClassDef field \"bases\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(bases, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3517,6 +3681,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "ClassDef field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3542,6 +3710,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "ClassDef field \"decorator_list\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(decorator_list, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3601,6 +3773,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Delete field \"targets\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(targets, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3638,6 +3814,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Assign field \"targets\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(targets, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3748,6 +3928,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Print field \"values\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(values, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3823,6 +4007,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "For field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3848,6 +4036,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "For field \"orelse\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(orelse, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3899,6 +4091,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "While field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3924,6 +4120,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "While field \"orelse\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(orelse, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3974,6 +4174,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "If field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -3999,6 +4203,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "If field \"orelse\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(orelse, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4060,6 +4268,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "With field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4145,6 +4357,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "TryExcept field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4170,6 +4386,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 excepthandler_ty value;
                                 res = obj2ast_excepthandler(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "TryExcept field \"handlers\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(handlers, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4195,6 +4415,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "TryExcept field \"orelse\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(orelse, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4233,6 +4457,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "TryFinally field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4258,6 +4486,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "TryFinally field \"finalbody\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(finalbody, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4329,6 +4561,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 alias_ty value;
                                 res = obj2ast_alias(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Import field \"names\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(names, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4359,8 +4595,7 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                         Py_XDECREF(tmp);
                         tmp = NULL;
                 } else {
-                        PyErr_SetString(PyExc_TypeError, "required field \"module\" missing from ImportFrom");
-                        return 1;
+                        module = NULL;
                 }
                 if (PyObject_HasAttrString(obj, "names")) {
                         int res;
@@ -4379,6 +4614,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 alias_ty value;
                                 res = obj2ast_alias(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "ImportFrom field \"names\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(names, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4474,6 +4713,10 @@ obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
                                 identifier value;
                                 res = obj2ast_identifier(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Global field \"names\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(names, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4622,6 +4865,10 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "BoolOp field \"values\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(values, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4829,6 +5076,10 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Dict field \"keys\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(keys, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4854,6 +5105,10 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Dict field \"values\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(values, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4863,6 +5118,46 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                         return 1;
                 }
                 *out = Dict(keys, values, lineno, col_offset, arena);
+                if (*out == NULL) goto failed;
+                return 0;
+        }
+        isinstance = PyObject_IsInstance(obj, (PyObject*)Set_type);
+        if (isinstance == -1) {
+                return 1;
+        }
+        if (isinstance) {
+                asdl_seq* elts;
+
+                if (PyObject_HasAttrString(obj, "elts")) {
+                        int res;
+                        Py_ssize_t len;
+                        Py_ssize_t i;
+                        tmp = PyObject_GetAttrString(obj, "elts");
+                        if (tmp == NULL) goto failed;
+                        if (!PyList_Check(tmp)) {
+                                PyErr_Format(PyExc_TypeError, "Set field \"elts\" must be a list, not a %.200s", tmp->ob_type->tp_name);
+                                goto failed;
+                        }
+                        len = PyList_GET_SIZE(tmp);
+                        elts = asdl_seq_new(len, arena);
+                        if (elts == NULL) goto failed;
+                        for (i = 0; i < len; i++) {
+                                expr_ty value;
+                                res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
+                                if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Set field \"elts\" changed size during iteration");
+                                        goto failed;
+                                }
+                                asdl_seq_SET(elts, i, value);
+                        }
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"elts\" missing from Set");
+                        return 1;
+                }
+                *out = Set(elts, lineno, col_offset, arena);
                 if (*out == NULL) goto failed;
                 return 0;
         }
@@ -4903,6 +5198,10 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                                 comprehension_ty value;
                                 res = obj2ast_comprehension(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "ListComp field \"generators\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(generators, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -4912,6 +5211,126 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                         return 1;
                 }
                 *out = ListComp(elt, generators, lineno, col_offset, arena);
+                if (*out == NULL) goto failed;
+                return 0;
+        }
+        isinstance = PyObject_IsInstance(obj, (PyObject*)SetComp_type);
+        if (isinstance == -1) {
+                return 1;
+        }
+        if (isinstance) {
+                expr_ty elt;
+                asdl_seq* generators;
+
+                if (PyObject_HasAttrString(obj, "elt")) {
+                        int res;
+                        tmp = PyObject_GetAttrString(obj, "elt");
+                        if (tmp == NULL) goto failed;
+                        res = obj2ast_expr(tmp, &elt, arena);
+                        if (res != 0) goto failed;
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"elt\" missing from SetComp");
+                        return 1;
+                }
+                if (PyObject_HasAttrString(obj, "generators")) {
+                        int res;
+                        Py_ssize_t len;
+                        Py_ssize_t i;
+                        tmp = PyObject_GetAttrString(obj, "generators");
+                        if (tmp == NULL) goto failed;
+                        if (!PyList_Check(tmp)) {
+                                PyErr_Format(PyExc_TypeError, "SetComp field \"generators\" must be a list, not a %.200s", tmp->ob_type->tp_name);
+                                goto failed;
+                        }
+                        len = PyList_GET_SIZE(tmp);
+                        generators = asdl_seq_new(len, arena);
+                        if (generators == NULL) goto failed;
+                        for (i = 0; i < len; i++) {
+                                comprehension_ty value;
+                                res = obj2ast_comprehension(PyList_GET_ITEM(tmp, i), &value, arena);
+                                if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "SetComp field \"generators\" changed size during iteration");
+                                        goto failed;
+                                }
+                                asdl_seq_SET(generators, i, value);
+                        }
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"generators\" missing from SetComp");
+                        return 1;
+                }
+                *out = SetComp(elt, generators, lineno, col_offset, arena);
+                if (*out == NULL) goto failed;
+                return 0;
+        }
+        isinstance = PyObject_IsInstance(obj, (PyObject*)DictComp_type);
+        if (isinstance == -1) {
+                return 1;
+        }
+        if (isinstance) {
+                expr_ty key;
+                expr_ty value;
+                asdl_seq* generators;
+
+                if (PyObject_HasAttrString(obj, "key")) {
+                        int res;
+                        tmp = PyObject_GetAttrString(obj, "key");
+                        if (tmp == NULL) goto failed;
+                        res = obj2ast_expr(tmp, &key, arena);
+                        if (res != 0) goto failed;
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"key\" missing from DictComp");
+                        return 1;
+                }
+                if (PyObject_HasAttrString(obj, "value")) {
+                        int res;
+                        tmp = PyObject_GetAttrString(obj, "value");
+                        if (tmp == NULL) goto failed;
+                        res = obj2ast_expr(tmp, &value, arena);
+                        if (res != 0) goto failed;
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"value\" missing from DictComp");
+                        return 1;
+                }
+                if (PyObject_HasAttrString(obj, "generators")) {
+                        int res;
+                        Py_ssize_t len;
+                        Py_ssize_t i;
+                        tmp = PyObject_GetAttrString(obj, "generators");
+                        if (tmp == NULL) goto failed;
+                        if (!PyList_Check(tmp)) {
+                                PyErr_Format(PyExc_TypeError, "DictComp field \"generators\" must be a list, not a %.200s", tmp->ob_type->tp_name);
+                                goto failed;
+                        }
+                        len = PyList_GET_SIZE(tmp);
+                        generators = asdl_seq_new(len, arena);
+                        if (generators == NULL) goto failed;
+                        for (i = 0; i < len; i++) {
+                                comprehension_ty value;
+                                res = obj2ast_comprehension(PyList_GET_ITEM(tmp, i), &value, arena);
+                                if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "DictComp field \"generators\" changed size during iteration");
+                                        goto failed;
+                                }
+                                asdl_seq_SET(generators, i, value);
+                        }
+                        Py_XDECREF(tmp);
+                        tmp = NULL;
+                } else {
+                        PyErr_SetString(PyExc_TypeError, "required field \"generators\" missing from DictComp");
+                        return 1;
+                }
+                *out = DictComp(key, value, generators, lineno, col_offset,
+                                arena);
                 if (*out == NULL) goto failed;
                 return 0;
         }
@@ -4952,6 +5371,10 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                                 comprehension_ty value;
                                 res = obj2ast_comprehension(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "GeneratorExp field \"generators\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(generators, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -5024,6 +5447,10 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                                 cmpop_ty value;
                                 res = obj2ast_cmpop(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Compare field \"ops\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(ops, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -5049,6 +5476,10 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Compare field \"comparators\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(comparators, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -5102,6 +5533,10 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Call field \"args\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(args, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -5127,6 +5562,10 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                                 keyword_ty value;
                                 res = obj2ast_keyword(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Call field \"keywords\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(keywords, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -5390,6 +5829,10 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "List field \"elts\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(elts, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -5439,6 +5882,10 @@ obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
                                 expr_ty value;
                                 res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "Tuple field \"elts\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(elts, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -5626,6 +6073,10 @@ obj2ast_slice(PyObject* obj, slice_ty* out, PyArena* arena)
                                 slice_ty value;
                                 res = obj2ast_slice(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "ExtSlice field \"dims\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(dims, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -6003,6 +6454,10 @@ obj2ast_comprehension(PyObject* obj, comprehension_ty* out, PyArena* arena)
                         expr_ty value;
                         res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                         if (res != 0) goto failed;
+                        if (len != PyList_GET_SIZE(tmp)) {
+                                PyErr_SetString(PyExc_RuntimeError, "comprehension field \"ifs\" changed size during iteration");
+                                goto failed;
+                        }
                         asdl_seq_SET(ifs, i, value);
                 }
                 Py_XDECREF(tmp);
@@ -6103,6 +6558,10 @@ obj2ast_excepthandler(PyObject* obj, excepthandler_ty* out, PyArena* arena)
                                 stmt_ty value;
                                 res = obj2ast_stmt(PyList_GET_ITEM(tmp, i), &value, arena);
                                 if (res != 0) goto failed;
+                                if (len != PyList_GET_SIZE(tmp)) {
+                                        PyErr_SetString(PyExc_RuntimeError, "ExceptHandler field \"body\" changed size during iteration");
+                                        goto failed;
+                                }
                                 asdl_seq_SET(body, i, value);
                         }
                         Py_XDECREF(tmp);
@@ -6151,6 +6610,10 @@ obj2ast_arguments(PyObject* obj, arguments_ty* out, PyArena* arena)
                         expr_ty value;
                         res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                         if (res != 0) goto failed;
+                        if (len != PyList_GET_SIZE(tmp)) {
+                                PyErr_SetString(PyExc_RuntimeError, "arguments field \"args\" changed size during iteration");
+                                goto failed;
+                        }
                         asdl_seq_SET(args, i, value);
                 }
                 Py_XDECREF(tmp);
@@ -6198,6 +6661,10 @@ obj2ast_arguments(PyObject* obj, arguments_ty* out, PyArena* arena)
                         expr_ty value;
                         res = obj2ast_expr(PyList_GET_ITEM(tmp, i), &value, arena);
                         if (res != 0) goto failed;
+                        if (len != PyList_GET_SIZE(tmp)) {
+                                PyErr_SetString(PyExc_RuntimeError, "arguments field \"defaults\" changed size during iteration");
+                                goto failed;
+                        }
                         asdl_seq_SET(defaults, i, value);
                 }
                 Py_XDECREF(tmp);
@@ -6300,7 +6767,7 @@ init_ast(void)
         if (PyDict_SetItemString(d, "AST", (PyObject*)&AST_type) < 0) return;
         if (PyModule_AddIntConstant(m, "PyCF_ONLY_AST", PyCF_ONLY_AST) < 0)
                 return;
-        if (PyModule_AddStringConstant(m, "__version__", "") < 0)
+        if (PyModule_AddStringConstant(m, "__version__", "82160") < 0)
                 return;
         if (PyDict_SetItemString(d, "mod", (PyObject*)mod_type) < 0) return;
         if (PyDict_SetItemString(d, "Module", (PyObject*)Module_type) < 0)
@@ -6357,7 +6824,12 @@ init_ast(void)
             return;
         if (PyDict_SetItemString(d, "IfExp", (PyObject*)IfExp_type) < 0) return;
         if (PyDict_SetItemString(d, "Dict", (PyObject*)Dict_type) < 0) return;
+        if (PyDict_SetItemString(d, "Set", (PyObject*)Set_type) < 0) return;
         if (PyDict_SetItemString(d, "ListComp", (PyObject*)ListComp_type) < 0)
+            return;
+        if (PyDict_SetItemString(d, "SetComp", (PyObject*)SetComp_type) < 0)
+            return;
+        if (PyDict_SetItemString(d, "DictComp", (PyObject*)DictComp_type) < 0)
             return;
         if (PyDict_SetItemString(d, "GeneratorExp",
             (PyObject*)GeneratorExp_type) < 0) return;
@@ -6457,10 +6929,18 @@ PyObject* PyAST_mod2obj(mod_ty t)
 mod_ty PyAST_obj2mod(PyObject* ast, PyArena* arena, int mode)
 {
     mod_ty res;
-    PyObject *req_type[] = {(PyObject*)Module_type, (PyObject*)Expression_type,
-                            (PyObject*)Interactive_type};
-    char *req_name[] = {"Module", "Expression", "Interactive"};
+    PyObject *req_type[3];
+    char *req_name[3];
     int isinstance;
+
+    req_type[0] = (PyObject*)Module_type;
+    req_type[1] = (PyObject*)Expression_type;
+    req_type[2] = (PyObject*)Interactive_type;
+
+    req_name[0] = "Module";
+    req_name[1] = "Expression";
+    req_name[2] = "Interactive";
+
     assert(0 <= mode && mode <= 2);
 
     init_types();

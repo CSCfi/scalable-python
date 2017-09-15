@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # UserString is a wrapper around the native builtin string type.
 # UserString instances should behave similar to builtin string objects.
 
@@ -29,14 +28,12 @@ class UserStringTest(
             realresult
         )
 
-    def checkraises(self, exc, object, methodname, *args):
-        object = self.fixtype(object)
+    def checkraises(self, exc, obj, methodname, *args):
+        obj = self.fixtype(obj)
         # we don't fix the arguments, because UserString can't cope with it
-        self.assertRaises(
-            exc,
-            getattr(object, methodname),
-            *args
-        )
+        with self.assertRaises(exc) as cm:
+            getattr(obj, methodname)(*args)
+        self.assertNotEqual(cm.exception.args[0], '')
 
     def checkcall(self, object, methodname, *args):
         object = self.fixtype(object)
@@ -104,17 +101,17 @@ class MutableStringTest(UserStringTest):
                     data.reverse()
                     L[start:stop:step] = data
                     s[start:stop:step] = "".join(data)
-                    self.assertEquals(s, "".join(L))
+                    self.assertEqual(s, "".join(L))
 
                     del L[start:stop:step]
                     del s[start:stop:step]
-                    self.assertEquals(s, "".join(L))
+                    self.assertEqual(s, "".join(L))
 
     def test_immutable(self):
         s = self.type2test("foobar")
         s2 = s.immutable()
         self.assertEqual(s, s2)
-        self.assert_(isinstance(s2, UserString))
+        self.assertIsInstance(s2, UserString)
 
     def test_iadd(self):
         s = self.type2test("foo")

@@ -55,51 +55,52 @@ class NumberTestCase(unittest.TestCase):
     def test_default_init(self):
         # default values are set to zero
         for t in signed_types + unsigned_types + float_types:
-            self.failUnlessEqual(t().value, 0)
+            self.assertEqual(t().value, 0)
 
     def test_unsigned_values(self):
         # the value given to the constructor is available
         # as the 'value' attribute
         for t, (l, h) in zip(unsigned_types, unsigned_ranges):
-            self.failUnlessEqual(t(l).value, l)
-            self.failUnlessEqual(t(h).value, h)
+            self.assertEqual(t(l).value, l)
+            self.assertEqual(t(h).value, h)
 
     def test_signed_values(self):
         # see above
         for t, (l, h) in zip(signed_types, signed_ranges):
-            self.failUnlessEqual(t(l).value, l)
-            self.failUnlessEqual(t(h).value, h)
+            self.assertEqual(t(l).value, l)
+            self.assertEqual(t(h).value, h)
 
     def test_bool_values(self):
         from operator import truth
         for t, v in zip(bool_types, bool_values):
-            self.failUnlessEqual(t(v).value, truth(v))
+            self.assertEqual(t(v).value, truth(v))
 
     def test_typeerror(self):
-        # Only numbers are allowed in the contructor,
+        # Only numbers are allowed in the constructor,
         # otherwise TypeError is raised
         for t in signed_types + unsigned_types + float_types:
             self.assertRaises(TypeError, t, "")
             self.assertRaises(TypeError, t, None)
 
-##    def test_valid_ranges(self):
-##        # invalid values of the correct type
-##        # raise ValueError (not OverflowError)
-##        for t, (l, h) in zip(unsigned_types, unsigned_ranges):
-##            self.assertRaises(ValueError, t, l-1)
-##            self.assertRaises(ValueError, t, h+1)
+    @unittest.skip('test disabled')
+    def test_valid_ranges(self):
+        # invalid values of the correct type
+        # raise ValueError (not OverflowError)
+        for t, (l, h) in zip(unsigned_types, unsigned_ranges):
+            self.assertRaises(ValueError, t, l-1)
+            self.assertRaises(ValueError, t, h+1)
 
     def test_from_param(self):
         # the from_param class method attribute always
         # returns PyCArgObject instances
         for t in signed_types + unsigned_types + float_types:
-            self.failUnlessEqual(ArgType, type(t.from_param(0)))
+            self.assertEqual(ArgType, type(t.from_param(0)))
 
     def test_byref(self):
         # calling byref returns also a PyCArgObject instance
         for t in signed_types + unsigned_types + float_types + bool_types:
             parm = byref(t())
-            self.failUnlessEqual(ArgType, type(parm))
+            self.assertEqual(ArgType, type(parm))
 
 
     def test_floats(self):
@@ -110,10 +111,10 @@ class NumberTestCase(unittest.TestCase):
                 return 2.0
         f = FloatLike()
         for t in float_types:
-            self.failUnlessEqual(t(2.0).value, 2.0)
-            self.failUnlessEqual(t(2).value, 2.0)
-            self.failUnlessEqual(t(2L).value, 2.0)
-            self.failUnlessEqual(t(f).value, 2.0)
+            self.assertEqual(t(2.0).value, 2.0)
+            self.assertEqual(t(2).value, 2.0)
+            self.assertEqual(t(2L).value, 2.0)
+            self.assertEqual(t(f).value, 2.0)
 
     def test_integers(self):
         class FloatLike(object):
@@ -129,7 +130,7 @@ class NumberTestCase(unittest.TestCase):
         for t in signed_types + unsigned_types:
             self.assertRaises(TypeError, t, 3.14)
             self.assertRaises(TypeError, t, f)
-            self.failUnlessEqual(t(i).value, 2)
+            self.assertEqual(t(i).value, 2)
 
     def test_sizes(self):
         for t in signed_types + unsigned_types + float_types + bool_types:
@@ -138,9 +139,9 @@ class NumberTestCase(unittest.TestCase):
             except struct.error:
                 continue
             # sizeof of the type...
-            self.failUnlessEqual(sizeof(t), size)
+            self.assertEqual(sizeof(t), size)
             # and sizeof of an instance
-            self.failUnlessEqual(sizeof(t()), size)
+            self.assertEqual(sizeof(t()), size)
 
     def test_alignments(self):
         for t in signed_types + unsigned_types + float_types:
@@ -148,16 +149,16 @@ class NumberTestCase(unittest.TestCase):
             align = struct.calcsize("c%c" % code) - struct.calcsize(code)
 
             # alignment of the type...
-            self.failUnlessEqual((code, alignment(t)),
+            self.assertEqual((code, alignment(t)),
                                  (code, align))
             # and alignment of an instance
-            self.failUnlessEqual((code, alignment(t())),
+            self.assertEqual((code, alignment(t())),
                                  (code, align))
 
     def test_int_from_address(self):
         from array import array
         for t in signed_types + unsigned_types:
-            # the array module doesn't suppport all format codes
+            # the array module doesn't support all format codes
             # (no 'q' or 'Q')
             try:
                 array(t._type_)
@@ -167,12 +168,12 @@ class NumberTestCase(unittest.TestCase):
 
             # v now is an integer at an 'external' memory location
             v = t.from_address(a.buffer_info()[0])
-            self.failUnlessEqual(v.value, a[0])
-            self.failUnlessEqual(type(v), t)
+            self.assertEqual(v.value, a[0])
+            self.assertEqual(type(v), t)
 
             # changing the value at the memory location changes v's value also
             a[0] = 42
-            self.failUnlessEqual(v.value, a[0])
+            self.assertEqual(v.value, a[0])
 
 
     def test_float_from_address(self):
@@ -180,11 +181,11 @@ class NumberTestCase(unittest.TestCase):
         for t in float_types:
             a = array(t._type_, [3.14])
             v = t.from_address(a.buffer_info()[0])
-            self.failUnlessEqual(v.value, a[0])
-            self.failUnless(type(v) is t)
+            self.assertEqual(v.value, a[0])
+            self.assertIs(type(v), t)
             a[0] = 2.3456e17
-            self.failUnlessEqual(v.value, a[0])
-            self.failUnless(type(v) is t)
+            self.assertEqual(v.value, a[0])
+            self.assertIs(type(v), t)
 
     def test_char_from_address(self):
         from ctypes import c_char
@@ -192,32 +193,44 @@ class NumberTestCase(unittest.TestCase):
 
         a = array('c', 'x')
         v = c_char.from_address(a.buffer_info()[0])
-        self.failUnlessEqual(v.value, a[0])
-        self.failUnless(type(v) is c_char)
+        self.assertEqual(v.value, a[0])
+        self.assertIs(type(v), c_char)
 
         a[0] = '?'
-        self.failUnlessEqual(v.value, a[0])
+        self.assertEqual(v.value, a[0])
 
     # array does not support c_bool / 't'
-    # def test_bool_from_address(self):
-    #     from ctypes import c_bool
-    #     from array import array
-    #     a = array(c_bool._type_, [True])
-    #     v = t.from_address(a.buffer_info()[0])
-    #     self.failUnlessEqual(v.value, a[0])
-    #     self.failUnlessEqual(type(v) is t)
-    #     a[0] = False
-    #     self.failUnlessEqual(v.value, a[0])
-    #     self.failUnlessEqual(type(v) is t)
+    @unittest.skip('test disabled')
+    def test_bool_from_address(self):
+        from ctypes import c_bool
+        from array import array
+        a = array(c_bool._type_, [True])
+        v = t.from_address(a.buffer_info()[0])
+        self.assertEqual(v.value, a[0])
+        self.assertEqual(type(v) is t)
+        a[0] = False
+        self.assertEqual(v.value, a[0])
+        self.assertEqual(type(v) is t)
 
     def test_init(self):
         # c_int() can be initialized from Python's int, and c_int.
-        # Not from c_long or so, which seems strange, abd should
+        # Not from c_long or so, which seems strange, abc should
         # probably be changed:
         self.assertRaises(TypeError, c_int, c_long(42))
 
-##    def test_perf(self):
-##        check_perf()
+    def test_float_overflow(self):
+        import sys
+        big_int = int(sys.float_info.max) * 2
+        for t in float_types + [c_longdouble]:
+            self.assertRaises(OverflowError, t, big_int)
+            if (hasattr(t, "__ctype_be__")):
+                self.assertRaises(OverflowError, t.__ctype_be__, big_int)
+            if (hasattr(t, "__ctype_le__")):
+                self.assertRaises(OverflowError, t.__ctype_le__, big_int)
+
+    @unittest.skip('test disabled')
+    def test_perf(self):
+        check_perf()
 
 from ctypes import _SimpleCData
 class c_int_S(_SimpleCData):

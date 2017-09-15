@@ -6,9 +6,9 @@
    :synopsis: The standard "database" interface, based on ndbm.
 
 .. note::
-   The :mod:`dbm` module has been renamed to :mod:`dbm.ndbm` in Python 3.0.  The
+   The :mod:`dbm` module has been renamed to :mod:`dbm.ndbm` in Python 3.  The
    :term:`2to3` tool will automatically adapt imports when converting your
-   sources to 3.0.
+   sources to Python 3.
 
 
 The :mod:`dbm` module provides an interface to the Unix "(n)dbm" library.  Dbm
@@ -63,6 +63,14 @@ The module defines the following:
    The optional *mode* argument is the Unix mode of the file, used only when the
    database has to be created.  It defaults to octal ``0666`` (and will be
    modified by the prevailing umask).
+
+   In addition to the dictionary-like methods, ``dbm`` objects
+   provide the following method:
+
+
+   .. function:: close()
+
+      Close the ``dbm`` database.
 
 
 .. seealso::

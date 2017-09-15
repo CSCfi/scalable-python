@@ -1,6 +1,8 @@
 import unittest
 from ctypes import *
 
+from ctypes.test import need_symbol
+
 formats = "bBhHiIlLqQfd"
 
 formats = c_byte, c_ubyte, c_short, c_ushort, c_int, c_uint, \
@@ -19,25 +21,29 @@ class ArrayTestCase(unittest.TestCase):
 
             ia = int_array(*init)
             # length of instance ok?
-            self.failUnlessEqual(len(ia), alen)
+            self.assertEqual(len(ia), alen)
 
             # slot values ok?
-            values = [ia[i] for i in range(len(init))]
-            self.failUnlessEqual(values, init)
+            values = [ia[i] for i in range(alen)]
+            self.assertEqual(values, init)
+
+            # out-of-bounds accesses should be caught
+            with self.assertRaises(IndexError): ia[alen]
+            with self.assertRaises(IndexError): ia[-alen-1]
 
             # change the items
             from operator import setitem
             new_values = range(42, 42+alen)
             [setitem(ia, n, new_values[n]) for n in range(alen)]
-            values = [ia[i] for i in range(len(init))]
-            self.failUnlessEqual(values, new_values)
+            values = [ia[i] for i in range(alen)]
+            self.assertEqual(values, new_values)
 
             # are the items initialized to 0?
             ia = int_array()
-            values = [ia[i] for i in range(len(init))]
-            self.failUnlessEqual(values, [0] * len(init))
+            values = [ia[i] for i in range(alen)]
+            self.assertEqual(values, [0] * alen)
 
-            # Too many in itializers should be caught
+            # Too many initializers should be caught
             self.assertRaises(IndexError, int_array, *range(alen*2))
 
         CharArray = ARRAY(c_char, 3)
@@ -48,14 +54,14 @@ class ArrayTestCase(unittest.TestCase):
         # CharArray("abc")
         self.assertRaises(TypeError, CharArray, "abc")
 
-        self.failUnlessEqual(ca[0], "a")
-        self.failUnlessEqual(ca[1], "b")
-        self.failUnlessEqual(ca[2], "c")
-        self.failUnlessEqual(ca[-3], "a")
-        self.failUnlessEqual(ca[-2], "b")
-        self.failUnlessEqual(ca[-1], "c")
+        self.assertEqual(ca[0], "a")
+        self.assertEqual(ca[1], "b")
+        self.assertEqual(ca[2], "c")
+        self.assertEqual(ca[-3], "a")
+        self.assertEqual(ca[-2], "b")
+        self.assertEqual(ca[-1], "c")
 
-        self.failUnlessEqual(len(ca), 3)
+        self.assertEqual(len(ca), 3)
 
         # slicing is now supported, but not extended slicing (3-argument)!
         from operator import getslice, delitem
@@ -72,49 +78,45 @@ class ArrayTestCase(unittest.TestCase):
 
         na = numarray()
         values = [na[i] for i in range(alen)]
-        self.failUnlessEqual(values, [0] * alen)
+        self.assertEqual(values, [0] * alen)
 
         na = numarray(*[c_int()] * alen)
         values = [na[i] for i in range(alen)]
-        self.failUnlessEqual(values, [0]*alen)
+        self.assertEqual(values, [0]*alen)
 
         na = numarray(1, 2, 3, 4, 5)
         values = [i for i in na]
-        self.failUnlessEqual(values, [1, 2, 3, 4, 5])
+        self.assertEqual(values, [1, 2, 3, 4, 5])
 
         na = numarray(*map(c_int, (1, 2, 3, 4, 5)))
         values = [i for i in na]
-        self.failUnlessEqual(values, [1, 2, 3, 4, 5])
+        self.assertEqual(values, [1, 2, 3, 4, 5])
 
     def test_classcache(self):
-        self.failUnless(not ARRAY(c_int, 3) is ARRAY(c_int, 4))
-        self.failUnless(ARRAY(c_int, 3) is ARRAY(c_int, 3))
+        self.assertIsNot(ARRAY(c_int, 3), ARRAY(c_int, 4))
+        self.assertIs(ARRAY(c_int, 3), ARRAY(c_int, 3))
 
     def test_from_address(self):
         # Failed with 0.9.8, reported by JUrner
         p = create_string_buffer("foo")
         sz = (c_char * 3).from_address(addressof(p))
-        self.failUnlessEqual(sz[:], "foo")
-        self.failUnlessEqual(sz[::], "foo")
-        self.failUnlessEqual(sz[::-1], "oof")
-        self.failUnlessEqual(sz[::3], "f")
-        self.failUnlessEqual(sz[1:4:2], "o")
-        self.failUnlessEqual(sz.value, "foo")
+        self.assertEqual(sz[:], "foo")
+        self.assertEqual(sz[::], "foo")
+        self.assertEqual(sz[::-1], "oof")
+        self.assertEqual(sz[::3], "f")
+        self.assertEqual(sz[1:4:2], "o")
+        self.assertEqual(sz.value, "foo")
 
-    try:
-        create_unicode_buffer
-    except NameError:
-        pass
-    else:
-        def test_from_addressW(self):
-            p = create_unicode_buffer("foo")
-            sz = (c_wchar * 3).from_address(addressof(p))
-            self.failUnlessEqual(sz[:], "foo")
-            self.failUnlessEqual(sz[::], "foo")
-            self.failUnlessEqual(sz[::-1], "oof")
-            self.failUnlessEqual(sz[::3], "f")
-            self.failUnlessEqual(sz[1:4:2], "o")
-            self.failUnlessEqual(sz.value, "foo")
+    @need_symbol('create_unicode_buffer')
+    def test_from_addressW(self):
+        p = create_unicode_buffer("foo")
+        sz = (c_wchar * 3).from_address(addressof(p))
+        self.assertEqual(sz[:], "foo")
+        self.assertEqual(sz[::], "foo")
+        self.assertEqual(sz[::-1], "oof")
+        self.assertEqual(sz[::3], "f")
+        self.assertEqual(sz[1:4:2], "o")
+        self.assertEqual(sz.value, "foo")
 
     def test_cache(self):
         # Array types are cached internally in the _ctypes extension,
@@ -128,7 +130,7 @@ class ArrayTestCase(unittest.TestCase):
         # Create a new array type based on it:
         t1 = my_int * 1
         t2 = my_int * 1
-        self.failUnless(t1 is t2)
+        self.assertIs(t1, t2)
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,4 +1,4 @@
-.. highlightlang:: none
+.. highlightlang:: sh
 
 .. _using-on-unix:
 
@@ -26,11 +26,11 @@ following links:
 
 .. seealso::
 
-   http://www.linux.com/articles/60383
+   https://www.debian.org/doc/manuals/maint-guide/first.en.html
       for Debian users
-   http://linuxmafia.com/pub/linux/suse-linux-internals/chapter35.html
+   https://en.opensuse.org/Portal:Packaging
       for OpenSuse users
-   http://docs.fedoraproject.org/drafts/rpm-guide-en/ch-creating-rpms.html
+   https://docs.fedoraproject.org/en-US/Fedora_Draft_Documentation/0.1/html/RPM_Guide/ch-creating-rpms.html
       for Fedora users
    http://www.slackbook.org/html/package-management-making-packages.html
       for Slackware users
@@ -55,27 +55,29 @@ On FreeBSD and OpenBSD
 On OpenSolaris
 --------------
 
-To install the newest Python versions on OpenSolaris, install blastwave
-(http://www.blastwave.org/howto.html) and type "pkg_get -i python" at the
-prompt.
+You can get Python from `OpenCSW <https://www.opencsw.org/>`_.  Various versions
+of Python are available and can be installed with e.g. ``pkgutil -i python27``.
 
+
+.. _building-python-on-unix:
 
 Building Python
 ===============
 
 If you want to compile CPython yourself, first thing you should do is get the
-`source <http://python.org/download/source/>`_. You can download either the
-latest release's source or just grab a fresh `checkout
-<http://www.python.org/dev/faq/#how-do-i-get-a-checkout-of-the-repository-read-only-and-read-write>`_.
+`source <https://www.python.org/downloads/source/>`_. You can download either the
+latest release's source or just grab a fresh `clone
+<https://docs.python.org/devguide/setup.html#getting-the-source-code>`_.  (If you want
+to contribute patches, you will need a clone.)
 
-The build process consists the usual ::
+The build process consists in the usual ::
 
    ./configure
    make
    make install
 
 invocations. Configuration options and caveats for specific Unix platforms are
-extensively documented in the :file:`README` file in the root of the Python
+extensively documented in the :source:`README` file in the root of the Python
 source tree.
 
 .. warning::
@@ -141,11 +143,10 @@ Vim and Emacs are excellent editors which support Python very well.  For more
 information on how to code in Python in these editors, look at:
 
 * http://www.vim.org/scripts/script.php?script_id=790
-* http://sourceforge.net/projects/python-mode
+* https://sourceforge.net/projects/python-mode
 
 Geany is an excellent IDE with support for a lot of languages. For more
-information, read: http://geany.uvena.de/
+information, read: https://www.geany.org/
 
 Komodo edit is another extremely good IDE.  It also has support for a lot of
-languages. For more information, read:
-http://www.activestate.com/store/productdetail.aspx?prdGuid=20f4ed15-6684-4118-a78b-d37ff4058c5f
+languages. For more information, read https://komodoide.com/.

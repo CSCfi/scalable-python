@@ -100,29 +100,8 @@
 #endif
 
 
-#ifndef VERSION
-#define VERSION "2.1"
-#endif
-
-#ifndef VPATH
-#define VPATH "."
-#endif
-
-#ifndef PREFIX
-#  ifdef __VMS
-#    define PREFIX ""
-#  else
-#    define PREFIX "/usr/local"
-#  endif
-#endif
-
-#ifndef EXEC_PREFIX
-#define EXEC_PREFIX PREFIX
-#endif
-
-#ifndef PYTHONPATH
-#define PYTHONPATH PREFIX "/lib/python" VERSION ":" \
-              EXEC_PREFIX "/lib/python" VERSION "/lib-dynload"
+#if !defined(PREFIX) || !defined(EXEC_PREFIX) || !defined(VERSION) || !defined(VPATH)
+#error "PREFIX, EXEC_PREFIX, VERSION, and VPATH must be constant defined"
 #endif
 
 #ifndef LANDMARK
@@ -236,7 +215,11 @@ copy_absolute(char *path, char *p)
     if (p[0] == SEP)
         strcpy(path, p);
     else {
-        getcwd(path, MAXPATHLEN);
+        if (!getcwd(path, MAXPATHLEN)) {
+            /* unable to get the current directory */
+            strcpy(path, p);
+            return;
+        }
         if (p[0] == '.' && p[1] == SEP)
             p += 2;
         joinpath(path, p);
@@ -335,12 +318,25 @@ search_for_exec_prefix(char *argv0_path, char *home)
         return 1;
     }
 
-    /* Check to see if argv[0] is in the build directory */
+    /* Check to see if argv[0] is in the build directory. "pybuilddir.txt"
+       is written by setup.py and contains the relative path to the location
+       of shared library modules. */
     strcpy(exec_prefix, argv0_path);
-    joinpath(exec_prefix, "Modules/Setup");
+    joinpath(exec_prefix, "pybuilddir.txt");
     if (isfile(exec_prefix)) {
-        reduce(exec_prefix);
-        return -1;
+      FILE *f = fopen(exec_prefix, "r");
+      if (f == NULL)
+	errno = 0;
+      else {
+	char rel_builddir_path[MAXPATHLEN+1];
+	size_t n;
+	n = fread(rel_builddir_path, 1, MAXPATHLEN, f);
+	rel_builddir_path[n] = '\0';
+	fclose(f);
+	strcpy(exec_prefix, argv0_path);
+	joinpath(exec_prefix, rel_builddir_path);
+	return -1;
+      }
     }
 
     /* Search from argv0_path, until root is found */
@@ -605,7 +601,10 @@ calculate_path(void)
 
             if (defpath[0] != SEP) {
                 strcat(buf, prefix);
-                strcat(buf, separator);
+                if (prefixsz >= 2 && prefix[prefixsz - 2] != SEP &&
+                    defpath[0] != (delim ? DELIM : L'\0')) {  /* not empty */
+                    strcat(buf, separator);
+                }
             }
 
             if (delim) {

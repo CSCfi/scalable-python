@@ -42,7 +42,7 @@ long PyThread_start_new_thread(void (*func)(void *), void *arg)
 }
 
 /*
- * Return the thread Id instead of an handle. The Id is said to uniquely identify the
+ * Return the thread Id instead of a handle. The Id is said to uniquely identify the
  * thread in the system
  */
 long PyThread_get_thread_ident(void)
@@ -53,48 +53,13 @@ long PyThread_get_thread_ident(void)
     return GetCurrentThreadId();
 }
 
-static void do_PyThread_exit_thread(int no_cleanup)
-{
-    dprintf(("%ld: do_PyThread_exit_thread called\n", PyThread_get_thread_ident()));
-    if (!initialized)
-        if (no_cleanup)
-            exit(0); /* XXX - was _exit()!! */
-        else
-            exit(0);
-    _endthread();
-}
-
 void PyThread_exit_thread(void)
 {
-    do_PyThread_exit_thread(0);
-}
-
-void PyThread__exit_thread(void)
-{
-    do_PyThread_exit_thread(1);
-}
-
-#ifndef NO_EXIT_PROG
-static void do_PyThread_exit_prog(int status, int no_cleanup)
-{
-    dprintf(("PyThread_exit_prog(%d) called\n", status));
+    dprintf(("%ld: PyThread_exit_thread called\n", PyThread_get_thread_ident()));
     if (!initialized)
-        if (no_cleanup)
-            _exit(status);
-        else
-            exit(status);
+        exit(0);
+    _endthread();
 }
-
-void PyThread_exit_prog(int status)
-{
-    do_PyThread_exit_prog(status, 0);
-}
-
-void PyThread__exit_prog(int status)
-{
-    do_PyThread_exit_prog(status, 1);
-}
-#endif /* NO_EXIT_PROG */
 
 /*
  * Lock support. It has to be implemented using Mutexes, as
@@ -107,12 +72,12 @@ PyThread_type_lock PyThread_allocate_lock(void)
 
     dprintf(("PyThread_allocate_lock called\n"));
     if (!initialized)
-    PyThread_init_thread();
+        PyThread_init_thread();
 
     aLock = CreateEvent(NULL,           /* Security attributes      */
-            0,              /* Manual-Reset               */
+                        0,              /* Manual-Reset               */
                         1,              /* Is initially signalled  */
-            NULL);          /* Name of event            */
+                        NULL);          /* Name of event            */
 
     dprintf(("%ld: PyThread_allocate_lock() -> %p\n", PyThread_get_thread_ident(), aLock));
 
@@ -152,7 +117,7 @@ int PyThread_acquire_lock(PyThread_type_lock aLock, int waitflag)
 #endif
 
     if (waitResult != WAIT_OBJECT_0) {
-                success = 0;    /* We failed */
+        success = 0;    /* We failed */
     }
 
     dprintf(("%ld: PyThread_acquire_lock(%p, %d) -> %d\n", PyThread_get_thread_ident(),aLock, waitflag, success));
@@ -165,7 +130,7 @@ void PyThread_release_lock(PyThread_type_lock aLock)
     dprintf(("%ld: PyThread_release_lock(%p) called\n", PyThread_get_thread_ident(),aLock));
 
     if (!SetEvent(aLock))
-    dprintf(("%ld: Could not PyThread_release_lock(%p) error: %l\n", PyThread_get_thread_ident(), aLock, GetLastError()));
+        dprintf(("%ld: Could not PyThread_release_lock(%p) error: %l\n", PyThread_get_thread_ident(), aLock, GetLastError()));
 }
 
 

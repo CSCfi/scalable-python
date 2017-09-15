@@ -12,8 +12,8 @@
 .. note::
 
    The :mod:`ConfigParser` module has been renamed to :mod:`configparser` in
-   Python 3.0.  The :term:`2to3` tool will automatically adapt imports when
-   converting your sources to 3.0.
+   Python 3.  The :term:`2to3` tool will automatically adapt imports when
+   converting your sources to Python 3.
 
 .. index::
    pair: .ini; file
@@ -21,7 +21,7 @@
    single: ini file
    single: Windows ini file
 
-This module defines the class :class:`ConfigParser`.   The :class:`ConfigParser`
+This module defines the class :class:`~ConfigParser.ConfigParser`.   The :class:`~ConfigParser.ConfigParser`
 class implements a basic configuration file parser language which provides a
 structure similar to what you would find on Microsoft Windows INI files.  You
 can use this to write Python programs which can be customized by end users
@@ -31,6 +31,16 @@ easily.
 
    This library does *not* interpret or write the value-type prefixes used in
    the Windows Registry extended version of INI syntax.
+
+.. seealso::
+
+   Module :mod:`shlex`
+      Support for a creating Unix shell-like mini-languages which can be used
+      as an alternate format for application configuration files.
+
+   Module :mod:`json`
+      The json module implements a subset of JavaScript syntax which can also
+      be used for this purpose.
 
 The configuration file consists of sections, led by a ``[section]`` header and
 followed by ``name: value`` entries, with continuations in the style of
@@ -43,7 +53,7 @@ provided on initialization and retrieval.  Lines beginning with ``'#'`` or
 
 Configuration files may include comments, prefixed by specific characters (``#``
 and ``;``).  Comments may appear on their own in an otherwise empty line, or may
-be entered in lines holding values or spection names.  In the latter case, they
+be entered in lines holding values or section names.  In the latter case, they
 need to be preceded by a whitespace character to be recognized as a comment.
 (For backwards compatibility, only ``;`` starts an inline comment, while ``#``
 does not.)
@@ -64,31 +74,42 @@ For example::
 would resolve the ``%(dir)s`` to the value of ``dir`` (``frob`` in this case).
 All reference expansions are done on demand.
 
-Default values can be specified by passing them into the :class:`ConfigParser`
+Default values can be specified by passing them into the :class:`~ConfigParser.ConfigParser`
 constructor as a dictionary.  Additional defaults  may be passed into the
 :meth:`get` method which will override all others.
 
 Sections are normally stored in a built-in dictionary. An alternative dictionary
-type can be passed to the :class:`ConfigParser` constructor. For example, if a
+type can be passed to the :class:`~ConfigParser.ConfigParser` constructor. For example, if a
 dictionary type is passed that sorts its keys, the sections will be sorted on
 write-back, as will be the keys within each section.
 
 
-.. class:: RawConfigParser([defaults[, dict_type]])
+.. class:: RawConfigParser([defaults[, dict_type[, allow_no_value]]])
 
    The basic configuration object.  When *defaults* is given, it is initialized
    into the dictionary of intrinsic defaults.  When *dict_type* is given, it will
    be used to create the dictionary objects for the list of sections, for the
-   options within a section, and for the default values. This class does not
+   options within a section, and for the default values.  When *allow_no_value*
+   is true (default: ``False``), options without values are accepted; the value
+   presented for these is ``None``.
+
+   This class does not
    support the magical interpolation behavior.
+
+   All option names are passed through the :meth:`optionxform` method.  Its
+   default implementation converts option names to lower case.
 
    .. versionadded:: 2.3
 
    .. versionchanged:: 2.6
       *dict_type* was added.
 
+   .. versionchanged:: 2.7
+      The default *dict_type* is :class:`collections.OrderedDict`.
+      *allow_no_value* was added.
 
-.. class:: ConfigParser([defaults[, dict_type]])
+
+.. class:: ConfigParser([defaults[, dict_type[, allow_no_value]]])
 
    Derived class of :class:`RawConfigParser` that implements the magical
    interpolation feature and adds optional arguments to the :meth:`get` and
@@ -98,15 +119,23 @@ write-back, as will be the keys within each section.
    *defaults*.
 
    All option names used in interpolation will be passed through the
-   :meth:`optionxform` method just like any other option name reference.  For
-   example, using the default implementation of :meth:`optionxform` (which converts
-   option names to lower case), the values ``foo %(bar)s`` and ``foo %(BAR)s`` are
-   equivalent.
+   :meth:`optionxform` method just like any other option name reference.  Using
+   the default implementation of :meth:`optionxform`, the values ``foo %(bar)s``
+   and ``foo %(BAR)s`` are equivalent.
+
+   .. versionadded:: 2.3
+
+   .. versionchanged:: 2.6
+      *dict_type* was added.
+
+   .. versionchanged:: 2.7
+      The default *dict_type* is :class:`collections.OrderedDict`.
+      *allow_no_value* was added.
 
 
-.. class:: SafeConfigParser([defaults[, dict_type]])
+.. class:: SafeConfigParser([defaults[, dict_type[, allow_no_value]]])
 
-   Derived class of :class:`ConfigParser` that implements a more-sane variant of
+   Derived class of :class:`~ConfigParser.ConfigParser` that implements a more-sane variant of
    the magical interpolation feature.  This implementation is more predictable as
    well. New applications should prefer this version if they don't need to be
    compatible with older versions of Python.
@@ -114,6 +143,13 @@ write-back, as will be the keys within each section.
    .. XXX Need to explain what's safer/more predictable about it.
 
    .. versionadded:: 2.3
+
+   .. versionchanged:: 2.6
+      *dict_type* was added.
+
+   .. versionchanged:: 2.7
+      The default *dict_type* is :class:`collections.OrderedDict`.
+      *allow_no_value* was added.
 
 
 .. exception:: Error
@@ -179,7 +215,7 @@ write-back, as will be the keys within each section.
 .. data:: MAX_INTERPOLATION_DEPTH
 
    The maximum depth for recursive interpolation for :meth:`get` when the *raw*
-   parameter is false.  This is relevant only for the :class:`ConfigParser` class.
+   parameter is false.  This is relevant only for the :class:`~ConfigParser.ConfigParser` class.
 
 
 .. seealso::
@@ -243,7 +279,7 @@ RawConfigParser Objects
    list of potential configuration file locations (for example, the current
    directory, the user's home directory, and some system-wide directory), and all
    existing configuration files in the list will be read.  If none of the named
-   files exist, the :class:`ConfigParser` instance will contain an empty dataset.
+   files exist, the :class:`~ConfigParser.ConfigParser` instance will contain an empty dataset.
    An application which requires initial values to be loaded from a file should
    load the required file or files using :meth:`readfp` before calling :meth:`read`
    for any optional files::
@@ -302,7 +338,7 @@ RawConfigParser Objects
 
    If the given section exists, set the given option to the specified value;
    otherwise raise :exc:`NoSectionError`.  While it is possible to use
-   :class:`RawConfigParser` (or :class:`ConfigParser` with *raw* parameters set to
+   :class:`RawConfigParser` (or :class:`~ConfigParser.ConfigParser` with *raw* parameters set to
    true) for *internal* storage of non-string values, full functionality (including
    interpolation and output to files) can only be achieved using string values.
 
@@ -358,7 +394,7 @@ RawConfigParser Objects
 ConfigParser Objects
 --------------------
 
-The :class:`ConfigParser` class extends some methods of the
+The :class:`~ConfigParser.ConfigParser` class extends some methods of the
 :class:`RawConfigParser` interface, adding some optional arguments.
 
 
@@ -386,7 +422,7 @@ SafeConfigParser Objects
 ------------------------
 
 The :class:`SafeConfigParser` class implements the same extended interface as
-:class:`ConfigParser`, with the following addition:
+:class:`~ConfigParser.ConfigParser`, with the following addition:
 
 
 .. method:: SafeConfigParser.set(section, option, value)
@@ -415,9 +451,9 @@ An example of writing to a configuration file::
    # when attempting to write to a file or when you get it in non-raw
    # mode. SafeConfigParser does not allow such assignments to take place.
    config.add_section('Section1')
-   config.set('Section1', 'int', '15')
-   config.set('Section1', 'bool', 'true')
-   config.set('Section1', 'float', '3.1415')
+   config.set('Section1', 'an_int', '15')
+   config.set('Section1', 'a_bool', 'true')
+   config.set('Section1', 'a_float', '3.1415')
    config.set('Section1', 'baz', 'fun')
    config.set('Section1', 'bar', 'Python')
    config.set('Section1', 'foo', '%(bar)s is %(baz)s!')
@@ -435,16 +471,16 @@ An example of reading the configuration file again::
 
    # getfloat() raises an exception if the value is not a float
    # getint() and getboolean() also do this for their respective types
-   float = config.getfloat('Section1', 'float')
-   int = config.getint('Section1', 'int')
-   print float + int
+   a_float = config.getfloat('Section1', 'a_float')
+   an_int = config.getint('Section1', 'an_int')
+   print a_float + an_int
 
    # Notice that the next output does not interpolate '%(bar)s' or '%(baz)s'.
    # This is because we are using a RawConfigParser().
-   if config.getboolean('Section1', 'bool'):
+   if config.getboolean('Section1', 'a_bool'):
        print config.get('Section1', 'foo')
 
-To get interpolation, you will need to use a :class:`ConfigParser` or
+To get interpolation, you will need to use a :class:`~ConfigParser.ConfigParser` or
 :class:`SafeConfigParser`::
 
    import ConfigParser
@@ -453,8 +489,8 @@ To get interpolation, you will need to use a :class:`ConfigParser` or
    config.read('example.cfg')
 
    # Set the third, optional argument of get to 1 if you wish to use raw mode.
-   print config.get('Section1', 'foo', 0) # -> "Python is fun!"
-   print config.get('Section1', 'foo', 1) # -> "%(bar)s is %(baz)s!"
+   print config.get('Section1', 'foo', 0)  # -> "Python is fun!"
+   print config.get('Section1', 'foo', 1)  # -> "%(bar)s is %(baz)s!"
 
    # The optional fourth argument is a dict with members that will take
    # precedence in interpolation.
@@ -470,10 +506,10 @@ interpolation if an option used is not defined elsewhere. ::
    config = ConfigParser.SafeConfigParser({'bar': 'Life', 'baz': 'hard'})
    config.read('example.cfg')
 
-   print config.get('Section1', 'foo') # -> "Python is fun!"
+   print config.get('Section1', 'foo')  # -> "Python is fun!"
    config.remove_option('Section1', 'bar')
    config.remove_option('Section1', 'baz')
-   print config.get('Section1', 'foo') # -> "Life is hard!"
+   print config.get('Section1', 'foo')  # -> "Life is hard!"
 
 The function ``opt_move`` below can be used to move options between sections::
 
@@ -486,3 +522,38 @@ The function ``opt_move`` below can be used to move options between sections::
            opt_move(config, section1, section2, option)
        else:
            config.remove_option(section1, option)
+
+Some configuration files are known to include settings without values, but which
+otherwise conform to the syntax supported by :mod:`ConfigParser`.  The
+*allow_no_value* parameter to the constructor can be used to indicate that such
+values should be accepted:
+
+.. doctest::
+
+   >>> import ConfigParser
+   >>> import io
+
+   >>> sample_config = """
+   ... [mysqld]
+   ... user = mysql
+   ... pid-file = /var/run/mysqld/mysqld.pid
+   ... skip-external-locking
+   ... old_passwords = 1
+   ... skip-bdb
+   ... skip-innodb
+   ... """
+   >>> config = ConfigParser.RawConfigParser(allow_no_value=True)
+   >>> config.readfp(io.BytesIO(sample_config))
+
+   >>> # Settings with values are treated as before:
+   >>> config.get("mysqld", "user")
+   'mysql'
+
+   >>> # Settings without values provide None:
+   >>> config.get("mysqld", "skip-bdb")
+
+   >>> # Settings which aren't specified still raise an error:
+   >>> config.get("mysqld", "does-not-exist")
+   Traceback (most recent call last):
+     ...
+   ConfigParser.NoOptionError: No option 'does-not-exist' in section: 'mysqld'

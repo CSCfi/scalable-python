@@ -5,9 +5,14 @@ import sys
 import unittest
 import pickle, cPickle
 
-from test.test_support import (TESTFN, unlink, run_unittest, captured_output,
-                               check_warnings)
+from test.test_support import (TESTFN, unlink, run_unittest, captured_stderr,
+                               check_warnings, cpython_only)
 from test.test_pep352 import ignore_deprecation_warnings
+
+class BrokenStrException(Exception):
+    def __str__(self):
+        raise Exception("str() is broken")
+    __repr__ = __str__  # Python 2's PyErr_WriteUnraisable() uses repr()
 
 # XXX This is not really enough, each *operation* should be tested!
 
@@ -32,8 +37,8 @@ class ExceptionTests(unittest.TestCase):
             raise exc("spam")
         except exc, err:
             buf2 = str(err)
-        self.assertEquals(buf1, buf2)
-        self.assertEquals(exc.__name__, excname)
+        self.assertEqual(buf1, buf2)
+        self.assertEqual(exc.__name__, excname)
 
     def testRaising(self):
         self.raise_catch(AttributeError, "AttributeError")
@@ -92,7 +97,7 @@ class ExceptionTests(unittest.TestCase):
 
         self.raise_catch(TabError, "TabError")
         # can only be tested under -tt, and is the only test for -tt
-        #try: compile("try:\n\t1/0\n    \t1/0\nfinally:\n pass\n", '<string>', 'exec')
+        #try: compile("try:\n\t1.0/0.0\n    \t1.0/0.0\nfinally:\n pass\n", '<string>', 'exec')
         #except TabError: pass
         #else: self.fail("TabError not raised")
 
@@ -147,6 +152,7 @@ class ExceptionTests(unittest.TestCase):
         ckmsg(s, "'continue' not properly in loop")
         ckmsg("continue\n", "'continue' not properly in loop")
 
+    @cpython_only
     def testSettingException(self):
         # test that setting an exception at the C level works even if the
         # exception object can't be constructed.
@@ -162,8 +168,8 @@ class ExceptionTests(unittest.TestCase):
             except TypeError, err:
                 exc, err, tb = sys.exc_info()
                 co = tb.tb_frame.f_code
-                self.assertEquals(co.co_name, "test_capi1")
-                self.assert_(co.co_filename.endswith('test_exceptions'+os.extsep+'py'))
+                self.assertEqual(co.co_name, "test_capi1")
+                self.assertTrue(co.co_filename.endswith('test_exceptions'+os.extsep+'py'))
             else:
                 self.fail("Expected exception")
 
@@ -174,10 +180,10 @@ class ExceptionTests(unittest.TestCase):
             except RuntimeError, err:
                 exc, err, tb = sys.exc_info()
                 co = tb.tb_frame.f_code
-                self.assertEquals(co.co_name, "__init__")
-                self.assert_(co.co_filename.endswith('test_exceptions'+os.extsep+'py'))
+                self.assertEqual(co.co_name, "__init__")
+                self.assertTrue(co.co_filename.endswith('test_exceptions'+os.extsep+'py'))
                 co2 = tb.tb_frame.f_back.f_code
-                self.assertEquals(co2.co_name, "test_capi2")
+                self.assertEqual(co2.co_name, "test_capi2")
             else:
                 self.fail("Expected exception")
 
@@ -191,12 +197,12 @@ class ExceptionTests(unittest.TestCase):
         except NameError:
             pass
         else:
-            self.failUnlessEqual(str(WindowsError(1001)),
+            self.assertEqual(str(WindowsError(1001)),
                                  "1001")
-            self.failUnlessEqual(str(WindowsError(1001, "message")),
+            self.assertEqual(str(WindowsError(1001, "message")),
                                  "[Error 1001] message")
-            self.failUnlessEqual(WindowsError(1001, "message").errno, 22)
-            self.failUnlessEqual(WindowsError(1001, "message").winerror, 1001)
+            self.assertEqual(WindowsError(1001, "message").errno, 22)
+            self.assertEqual(WindowsError(1001, "message").winerror, 1001)
 
     @ignore_deprecation_warnings
     def testAttributes(self):
@@ -283,14 +289,14 @@ class ExceptionTests(unittest.TestCase):
                 if type(e) is not exc:
                     raise
                 # Verify module name
-                self.assertEquals(type(e).__module__, 'exceptions')
+                self.assertEqual(type(e).__module__, 'exceptions')
                 # Verify no ref leaks in Exc_str()
                 s = str(e)
                 for checkArgName in expected:
-                    self.assertEquals(repr(getattr(e, checkArgName)),
-                                      repr(expected[checkArgName]),
-                                      'exception "%s", attribute "%s"' %
-                                       (repr(e), checkArgName))
+                    self.assertEqual(repr(getattr(e, checkArgName)),
+                                     repr(expected[checkArgName]),
+                                     'exception "%s", attribute "%s"' %
+                                      (repr(e), checkArgName))
 
                 # test for pickling support
                 for p in pickle, cPickle:
@@ -299,9 +305,9 @@ class ExceptionTests(unittest.TestCase):
                         for checkArgName in expected:
                             got = repr(getattr(new, checkArgName))
                             want = repr(expected[checkArgName])
-                            self.assertEquals(got, want,
-                                              'pickled "%r", attribute "%s"' %
-                                              (e, checkArgName))
+                            self.assertEqual(got, want,
+                                             'pickled "%r", attribute "%s"' %
+                                             (e, checkArgName))
 
 
     def testDeprecatedMessageAttribute(self):
@@ -323,7 +329,8 @@ class ExceptionTests(unittest.TestCase):
         self.assertEqual(len(w.warnings), 0)
         # Deleting the message is supported, too.
         del exc.message
-        self.assertRaises(AttributeError, getattr, exc, "message")
+        with self.assertRaises(AttributeError):
+            exc.message
 
     @ignore_deprecation_warnings
     def testPickleMessageAttribute(self):
@@ -343,7 +350,7 @@ class ExceptionTests(unittest.TestCase):
         # going through the 'args' attribute.
         args = (1, 2, 3)
         exc = BaseException(*args)
-        self.failUnlessEqual(exc[:], args)
+        self.assertEqual(exc[:], args)
         self.assertEqual(exc.args[:], args)
 
     def testKeywordArgs(self):
@@ -357,7 +364,7 @@ class ExceptionTests(unittest.TestCase):
                 self.fancy_arg = fancy_arg
 
         x = DerivedException(fancy_arg=42)
-        self.assertEquals(x.fancy_arg, 42)
+        self.assertEqual(x.fancy_arg, 42)
 
     def testInfiniteRecursion(self):
         def f():
@@ -373,7 +380,7 @@ class ExceptionTests(unittest.TestCase):
         # The test prints an unraisable recursion error when
         # doing "except ValueError", this is because subclass
         # checking has recursion checking too.
-        with captured_output("stderr"):
+        with captured_stderr():
             try:
                 g()
             except RuntimeError:
@@ -386,11 +393,11 @@ class ExceptionTests(unittest.TestCase):
     def testUnicodeStrUsage(self):
         # Make sure both instances and classes have a str and unicode
         # representation.
-        self.failUnless(str(Exception))
-        self.failUnless(unicode(Exception))
-        self.failUnless(str(Exception('a')))
-        self.failUnless(unicode(Exception(u'a')))
-        self.failUnless(unicode(Exception(u'\xe1')))
+        self.assertTrue(str(Exception))
+        self.assertTrue(unicode(Exception))
+        self.assertTrue(str(Exception('a')))
+        self.assertTrue(unicode(Exception(u'a')))
+        self.assertTrue(unicode(Exception(u'\xe1')))
 
     def testUnicodeChangeAttributes(self):
         # See issue 7309. This was a crasher.
@@ -429,6 +436,12 @@ class ExceptionTests(unittest.TestCase):
         u.start = 1000
         self.assertEqual(str(u), "can't translate characters in position 1000-4: 965230951443685724997")
 
+    def test_unicode_errors_no_object(self):
+        # See issue #21134.
+        klasses = UnicodeEncodeError, UnicodeDecodeError, UnicodeTranslateError
+        for klass in klasses:
+            self.assertEqual(str(klass.__new__(klass)), "")
+
     def test_badisinstance(self):
         # Bug #2542: if issubclass(e, MyException) raises an exception,
         # it should be ignored
@@ -440,7 +453,7 @@ class ExceptionTests(unittest.TestCase):
             __metaclass__ = Meta
             pass
 
-        with captured_output("stderr") as stderr:
+        with captured_stderr() as stderr:
             try:
                 raise KeyError()
             except MyException, e:
@@ -452,16 +465,42 @@ class ExceptionTests(unittest.TestCase):
             else:
                 self.fail("Should have raised KeyError")
 
-        with captured_output("stderr") as stderr:
+        with captured_stderr() as stderr:
             def g():
                 try:
                     return g()
                 except RuntimeError:
                     return sys.exc_info()
             e, v, tb = g()
-            self.assert_(e is RuntimeError, e)
-            self.assert_("maximum recursion depth exceeded" in str(v), v)
+            self.assertTrue(e is RuntimeError, e)
+            self.assertIn("maximum recursion depth exceeded", str(v))
 
+    def test_new_returns_invalid_instance(self):
+        # See issue #11627.
+        class MyException(Exception):
+            def __new__(cls, *args):
+                return object()
+
+        with self.assertRaises(TypeError):
+            raise MyException
+
+    def test_assert_with_tuple_arg(self):
+        try:
+            assert False, (3,)
+        except AssertionError as e:
+            self.assertEqual(str(e), "(3,)")
+
+    def test_bad_exception_clearing(self):
+        # See issue 16445: use of Py_XDECREF instead of Py_CLEAR in
+        # BaseException_set_message gave a possible way to segfault the
+        # interpreter.
+        class Nasty(str):
+            def __del__(message):
+                del e.message
+
+        e = ValueError(Nasty("msg"))
+        e.args = ()
+        del e.message
 
 
 # Helper class used by TestSameStrAndUnicodeMsg
@@ -569,6 +608,102 @@ class TestSameStrAndUnicodeMsg(unittest.TestCase):
                                  msg=u'f\xf6\xf6')
         self.assertRaises(UnicodeEncodeError, str, e)
         self.assertEqual(unicode(e), u'f\xf6\xf6')
+
+    @cpython_only
+    def test_exception_with_doc(self):
+        import _testcapi
+        doc2 = "This is a test docstring."
+        doc4 = "This is another test docstring."
+
+        self.assertRaises(SystemError, _testcapi.make_exception_with_doc,
+                          "error1")
+
+        # test basic usage of PyErr_NewException
+        error1 = _testcapi.make_exception_with_doc("_testcapi.error1")
+        self.assertIs(type(error1), type)
+        self.assertTrue(issubclass(error1, Exception))
+        self.assertIsNone(error1.__doc__)
+
+        # test with given docstring
+        error2 = _testcapi.make_exception_with_doc("_testcapi.error2", doc2)
+        self.assertEqual(error2.__doc__, doc2)
+
+        # test with explicit base (without docstring)
+        error3 = _testcapi.make_exception_with_doc("_testcapi.error3",
+                                                   base=error2)
+        self.assertTrue(issubclass(error3, error2))
+
+        # test with explicit base tuple
+        class C(object):
+            pass
+        error4 = _testcapi.make_exception_with_doc("_testcapi.error4", doc4,
+                                                   (error3, C))
+        self.assertTrue(issubclass(error4, error3))
+        self.assertTrue(issubclass(error4, C))
+        self.assertEqual(error4.__doc__, doc4)
+
+        # test with explicit dictionary
+        error5 = _testcapi.make_exception_with_doc("_testcapi.error5", "",
+                                                   error4, {'a': 1})
+        self.assertTrue(issubclass(error5, error4))
+        self.assertEqual(error5.a, 1)
+        self.assertEqual(error5.__doc__, "")
+
+    def test_unraisable(self):
+        # Issue #22836: PyErr_WriteUnraisable() should give sensible reports
+        class BrokenDel:
+            def __del__(self):
+                exc = ValueError("del is broken")
+                # In Python 3, the following line would be in the report:
+                raise exc
+
+        class BrokenRepr(BrokenDel):
+            def __repr__(self):
+                raise AttributeError("repr() is broken")
+
+        class BrokenExceptionDel:
+            def __del__(self):
+                exc = BrokenStrException()
+                # In Python 3, the following line would be in the report:
+                raise exc
+
+        for test_class in (BrokenDel, BrokenRepr, BrokenExceptionDel):
+            obj = test_class()
+            with captured_stderr() as stderr:
+                del obj
+            report = stderr.getvalue()
+            self.assertRegexpMatches(report, "Exception.* ignored")
+            if test_class is BrokenRepr:
+                self.assertIn("<object repr() failed>", report)
+            else:
+                self.assertIn("__del__", report)
+            if test_class is BrokenExceptionDel:
+                self.assertIn("BrokenStrException", report)
+                self.assertIn("<exception repr() failed>", report)
+            else:
+                self.assertIn("ValueError", report)
+                self.assertIn("del is broken", report)
+            self.assertTrue(report.endswith("\n"))
+
+    def test_unhandled(self):
+        # Check for sensible reporting of unhandled exceptions
+        for exc_type in (ValueError, BrokenStrException):
+            try:
+                exc = exc_type("test message")
+                # The following line is included in the traceback report:
+                raise exc
+            except exc_type:
+                with captured_stderr() as stderr:
+                    sys.__excepthook__(*sys.exc_info())
+            report = stderr.getvalue()
+            self.assertIn("test_exceptions.py", report)
+            self.assertIn("raise exc", report)
+            self.assertIn(exc_type.__name__, report)
+            if exc_type is BrokenStrException:
+                self.assertIn("<exception str() failed>", report)
+            else:
+                self.assertIn("test message", report)
+            self.assertTrue(report.endswith("\n"))
 
 
 def test_main():

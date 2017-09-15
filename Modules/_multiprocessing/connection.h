@@ -19,14 +19,14 @@
 
 #define CHECK_READABLE(self) \
     if (!(self->flags & READABLE)) { \
-    PyErr_SetString(PyExc_IOError, "connection is write-only"); \
-    return NULL; \
+        PyErr_SetString(PyExc_IOError, "connection is write-only"); \
+        return NULL; \
     }
 
 #define CHECK_WRITABLE(self) \
     if (!(self->flags & WRITABLE)) { \
-    PyErr_SetString(PyExc_IOError, "connection is read-only"); \
-    return NULL; \
+        PyErr_SetString(PyExc_IOError, "connection is read-only"); \
+        return NULL; \
     }
 
 /*
@@ -131,8 +131,12 @@ connection_sendbytes(ConnectionObject *self, PyObject *args)
 
     res = conn_send_string(self, buffer + offset, size);
 
-    if (res < 0)
-        return mp_SetError(PyExc_IOError, res);
+    if (res < 0) {
+        if (PyErr_Occurred())
+            return NULL;
+        else
+            return mp_SetError(PyExc_IOError, res);
+    }
 
     Py_RETURN_NONE;
 }

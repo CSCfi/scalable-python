@@ -161,13 +161,13 @@ Hyperbolic functions
 
 .. function:: acosh(x)
 
-   Return the hyperbolic arc cosine of *x*. There is one branch cut, extending left
-   from 1 along the real axis to -∞, continuous from above.
+   Return the inverse hyperbolic cosine of *x*. There is one branch cut,
+   extending left from 1 along the real axis to -∞, continuous from above.
 
 
 .. function:: asinh(x)
 
-   Return the hyperbolic arc sine of *x*. There are two branch cuts:
+   Return the inverse hyperbolic sine of *x*. There are two branch cuts:
    One extends from ``1j`` along the imaginary axis to ``∞j``,
    continuous from the right.  The other extends from ``-1j`` along
    the imaginary axis to ``-∞j``, continuous from the left.
@@ -178,7 +178,7 @@ Hyperbolic functions
 
 .. function:: atanh(x)
 
-   Return the hyperbolic arc tangent of *x*. There are two branch cuts: One
+   Return the inverse hyperbolic tangent of *x*. There are two branch cuts: One
    extends from ``1`` along the real axis to ``∞``, continuous from below. The
    other extends from ``-1`` along the real axis to ``-∞``, continuous from
    above.
@@ -207,7 +207,7 @@ Classification functions
 
 .. function:: isinf(x)
 
-   Return *True* if the real or the imaginary part of x is positive
+   Return ``True`` if the real or the imaginary part of x is positive
    or negative infinity.
 
    .. versionadded:: 2.6
@@ -215,7 +215,7 @@ Classification functions
 
 .. function:: isnan(x)
 
-   Return *True* if the real or imaginary part of x is not a number (NaN).
+   Return ``True`` if the real or imaginary part of x is not a number (NaN).
 
    .. versionadded:: 2.6
 
@@ -255,6 +255,6 @@ cuts for numerical purposes, a good reference should be the following:
 
    Kahan, W:  Branch cuts for complex elementary functions; or, Much ado about
    nothing's sign bit.  In Iserles, A., and Powell, M. (eds.), The state of the art
-   in numerical analysis. Clarendon Press (1987) pp165-211.
+   in numerical analysis. Clarendon Press (1987) pp165--211.
 
 

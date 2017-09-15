@@ -6,13 +6,13 @@
 
 .. note::
    The :mod:`whichdb` module's only function has been put into the :mod:`dbm`
-   module in Python 3.0.  The :term:`2to3` tool will automatically adapt imports
-   when converting your sources to 3.0.
+   module in Python 3.  The :term:`2to3` tool will automatically adapt imports
+   when converting your sources to Python 3.
 
 
 The single function in this module attempts to guess which of the several simple
-database modules available--\ :mod:`dbm`, :mod:`gdbm`, or :mod:`dbhash`\
---should be used to open a given file.
+database modules available—:mod:`dbm`, :mod:`gdbm`, or :mod:`dbhash`\
+—should be used to open a given file.
 
 
 .. function:: whichdb(filename)

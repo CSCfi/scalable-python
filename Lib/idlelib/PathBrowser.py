@@ -4,13 +4,20 @@ import imp
 
 from idlelib.TreeWidget import TreeItem
 from idlelib.ClassBrowser import ClassBrowser, ModuleBrowserTreeItem
+from idlelib.PyShell import PyShellFileList
+
 
 class PathBrowser(ClassBrowser):
 
-    def __init__(self, flist):
+    def __init__(self, flist, _htest=False):
+        """
+        _htest - bool, change box location when running htest
+        """
+        self._htest = _htest
         self.init(flist)
 
     def settitle(self):
+        "Set window titles."
         self.top.wm_title("Path Browser")
         self.top.wm_iconname("Path Browser")
 
@@ -64,7 +71,7 @@ class DirBrowserTreeItem(TreeItem):
 
     def ispackagedir(self, file):
         if not os.path.isdir(file):
-            return 0
+            return False
         init = os.path.join(file, "__init__.py")
         return os.path.exists(init)
 
@@ -78,18 +85,21 @@ class DirBrowserTreeItem(TreeItem):
                 normed_name = os.path.normcase(name)
                 if normed_name[i:] == suff:
                     mod_name = name[:i]
-                    if not modules.has_key(mod_name):
+                    if mod_name not in modules:
                         modules[mod_name] = None
                         sorted.append((normed_name, name))
                         allnames.remove(name)
         sorted.sort()
         return sorted
 
-def main():
-    from idlelib import PyShell
-    PathBrowser(PyShell.flist)
-    if sys.stdin is sys.__stdin__:
-        mainloop()
+def _path_browser(parent):  # htest #
+    flist = PyShellFileList(parent)
+    PathBrowser(flist, _htest=True)
+    parent.mainloop()
 
 if __name__ == "__main__":
-    main()
+    from unittest import main
+    main('idlelib.idle_test.test_pathbrowser', verbosity=2, exit=False)
+
+    from idlelib.idle_test.htest import run
+    run(_path_browser)

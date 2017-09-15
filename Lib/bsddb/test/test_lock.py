@@ -19,12 +19,6 @@ if have_threads :
 #----------------------------------------------------------------------
 
 class LockingTestCase(unittest.TestCase):
-    import sys
-    if sys.version_info[:3] < (2, 4, 0):
-        def assertTrue(self, expr, msg=None):
-            self.failUnless(expr,msg=msg)
-
-
     def setUp(self):
         self.homeDir = get_new_environment_path()
         self.env = db.DBEnv()
@@ -47,7 +41,7 @@ class LockingTestCase(unittest.TestCase):
             print "locker ID: %s" % anID
         lock = self.env.lock_get(anID, "some locked thing", db.DB_LOCK_WRITE)
         if verbose:
-            print "Aquired lock: %s" % lock
+            print "Acquired lock: %s" % lock
         self.env.lock_put(lock)
         if verbose:
             print "Released lock: %s" % lock
@@ -89,7 +83,17 @@ class LockingTestCase(unittest.TestCase):
         for t in threads:
             t.join()
 
-    def test03_lock_timeout(self):
+        def test03_lock_timeout(self):
+            self.env.set_timeout(0, db.DB_SET_LOCK_TIMEOUT)
+            self.assertEqual(self.env.get_timeout(db.DB_SET_LOCK_TIMEOUT), 0)
+            self.env.set_timeout(0, db.DB_SET_TXN_TIMEOUT)
+            self.assertEqual(self.env.get_timeout(db.DB_SET_TXN_TIMEOUT), 0)
+            self.env.set_timeout(123456, db.DB_SET_LOCK_TIMEOUT)
+            self.assertEqual(self.env.get_timeout(db.DB_SET_LOCK_TIMEOUT), 123456)
+            self.env.set_timeout(7890123, db.DB_SET_TXN_TIMEOUT)
+            self.assertEqual(self.env.get_timeout(db.DB_SET_TXN_TIMEOUT), 7890123)
+
+    def test04_lock_timeout2(self):
         self.env.set_timeout(0, db.DB_SET_LOCK_TIMEOUT)
         self.env.set_timeout(0, db.DB_SET_TXN_TIMEOUT)
         self.env.set_timeout(123456, db.DB_SET_LOCK_TIMEOUT)
@@ -124,6 +128,7 @@ class LockingTestCase(unittest.TestCase):
                 self.env.lock_get,anID2, "shared lock", db.DB_LOCK_READ)
         end_time=time.time()
         deadlock_detection.end=True
+        # Floating point rounding
         self.assertTrue((end_time-start_time) >= 0.0999)
         self.env.lock_put(lock)
         t.join()
@@ -153,7 +158,7 @@ class LockingTestCase(unittest.TestCase):
         for i in xrange(1000) :
             lock = self.env.lock_get(anID, "some locked thing", lockType)
             if verbose:
-                print "%s: Aquired %s lock: %s" % (name, lt, lock)
+                print "%s: Acquired %s lock: %s" % (name, lt, lock)
 
             self.env.lock_put(lock)
             if verbose:

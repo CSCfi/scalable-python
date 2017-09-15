@@ -1,5 +1,3 @@
-.. _tarfile-mod:
-
 :mod:`tarfile` --- Read and write tar archive files
 ===================================================
 
@@ -12,14 +10,19 @@
 .. moduleauthor:: Lars Gustäbel <lars@gustaebel.de>
 .. sectionauthor:: Lars Gustäbel <lars@gustaebel.de>
 
+**Source code:** :source:`Lib/tarfile.py`
+
+--------------
 
 The :mod:`tarfile` module makes it possible to read and write tar
 archives, including those using gzip or bz2 compression.
-(:file:`.zip` files can be read and written using the :mod:`zipfile` module.)
+Use the :mod:`zipfile` module to read or write :file:`.zip` files, or the
+higher-level functions in :ref:`shutil <archiving-operations>`.
 
 Some facts and figures:
 
-* reads and writes :mod:`gzip` and :mod:`bz2` compressed archives.
+* reads and writes :mod:`gzip` and :mod:`bz2` compressed archives
+  if the respective modules are available.
 
 * read/write support for the POSIX.1-1988 (ustar) format.
 
@@ -75,6 +78,10 @@ Some facts and figures:
    If *fileobj* is specified, it is used as an alternative to a file object opened
    for *name*. It is supposed to be at position 0.
 
+   For modes ``'w:gz'``, ``'r:gz'``, ``'w:bz2'``, ``'r:bz2'``, :func:`tarfile.open`
+   accepts the keyword argument *compresslevel* (default ``9``) to
+   specify the compression level of the file.
+
    For special purposes, there is a second format for *mode*:
    ``'filemode|[compression]'``.  :func:`tarfile.open` will return a :class:`TarFile`
    object that processes its data as a stream of blocks.  No random seeking will
@@ -83,7 +90,7 @@ Some facts and figures:
    specifies the blocksize and defaults to ``20 * 512`` bytes. Use this variant
    in combination with e.g. ``sys.stdin``, a socket file object or a tape
    device. However, such a :class:`TarFile` object is limited in that it does
-   not allow to be accessed randomly, see :ref:`tar-examples`.  The currently
+   not allow random access, see :ref:`tar-examples`.  The currently
    possible modes:
 
    +-------------+--------------------------------------------+
@@ -103,10 +110,10 @@ Some facts and figures:
    +-------------+--------------------------------------------+
    | ``'w|'``    | Open an uncompressed *stream* for writing. |
    +-------------+--------------------------------------------+
-   | ``'w|gz'``  | Open an gzip compressed *stream* for       |
+   | ``'w|gz'``  | Open a gzip compressed *stream* for        |
    |             | writing.                                   |
    +-------------+--------------------------------------------+
-   | ``'w|bz2'`` | Open an bzip2 compressed *stream* for      |
+   | ``'w|bz2'`` | Open a bzip2 compressed *stream* for       |
    |             | writing.                                   |
    +-------------+--------------------------------------------+
 
@@ -141,7 +148,7 @@ Some facts and figures:
 
 
    .. deprecated:: 2.6
-      The :class:`TarFileCompat` class has been deprecated for removal in Python 3.0.
+      The :class:`TarFileCompat` class has been removed in Python 3.
 
 
 .. exception:: TarError
@@ -171,6 +178,14 @@ Some facts and figures:
 
    Is raised for *non-fatal* errors when using :meth:`TarFile.extract`, but only if
    :attr:`TarFile.errorlevel`\ ``== 2``.
+
+
+The following constants are available at the module level:
+
+.. data:: ENCODING
+
+   The default character encoding: ``'utf-8'`` on Windows, the value returned by
+   :func:`sys.getfilesystemencoding` otherwise.
 
 
 .. exception:: HeaderError
@@ -205,21 +220,16 @@ details.
    The default format for creating archives. This is currently :const:`GNU_FORMAT`.
 
 
-The following variables are available on module level:
-
-
-.. data:: ENCODING
-
-   The default character encoding i.e. the value from either
-   :func:`sys.getfilesystemencoding` or :func:`sys.getdefaultencoding`.
-
-
 .. seealso::
 
    Module :mod:`zipfile`
       Documentation of the :mod:`zipfile` standard module.
 
-   `GNU tar manual, Basic Tar Format <http://www.gnu.org/software/tar/manual/html_node/Standard.html>`_
+   :ref:`archiving-operations`
+      Documentation of the higher-level archiving facilities provided by the
+      standard :mod:`shutil` module.
+
+   `GNU tar manual, Basic Tar Format <https://www.gnu.org/software/tar/manual/html_node/Standard.html>`_
       Documentation for tar archive files, including GNU tar extensions.
 
 
@@ -234,6 +244,14 @@ a header block followed by data blocks. It is possible to store a file in a tar
 archive several times. Each archive member is represented by a :class:`TarInfo`
 object, see :ref:`tarinfo-objects` for details.
 
+A :class:`TarFile` object can be used as a context manager in a :keyword:`with`
+statement. It will automatically be closed when the block is completed. Please
+note that in the event of an exception an archive opened for writing will not
+be finalized; only the internally used file object will be closed. See the
+:ref:`tar-examples` section for a use case.
+
+.. versionadded:: 2.7
+   Added support for the context management protocol.
 
 .. class:: TarFile(name=None, mode='r', fileobj=None, format=DEFAULT_FORMAT, tarinfo=TarInfo, dereference=False, ignore_zeros=False, encoding=ENCODING, errors=None, pax_headers=None, debug=0, errorlevel=0)
 
@@ -295,7 +313,7 @@ object, see :ref:`tarinfo-objects` for details.
    .. versionadded:: 2.6
 
 
-.. method:: TarFile.open(...)
+.. classmethod:: TarFile.open(...)
 
    Alternative constructor. The :func:`tarfile.open` function is actually a
    shortcut to this classmethod.
@@ -389,7 +407,7 @@ object, see :ref:`tarinfo-objects` for details.
       and :meth:`close`, and also supports iteration over its lines.
 
 
-.. method:: TarFile.add(name, arcname=None, recursive=True, exclude=None)
+.. method:: TarFile.add(name, arcname=None, recursive=True, exclude=None, filter=None)
 
    Add the file *name* to the archive. *name* may be any type of file (directory,
    fifo, symbolic link, etc.). If given, *arcname* specifies an alternative name
@@ -397,30 +415,52 @@ object, see :ref:`tarinfo-objects` for details.
    can be avoided by setting *recursive* to :const:`False`. If *exclude* is given
    it must be a function that takes one filename argument and returns a boolean
    value. Depending on this value the respective file is either excluded
-   (:const:`True`) or added (:const:`False`).
+   (:const:`True`) or added (:const:`False`). If *filter* is specified it must
+   be a function that takes a :class:`TarInfo` object argument and returns the
+   changed :class:`TarInfo` object. If it instead returns :const:`None` the :class:`TarInfo`
+   object will be excluded from the archive. See :ref:`tar-examples` for an
+   example.
 
    .. versionchanged:: 2.6
       Added the *exclude* parameter.
+
+   .. versionchanged:: 2.7
+      Added the *filter* parameter.
+
+   .. deprecated:: 2.7
+      The *exclude* parameter is deprecated, please use the *filter* parameter
+      instead.  For maximum portability, *filter* should be used as a keyword
+      argument rather than as a positional argument so that code won't be
+      affected when *exclude* is ultimately removed.
 
 
 .. method:: TarFile.addfile(tarinfo, fileobj=None)
 
    Add the :class:`TarInfo` object *tarinfo* to the archive. If *fileobj* is given,
    ``tarinfo.size`` bytes are read from it and added to the archive.  You can
-   create :class:`TarInfo` objects using :meth:`gettarinfo`.
+   create :class:`TarInfo` objects directly, or by using :meth:`gettarinfo`.
 
    .. note::
-
       On Windows platforms, *fileobj* should always be opened with mode ``'rb'`` to
       avoid irritation about the file size.
 
 
 .. method:: TarFile.gettarinfo(name=None, arcname=None, fileobj=None)
 
-   Create a :class:`TarInfo` object for either the file *name* or the file object
-   *fileobj* (using :func:`os.fstat` on its file descriptor).  You can modify some
-   of the :class:`TarInfo`'s attributes before you add it using :meth:`addfile`.
-   If given, *arcname* specifies an alternative name for the file in the archive.
+   Create a :class:`TarInfo` object from the result of :func:`os.stat` or
+   equivalent on an existing file.  The file is either named by *name*, or
+   specified as a file object *fileobj* with a file descriptor.  If
+   given, *arcname* specifies an alternative name for the file in the
+   archive, otherwise, the name is taken from *fileobj*’s
+   :attr:`~file.name` attribute, or the *name* argument.
+
+   You can modify some
+   of the :class:`TarInfo`’s attributes before you add it using :meth:`addfile`.
+   If the file object is not an ordinary file object positioned at the
+   beginning of the file, attributes such as :attr:`~TarInfo.size` may need
+   modifying.  This is the case for objects such as :class:`~gzip.GzipFile`.
+   The :attr:`~TarInfo.name` may also be modified, in which case *arcname*
+   could be a dummy string.
 
 
 .. method:: TarFile.close()
@@ -521,7 +561,7 @@ A ``TarInfo`` object has the following public data attributes:
    :const:`AREGTYPE`, :const:`LNKTYPE`, :const:`SYMTYPE`, :const:`DIRTYPE`,
    :const:`FIFOTYPE`, :const:`CONTTYPE`, :const:`CHRTYPE`, :const:`BLKTYPE`,
    :const:`GNUTYPE_SPARSE`.  To determine the type of a :class:`TarInfo` object
-   more conveniently, use the ``is_*()`` methods below.
+   more conveniently, use the ``is*()`` methods below.
 
 
 .. attribute:: TarInfo.linkname
@@ -639,6 +679,13 @@ How to create an uncompressed tar archive from a list of filenames::
        tar.add(name)
    tar.close()
 
+The same example using the :keyword:`with` statement::
+
+    import tarfile
+    with tarfile.open("sample.tar", "w") as tar:
+        for name in ["foo", "bar", "quux"]:
+            tar.add(name)
+
 How to read a gzip compressed tar archive and display some member information::
 
    import tarfile
@@ -652,6 +699,18 @@ How to read a gzip compressed tar archive and display some member information::
        else:
            print "something else."
    tar.close()
+
+How to create an archive and reset the user information using the *filter*
+parameter in :meth:`TarFile.add`::
+
+    import tarfile
+    def reset(tarinfo):
+        tarinfo.uid = tarinfo.gid = 0
+        tarinfo.uname = tarinfo.gname = "root"
+        return tarinfo
+    tar = tarfile.open("sample.tar.gz", "w:gz")
+    tar.add("foo", filter=reset)
+    tar.close()
 
 
 .. _tar-formats:

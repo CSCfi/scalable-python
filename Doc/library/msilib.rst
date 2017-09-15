@@ -44,7 +44,7 @@ structures.
 .. function:: UuidCreate()
 
    Return the string representation of a new unique identifier. This wraps the
-   Windows API functions :cfunc:`UuidCreate` and :cfunc:`UuidToString`.
+   Windows API functions :c:func:`UuidCreate` and :c:func:`UuidToString`.
 
 
 .. function:: OpenDatabase(path, persist)
@@ -60,7 +60,7 @@ structures.
 
 .. function:: CreateRecord(count)
 
-   Return a new record object by calling :cfunc:`MSICreateRecord`. *count* is the
+   Return a new record object by calling :c:func:`MSICreateRecord`. *count* is the
    number of fields of the record.
 
 
@@ -123,9 +123,9 @@ structures.
 
 .. seealso::
 
-   `FCICreateFile <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/devnotes/winprog/fcicreate.asp>`_
-   `UuidCreate <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/rpc/rpc/uuidcreate.asp>`_
-   `UuidToString <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/rpc/rpc/uuidtostring.asp>`_
+   `FCICreateFile <https://msdn.microsoft.com/library?url=/library/en-us/devnotes/winprog/fcicreate.asp>`_
+   `UuidCreate <https://msdn.microsoft.com/library?url=/library/en-us/rpc/rpc/uuidcreate.asp>`_
+   `UuidToString <https://msdn.microsoft.com/library?url=/library/en-us/rpc/rpc/uuidtostring.asp>`_
 
 .. _database-objects:
 
@@ -135,28 +135,28 @@ Database Objects
 
 .. method:: Database.OpenView(sql)
 
-   Return a view object, by calling :cfunc:`MSIDatabaseOpenView`. *sql* is the SQL
+   Return a view object, by calling :c:func:`MSIDatabaseOpenView`. *sql* is the SQL
    statement to execute.
 
 
 .. method:: Database.Commit()
 
    Commit the changes pending in the current transaction, by calling
-   :cfunc:`MSIDatabaseCommit`.
+   :c:func:`MSIDatabaseCommit`.
 
 
 .. method:: Database.GetSummaryInformation(count)
 
    Return a new summary information object, by calling
-   :cfunc:`MsiGetSummaryInformation`.  *count* is the maximum number of updated
+   :c:func:`MsiGetSummaryInformation`.  *count* is the maximum number of updated
    values.
 
 
 .. seealso::
 
-   `MSIDatabaseOpenView <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msidatabaseopenview.asp>`_
-   `MSIDatabaseCommit <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msidatabasecommit.asp>`_
-   `MSIGetSummaryInformation <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msigetsummaryinformation.asp>`_
+   `MSIDatabaseOpenView <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msidatabaseopenview.asp>`_
+   `MSIDatabaseCommit <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msidatabasecommit.asp>`_
+   `MSIGetSummaryInformation <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msigetsummaryinformation.asp>`_
 
 .. _view-objects:
 
@@ -166,7 +166,7 @@ View Objects
 
 .. method:: View.Execute(params)
 
-   Execute the SQL query of the view, through :cfunc:`MSIViewExecute`. If
+   Execute the SQL query of the view, through :c:func:`MSIViewExecute`. If
    *params* is not ``None``, it is a record describing actual values of the
    parameter tokens in the query.
 
@@ -174,18 +174,18 @@ View Objects
 .. method:: View.GetColumnInfo(kind)
 
    Return a record describing the columns of the view, through calling
-   :cfunc:`MsiViewGetColumnInfo`. *kind* can be either ``MSICOLINFO_NAMES`` or
+   :c:func:`MsiViewGetColumnInfo`. *kind* can be either ``MSICOLINFO_NAMES`` or
    ``MSICOLINFO_TYPES``.
 
 
 .. method:: View.Fetch()
 
-   Return a result record of the query, through calling :cfunc:`MsiViewFetch`.
+   Return a result record of the query, through calling :c:func:`MsiViewFetch`.
 
 
 .. method:: View.Modify(kind, data)
 
-   Modify the view, by calling :cfunc:`MsiViewModify`. *kind* can be one of
+   Modify the view, by calling :c:func:`MsiViewModify`. *kind* can be one of
    ``MSIMODIFY_SEEK``, ``MSIMODIFY_REFRESH``, ``MSIMODIFY_INSERT``,
    ``MSIMODIFY_UPDATE``, ``MSIMODIFY_ASSIGN``, ``MSIMODIFY_REPLACE``,
    ``MSIMODIFY_MERGE``, ``MSIMODIFY_DELETE``, ``MSIMODIFY_INSERT_TEMPORARY``,
@@ -197,16 +197,16 @@ View Objects
 
 .. method:: View.Close()
 
-   Close the view, through :cfunc:`MsiViewClose`.
+   Close the view, through :c:func:`MsiViewClose`.
 
 
 .. seealso::
 
-   `MsiViewExecute <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msiviewexecute.asp>`_
-   `MSIViewGetColumnInfo <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msiviewgetcolumninfo.asp>`_
-   `MsiViewFetch <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msiviewfetch.asp>`_
-   `MsiViewModify <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msiviewmodify.asp>`_
-   `MsiViewClose <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msiviewclose.asp>`_
+   `MsiViewExecute <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msiviewexecute.asp>`_
+   `MSIViewGetColumnInfo <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msiviewgetcolumninfo.asp>`_
+   `MsiViewFetch <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msiviewfetch.asp>`_
+   `MsiViewModify <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msiviewmodify.asp>`_
+   `MsiViewClose <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msiviewclose.asp>`_
 
 .. _summary-objects:
 
@@ -216,7 +216,7 @@ Summary Information Objects
 
 .. method:: SummaryInformation.GetProperty(field)
 
-   Return a property of the summary, through :cfunc:`MsiSummaryInfoGetProperty`.
+   Return a property of the summary, through :c:func:`MsiSummaryInfoGetProperty`.
    *field* is the name of the property, and can be one of the constants
    ``PID_CODEPAGE``, ``PID_TITLE``, ``PID_SUBJECT``, ``PID_AUTHOR``,
    ``PID_KEYWORDS``, ``PID_COMMENTS``, ``PID_TEMPLATE``, ``PID_LASTAUTHOR``,
@@ -228,12 +228,12 @@ Summary Information Objects
 .. method:: SummaryInformation.GetPropertyCount()
 
    Return the number of summary properties, through
-   :cfunc:`MsiSummaryInfoGetPropertyCount`.
+   :c:func:`MsiSummaryInfoGetPropertyCount`.
 
 
 .. method:: SummaryInformation.SetProperty(field, value)
 
-   Set a property through :cfunc:`MsiSummaryInfoSetProperty`. *field* can have the
+   Set a property through :c:func:`MsiSummaryInfoSetProperty`. *field* can have the
    same values as in :meth:`GetProperty`, *value* is the new value of the property.
    Possible value types are integer and string.
 
@@ -241,15 +241,15 @@ Summary Information Objects
 .. method:: SummaryInformation.Persist()
 
    Write the modified properties to the summary information stream, using
-   :cfunc:`MsiSummaryInfoPersist`.
+   :c:func:`MsiSummaryInfoPersist`.
 
 
 .. seealso::
 
-   `MsiSummaryInfoGetProperty <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msisummaryinfogetproperty.asp>`_
-   `MsiSummaryInfoGetPropertyCount <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msisummaryinfogetpropertycount.asp>`_
-   `MsiSummaryInfoSetProperty <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msisummaryinfosetproperty.asp>`_
-   `MsiSummaryInfoPersist <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msisummaryinfopersist.asp>`_
+   `MsiSummaryInfoGetProperty <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msisummaryinfogetproperty.asp>`_
+   `MsiSummaryInfoGetPropertyCount <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msisummaryinfogetpropertycount.asp>`_
+   `MsiSummaryInfoSetProperty <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msisummaryinfosetproperty.asp>`_
+   `MsiSummaryInfoPersist <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msisummaryinfopersist.asp>`_
 
 .. _record-objects:
 
@@ -260,7 +260,7 @@ Record Objects
 .. method:: Record.GetFieldCount()
 
    Return the number of fields of the record, through
-   :cfunc:`MsiRecordGetFieldCount`.
+   :c:func:`MsiRecordGetFieldCount`.
 
 
 .. method:: Record.GetInteger(field)
@@ -277,34 +277,34 @@ Record Objects
 
 .. method:: Record.SetString(field, value)
 
-   Set *field* to *value* through :cfunc:`MsiRecordSetString`. *field* must be an
+   Set *field* to *value* through :c:func:`MsiRecordSetString`. *field* must be an
    integer; *value* a string.
 
 
 .. method:: Record.SetStream(field, value)
 
    Set *field* to the contents of the file named *value*, through
-   :cfunc:`MsiRecordSetStream`. *field* must be an integer; *value* a string.
+   :c:func:`MsiRecordSetStream`. *field* must be an integer; *value* a string.
 
 
 .. method:: Record.SetInteger(field, value)
 
-   Set *field* to *value* through :cfunc:`MsiRecordSetInteger`. Both *field* and
+   Set *field* to *value* through :c:func:`MsiRecordSetInteger`. Both *field* and
    *value* must be an integer.
 
 
 .. method:: Record.ClearData()
 
-   Set all fields of the record to 0, through :cfunc:`MsiRecordClearData`.
+   Set all fields of the record to 0, through :c:func:`MsiRecordClearData`.
 
 
 .. seealso::
 
-   `MsiRecordGetFieldCount <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msirecordgetfieldcount.asp>`_
-   `MsiRecordSetString <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msirecordsetstring.asp>`_
-   `MsiRecordSetStream <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msirecordsetstream.asp>`_
-   `MsiRecordSetInteger <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msirecordsetinteger.asp>`_
-   `MsiRecordClear <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/msirecordclear.asp>`_
+   `MsiRecordGetFieldCount <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msirecordgetfieldcount.asp>`_
+   `MsiRecordSetString <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msirecordsetstring.asp>`_
+   `MsiRecordSetStream <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msirecordsetstream.asp>`_
+   `MsiRecordSetInteger <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msirecordsetinteger.asp>`_
+   `MsiRecordClear <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/msirecordclear.asp>`_
 
 .. _msi-errors:
 
@@ -353,7 +353,7 @@ Directory Objects
 -----------------
 
 
-.. class:: Directory(database, cab, basedir, physical,  logical, default, component, [componentflags])
+.. class:: Directory(database, cab, basedir, physical,  logical, default, [componentflags])
 
    Create a new directory in the Directory table. There is a current component at
    each point in time for the directory, which is either explicitly created through
@@ -396,10 +396,10 @@ Directory Objects
 
 .. seealso::
 
-   `Directory Table <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/directory_table.asp>`_
-   `File Table <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/file_table.asp>`_
-   `Component Table <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/component_table.asp>`_
-   `FeatureComponents Table <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/featurecomponents_table.asp>`_
+   `Directory Table <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/directory_table.asp>`_
+   `File Table <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/file_table.asp>`_
+   `Component Table <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/component_table.asp>`_
+   `FeatureComponents Table <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/featurecomponents_table.asp>`_
 
 .. _features:
 
@@ -424,7 +424,7 @@ Features
 
 .. seealso::
 
-   `Feature Table <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/feature_table.asp>`_
+   `Feature Table <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/feature_table.asp>`_
 
 .. _msi-gui:
 
@@ -432,8 +432,9 @@ GUI classes
 -----------
 
 :mod:`msilib` provides several classes that wrap the GUI tables in an MSI
-database. However, no standard user interface is provided; use :mod:`bdist_msi`
-to create MSI files with a user-interface for installing Python packages.
+database. However, no standard user interface is provided; use
+:mod:`~distutils.command.bdist_msi` to create MSI files with a user-interface
+for installing Python packages.
 
 
 .. class:: Control(dlg, name)
@@ -518,13 +519,13 @@ to create MSI files with a user-interface for installing Python packages.
 
 .. seealso::
 
-   `Dialog Table <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/dialog_table.asp>`_
-   `Control Table <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/control_table.asp>`_
-   `Control Types <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/controls.asp>`_
-   `ControlCondition Table <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/controlcondition_table.asp>`_
-   `ControlEvent Table <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/controlevent_table.asp>`_
-   `EventMapping Table <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/eventmapping_table.asp>`_
-   `RadioButton Table <http://msdn.microsoft.com/library/default.asp?url=/library/en-us/msi/setup/radiobutton_table.asp>`_
+   `Dialog Table <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/dialog_table.asp>`_
+   `Control Table <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/control_table.asp>`_
+   `Control Types <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/controls.asp>`_
+   `ControlCondition Table <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/controlcondition_table.asp>`_
+   `ControlEvent Table <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/controlevent_table.asp>`_
+   `EventMapping Table <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/eventmapping_table.asp>`_
+   `RadioButton Table <https://msdn.microsoft.com/library?url=/library/en-us/msi/setup/radiobutton_table.asp>`_
 
 .. _msi-tables:
 

@@ -36,7 +36,7 @@ DOM Level 2 recommendation.
 .. XXX PyXML is dead...
 .. The mapping of the Level 3 specification, currently
    only available in draft form, is being developed by the `Python XML Special
-   Interest Group <http://www.python.org/sigs/xml-sig/>`_ as part of the `PyXML
+   Interest Group <https://www.python.org/sigs/xml-sig/>`_ as part of the `PyXML
    package <http://pyxml.sourceforge.net/>`_.  Refer to the documentation bundled
    with that package for information on the current state of DOM Level 3 support.
 
@@ -73,10 +73,10 @@ implementations are free to support the strict mapping from IDL).  See section
 
 .. seealso::
 
-   `Document Object Model (DOM) Level 2 Specification <http://www.w3.org/TR/DOM-Level-2-Core/>`_
+   `Document Object Model (DOM) Level 2 Specification <https://www.w3.org/TR/DOM-Level-2-Core/>`_
       The W3C recommendation upon which the Python DOM API is based.
 
-   `Document Object Model (DOM) Level 1 Specification <http://www.w3.org/TR/REC-DOM-Level-1/>`_
+   `Document Object Model (DOM) Level 1 Specification <https://www.w3.org/TR/REC-DOM-Level-1/>`_
       The W3C recommendation for the DOM supported by :mod:`xml.dom.minidom`.
 
    `Python Language Mapping Specification <http://www.omg.org/spec/PYTH/1.2/PDF>`_
@@ -127,7 +127,7 @@ Some convenience constants are also provided:
 .. data:: XML_NAMESPACE
 
    The namespace URI associated with the reserved prefix ``xml``, as defined by
-   `Namespaces in XML <http://www.w3.org/TR/REC-xml-names/>`_ (section 4).
+   `Namespaces in XML <https://www.w3.org/TR/REC-xml-names/>`_ (section 4).
 
    .. versionadded:: 2.2
 
@@ -136,7 +136,7 @@ Some convenience constants are also provided:
 
    The namespace URI for namespace declarations, as defined by `Document Object
    Model (DOM) Level 2 Core Specification
-   <http://www.w3.org/TR/DOM-Level-2-Core/core.html>`_ (section 1.1.8).
+   <https://www.w3.org/TR/DOM-Level-2-Core/core.html>`_ (section 1.1.8).
 
    .. versionadded:: 2.2
 
@@ -144,7 +144,7 @@ Some convenience constants are also provided:
 .. data:: XHTML_NAMESPACE
 
    The URI of the XHTML namespace as defined by `XHTML 1.0: The Extensible
-   HyperText Markup Language <http://www.w3.org/TR/xhtml1/>`_ (section 3.1.1).
+   HyperText Markup Language <https://www.w3.org/TR/xhtml1/>`_ (section 3.1.1).
 
    .. versionadded:: 2.2
 
@@ -321,7 +321,7 @@ All of the components of an XML document are subclasses of :class:`Node`.
 .. attribute:: Node.prefix
 
    The part of the :attr:`tagName` preceding the colon if there is one, else the
-   empty string.  The value is a string, or ``None``
+   empty string.  The value is a string, or ``None``.
 
 
 .. attribute:: Node.namespaceURI
@@ -374,7 +374,7 @@ All of the components of an XML document are subclasses of :class:`Node`.
 
    Add a new child node to this node at the end of the list of
    children, returning *newChild*. If the node was already in
-   in the tree, it is removed first.
+   the tree, it is removed first.
 
 
 .. method:: Node.insertBefore(newChild, refChild)
@@ -419,7 +419,7 @@ NodeList Objects
 ^^^^^^^^^^^^^^^^
 
 A :class:`NodeList` represents a sequence of nodes.  These objects are used in
-two ways in the DOM Core recommendation:  the :class:`Element` objects provides
+two ways in the DOM Core recommendation:  an :class:`Element` object provides
 one as its list of child nodes, and the :meth:`getElementsByTagName` and
 :meth:`getElementsByTagNameNS` methods of :class:`Node` return objects with this
 interface to represent query results.
@@ -431,7 +431,7 @@ objects:
 .. method:: NodeList.item(i)
 
    Return the *i*'th item from the sequence, if there is one, or ``None``.  The
-   index *i* is not allowed to be less then zero or greater than or equal to the
+   index *i* is not allowed to be less than zero or greater than or equal to the
    length of the sequence.
 
 
@@ -441,14 +441,15 @@ objects:
 
 In addition, the Python DOM interface requires that some additional support is
 provided to allow :class:`NodeList` objects to be used as Python sequences.  All
-:class:`NodeList` implementations must include support for :meth:`__len__` and
-:meth:`__getitem__`; this allows iteration over the :class:`NodeList` in
+:class:`NodeList` implementations must include support for
+:meth:`~object.__len__` and
+:meth:`~object.__getitem__`; this allows iteration over the :class:`NodeList` in
 :keyword:`for` statements and proper support for the :func:`len` built-in
 function.
 
 If a DOM implementation supports modification of the document, the
-:class:`NodeList` implementation must also support the :meth:`__setitem__` and
-:meth:`__delitem__` methods.
+:class:`NodeList` implementation must also support the
+:meth:`~object.__setitem__` and :meth:`~object.__delitem__` methods.
 
 
 .. _dom-documenttype-objects:
@@ -705,18 +706,27 @@ Attr Objects
 
 .. attribute:: Attr.name
 
-   The attribute name.  In a namespace-using document it may have colons in it.
+   The attribute name.
+   In a namespace-using document it may include a colon.
 
 
 .. attribute:: Attr.localName
 
-   The part of the name following the colon if there is one, else the entire name.
+   The part of the name following the colon if there is one, else the
+   entire name.
    This is a read-only attribute.
 
 
 .. attribute:: Attr.prefix
 
-   The part of the name preceding the colon if there is one, else the empty string.
+   The part of the name preceding the colon if there is one, else the
+   empty string.
+
+
+.. attribute:: Attr.value
+
+   The text value of the attribute.  This is a synonym for the
+   :attr:`nodeValue` attribute.
 
 
 .. _dom-attributelist-objects:
@@ -885,7 +895,7 @@ attribute.
 .. exception:: NamespaceErr
 
    If an attempt is made to change any object in a way that is not permitted with
-   regard to the `Namespaces in XML <http://www.w3.org/TR/REC-xml-names/>`_
+   regard to the `Namespaces in XML <https://www.w3.org/TR/REC-xml-names/>`_
    recommendation, this exception is raised.
 
 

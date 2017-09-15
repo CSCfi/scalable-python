@@ -4,25 +4,26 @@
 Classes
 *******
 
-Python's class mechanism adds classes to the language with a minimum of new
-syntax and semantics.  It is a mixture of the class mechanisms found in C++ and
-Modula-3.  As is true for modules, classes in Python do not put an absolute
-barrier between definition and user, but rather rely on the politeness of the
-user not to "break into the definition."  The most important features of classes
-are retained with full power, however: the class inheritance mechanism allows
+Compared with other programming languages, Python's class mechanism adds classes
+with a minimum of new syntax and semantics.  It is a mixture of the class
+mechanisms found in C++ and Modula-3.  Python classes provide all the standard
+features of Object Oriented Programming: the class inheritance mechanism allows
 multiple base classes, a derived class can override any methods of its base
 class or classes, and a method can call the method of a base class with the same
-name.  Objects can contain an arbitrary amount of data.
+name.  Objects can contain arbitrary amounts and kinds of data.  As is true for
+modules, classes partake of the dynamic nature of Python: they are created at
+runtime, and can be modified further after creation.
 
-In C++ terminology, all class members (including the data members) are *public*,
-and all member functions are *virtual*.  As in Modula-3, there are no shorthands
-for referencing the object's members from its methods: the method function is
-declared with an explicit first argument representing the object, which is
-provided implicitly by the call.  As in Smalltalk, classes themselves are
-objects.  This provides semantics for importing and renaming.  Unlike C++ and
-Modula-3, built-in types can be used as base classes for extension by the user.
-Also, like in C++, most built-in operators with special syntax (arithmetic
-operators, subscripting etc.) can be redefined for class instances.
+In C++ terminology, normally class members (including the data members) are
+*public* (except see below :ref:`tut-private`), and all member functions are
+*virtual*.  As in Modula-3, there are no shorthands for referencing the object's
+members from its methods: the method function is declared with an explicit first
+argument representing the object, which is provided implicitly by the call.  As
+in Smalltalk, classes themselves are objects.  This provides semantics for
+importing and renaming.  Unlike C++ and Modula-3, built-in types can be used as
+base classes for extension by the user.  Also, like in C++, most built-in
+operators with special syntax (arithmetic operators, subscripting etc.) can be
+redefined for class instances.
 
 (Lacking universally accepted terminology to talk about classes, I will make
 occasional use of Smalltalk and C++ terms.  I would use Modula-3 terms, since
@@ -209,6 +210,7 @@ definition looked like this::
    class MyClass:
        """A simple example class"""
        i = 12345
+
        def f(self):
            return 'hello world'
 
@@ -336,6 +338,77 @@ object and the argument list, and the function object is called with this new
 argument list.
 
 
+.. _tut-class-and-instance-variables:
+
+Class and Instance Variables
+----------------------------
+
+Generally speaking, instance variables are for data unique to each instance
+and class variables are for attributes and methods shared by all instances
+of the class::
+
+    class Dog:
+
+        kind = 'canine'         # class variable shared by all instances
+
+        def __init__(self, name):
+            self.name = name    # instance variable unique to each instance
+
+    >>> d = Dog('Fido')
+    >>> e = Dog('Buddy')
+    >>> d.kind                  # shared by all dogs
+    'canine'
+    >>> e.kind                  # shared by all dogs
+    'canine'
+    >>> d.name                  # unique to d
+    'Fido'
+    >>> e.name                  # unique to e
+    'Buddy'
+
+As discussed in :ref:`tut-object`, shared data can have possibly surprising
+effects with involving :term:`mutable` objects such as lists and dictionaries.
+For example, the *tricks* list in the following code should not be used as a
+class variable because just a single list would be shared by all *Dog*
+instances::
+
+    class Dog:
+
+        tricks = []             # mistaken use of a class variable
+
+        def __init__(self, name):
+            self.name = name
+
+        def add_trick(self, trick):
+            self.tricks.append(trick)
+
+    >>> d = Dog('Fido')
+    >>> e = Dog('Buddy')
+    >>> d.add_trick('roll over')
+    >>> e.add_trick('play dead')
+    >>> d.tricks                # unexpectedly shared by all dogs
+    ['roll over', 'play dead']
+
+Correct design of the class should use an instance variable instead::
+
+    class Dog:
+
+        def __init__(self, name):
+            self.name = name
+            self.tricks = []    # creates a new empty list for each dog
+
+        def add_trick(self, trick):
+            self.tricks.append(trick)
+
+    >>> d = Dog('Fido')
+    >>> e = Dog('Buddy')
+    >>> d.add_trick('roll over')
+    >>> e.add_trick('play dead')
+    >>> d.tricks
+    ['roll over']
+    >>> e.tricks
+    ['play dead']
+
+
 .. _tut-remarks:
 
 Random Remarks
@@ -386,8 +459,10 @@ variable in the class is also ok.  For example::
 
    class C:
        f = f1
+
        def g(self):
            return 'hello world'
+
        h = g
 
 Now ``f``, ``g`` and ``h`` are all attributes of class :class:`C` that refer to
@@ -401,15 +476,17 @@ argument::
    class Bag:
        def __init__(self):
            self.data = []
+
        def add(self, x):
            self.data.append(x)
+
        def addtwice(self, x):
            self.add(x)
            self.add(x)
 
 Methods may reference global names in the same way as ordinary functions.  The
-global scope associated with a method is the module containing the class
-definition.  (The class itself is never used as a global scope.)  While one
+global scope associated with a method is the module containing its
+definition.  (A class is never used as a global scope.)  While one
 rarely encounters a good reason for using global data in a method, there are
 many legitimate uses of the global scope: for one thing, functions and modules
 imported into the global scope can be used by methods, as well as functions and
@@ -517,7 +594,7 @@ other multiple-inheritance languages as call-next-method and is more powerful
 than the super call found in single-inheritance languages.
 
 With new-style classes, dynamic ordering is necessary because all  cases of
-multiple inheritance exhibit one or more diamond relationships (where one at
+multiple inheritance exhibit one or more diamond relationships (where at
 least one of the parent classes can be accessed through multiple paths from the
 bottommost class).  For example, all new-style classes inherit from
 :class:`object`, so any case of multiple inheritance provides more than one path
@@ -528,16 +605,16 @@ parent only once, and that is monotonic (meaning that a class can be subclassed
 without affecting the precedence order of its parents).  Taken together, these
 properties make it possible to design reliable and extensible classes with
 multiple inheritance.  For more detail, see
-http://www.python.org/download/releases/2.3/mro/.
+https://www.python.org/download/releases/2.3/mro/.
 
 
 .. _tut-private:
 
-Private Variables
-=================
+Private Variables and Class-local References
+============================================
 
 "Private" instance variables that cannot be accessed except from inside an
-object, don't exist in Python.  However, there is a convention that is followed
+object don't exist in Python.  However, there is a convention that is followed
 by most Python code: a name prefixed with an underscore (e.g. ``_spam``) should
 be treated as a non-public part of the API (whether it is a function, a method
 or a data member).  It should be considered an implementation detail and subject
@@ -551,6 +628,28 @@ is textually replaced with ``_classname__spam``, where ``classname`` is the
 current class name with leading underscore(s) stripped.  This mangling is done
 without regard to the syntactic position of the identifier, as long as it
 occurs within the definition of a class.
+
+Name mangling is helpful for letting subclasses override methods without
+breaking intraclass method calls.  For example::
+
+   class Mapping:
+       def __init__(self, iterable):
+           self.items_list = []
+           self.__update(iterable)
+
+       def update(self, iterable):
+           for item in iterable:
+               self.items_list.append(item)
+
+       __update = update   # private copy of original update() method
+
+   class MappingSubclass(Mapping):
+
+       def update(self, keys, values):
+           # provides new signature for update()
+           # but does not break __init__()
+           for item in zip(keys, values):
+               self.items_list.append(item)
 
 Note that the mangling rules are designed mostly to avoid accidents; it still is
 possible to access or modify a variable that is considered private.  This can
@@ -576,7 +675,7 @@ will do nicely::
    class Employee:
        pass
 
-   john = Employee() # Create an empty employee record
+   john = Employee()  # Create an empty employee record
 
    # Fill the fields of the record
    john.name = 'John Doe'
@@ -586,7 +685,7 @@ will do nicely::
 A piece of Python code that expects a particular abstract data type can often be
 passed a class that emulates the methods of that data type instead.  For
 instance, if you have a function that formats some data from a file object, you
-can define a class with methods :meth:`read` and :meth:`readline` that get the
+can define a class with methods :meth:`read` and :meth:`!readline` that get the
 data from a string buffer instead, and pass it as an argument.
 
 .. (Unfortunately, this technique has its limitations: a class can't define
@@ -665,14 +764,15 @@ using a :keyword:`for` statement::
    for char in "123":
        print char
    for line in open("myfile.txt"):
-       print line
+       print line,
 
 This style of access is clear, concise, and convenient.  The use of iterators
 pervades and unifies Python.  Behind the scenes, the :keyword:`for` statement
 calls :func:`iter` on the container object.  The function returns an iterator
-object that defines the method :meth:`next` which accesses elements in the
-container one at a time.  When there are no more elements, :meth:`next` raises a
-:exc:`StopIteration` exception which tells the :keyword:`for` loop to terminate.
+object that defines the method :meth:`~iterator.next` which accesses elements
+in the container one at a time.  When there are no more elements,
+:meth:`~iterator.next` raises a :exc:`StopIteration` exception which tells the
+:keyword:`for` loop to terminate.
 This example shows how it all works::
 
    >>> s = 'abc'
@@ -686,7 +786,6 @@ This example shows how it all works::
    >>> it.next()
    'c'
    >>> it.next()
-
    Traceback (most recent call last):
      File "<stdin>", line 1, in ?
        it.next()
@@ -694,21 +793,25 @@ This example shows how it all works::
 
 Having seen the mechanics behind the iterator protocol, it is easy to add
 iterator behavior to your classes.  Define an :meth:`__iter__` method which
-returns an object with a :meth:`next` method.  If the class defines
-:meth:`next`, then :meth:`__iter__` can just return ``self``::
+returns an object with a :meth:`~iterator.next` method.  If the class
+defines :meth:`~iterator.next`, then :meth:`__iter__` can just return ``self``::
 
    class Reverse:
-       "Iterator for looping over a sequence backwards"
+       """Iterator for looping over a sequence backwards."""
        def __init__(self, data):
            self.data = data
            self.index = len(data)
+
        def __iter__(self):
            return self
+
        def next(self):
            if self.index == 0:
                raise StopIteration
            self.index = self.index - 1
            return self.data[self.index]
+
+::
 
    >>> rev = Reverse('spam')
    >>> iter(rev)
@@ -729,14 +832,16 @@ Generators
 
 :term:`Generator`\s are a simple and powerful tool for creating iterators.  They
 are written like regular functions but use the :keyword:`yield` statement
-whenever they want to return data.  Each time :meth:`next` is called, the
-generator resumes where it left-off (it remembers all the data values and which
+whenever they want to return data.  Each time :func:`next` is called on it, the
+generator resumes where it left off (it remembers all the data values and which
 statement was last executed).  An example shows that generators can be trivially
 easy to create::
 
    def reverse(data):
        for index in range(len(data)-1, -1, -1):
            yield data[index]
+
+::
 
    >>> for char in reverse('golf'):
    ...     print char
@@ -746,10 +851,10 @@ easy to create::
    o
    g
 
-Anything that can be done with generators can also be done with class based
+Anything that can be done with generators can also be done with class-based
 iterators as described in the previous section.  What makes generators so
-compact is that the :meth:`__iter__` and :meth:`next` methods are created
-automatically.
+compact is that the :meth:`__iter__` and :meth:`~generator.next` methods
+are created automatically.
 
 Another key feature is that the local variables and execution state are
 automatically saved between calls.  This made the function easier to write and
@@ -800,8 +905,8 @@ Examples::
 .. rubric:: Footnotes
 
 .. [#] Except for one thing.  Module objects have a secret read-only attribute called
-   :attr:`__dict__` which returns the dictionary used to implement the module's
-   namespace; the name :attr:`__dict__` is an attribute but not a global name.
+   :attr:`~object.__dict__` which returns the dictionary used to implement the module's
+   namespace; the name :attr:`~object.__dict__` is an attribute but not a global name.
    Obviously, using this violates the abstraction of namespace implementation, and
    should be restricted to things like post-mortem debuggers.
 

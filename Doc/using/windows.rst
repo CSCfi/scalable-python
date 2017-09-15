@@ -18,7 +18,7 @@ Installing Python
 Unlike most Unix systems and services, Windows does not require Python natively
 and thus does not pre-install a version of Python.  However, the CPython team
 has compiled Windows installers (MSI packages) with every `release
-<http://www.python.org/download/releases/>`_ for many years.
+<https://www.python.org/download/releases/>`_ for many years.
 
 With ongoing development of Python, some platforms that used to be supported
 earlier are no longer supported (due to the lack of users or developers).
@@ -31,31 +31,30 @@ Check :pep:`11` for details on all unsupported platforms.
   following releases), this support was dropped and new releases are just
   expected to work on the Windows NT family.
 * `Windows CE <http://pythonce.sourceforge.net/>`_ is still supported.
-* The `Cygwin <http://cygwin.com/>`_ installer offers to install the `Python
-  interpreter <http://cygwin.com/packages/python>`_ as well; it is located under
-  "Interpreters." (cf. `Cygwin package source
+* The `Cygwin <https://cygwin.com/>`_ installer offers to install the Python
+  interpreter as well (cf. `Cygwin package source
   <ftp://ftp.uni-erlangen.de/pub/pc/gnuwin32/cygwin/mirrors/cygnus/
   release/python>`_, `Maintainer releases
   <http://www.tishler.net/jason/software/python/>`_)
 
-See `Python for Windows (and DOS) <http://www.python.org/download/windows/>`_
+See `Python for Windows (and DOS) <https://www.python.org/download/windows/>`_
 for detailed information about platforms with precompiled installers.
 
 .. seealso::
 
-   `Python on XP <http://www.richarddooling.com/index.php/2006/03/14/python-on-xp-7-minutes-to-hello-world/>`_
+   `Python on XP <http://dooling.com/index.php/2006/03/14/python-on-xp-7-minutes-to-hello-world/>`_
       "7 Minutes to "Hello World!""
       by Richard Dooling, 2006
 
-   `Installing on Windows <http://diveintopython.org/installing_python/windows.html>`_
+   `Installing on Windows <http://www.diveintopython.net/installing_python/windows.html>`_
       in "`Dive into Python: Python from novice to pro
-      <http://diveintopython.org/index.html>`_"
+      <http://www.diveintopython.net/>`_"
       by Mark Pilgrim, 2004,
       ISBN 1-59059-356-1
 
-   `For Windows users <http://swaroopch.com/text/Byte_of_Python:Installing_Python#For_Windows_users>`_
+   `For Windows users <http://python.swaroopch.com/installation.html#installation-on-windows>`_
       in "Installing Python"
-      in "`A Byte of Python <http://www.byteofpython.info>`_"
+      in "`A Byte of Python <http://python.swaroopch.com/>`_"
       by Swaroop C H, 2003
 
 
@@ -66,10 +65,10 @@ Besides the standard CPython distribution, there are modified packages including
 additional functionality.  The following is a list of popular versions and their
 key features:
 
-`ActivePython <http://www.activestate.com/Products/activepython/>`_
+`ActivePython <https://www.activestate.com/activepython/>`_
     Installer with multi-platform compatibility, documentation, PyWin32
 
-`Enthought Python Distribution <http://www.enthought.com/products/epd.php>`_
+`Enthought Python Distribution <https://www.enthought.com/products/epd/>`_
     Popular modules (such as PyWin32) with their respective documentation, tool
     suite for building extensible Python applications
 
@@ -83,6 +82,8 @@ Configuring Python
 In order to run Python flawlessly, you might have to change certain environment
 settings in Windows.
 
+
+.. _setting-envvars:
 
 Excursus: Setting environment variables
 ---------------------------------------
@@ -122,13 +123,13 @@ Consult :command:`set /?` for details on this behaviour.
 
 .. seealso::
 
-   http://support.microsoft.com/kb/100843
+   https://support.microsoft.com/kb/100843
       Environment variables in Windows NT
 
-   http://support.microsoft.com/kb/310519
+   https://support.microsoft.com/kb/310519
       How To Manage Environment Variables in Windows XP
 
-   http://www.chem.gla.ac.uk/~louis/software/faq/q1.html
+   https://www.chem.gla.ac.uk/~louis/software/faq/q1.html
       Setting Environment variables, Louis J. Farrugia
 
 
@@ -158,23 +159,48 @@ installation directory.  So, if you had installed Python to
 :file:`C:\\Python\\Lib\\` and third-party modules should be stored in
 :file:`C:\\Python\\Lib\\site-packages\\`.
 
-.. `` this fixes syntax highlighting errors in some editors due to the \\ hackery
+This is how :data:`sys.path` is populated on Windows:
 
-You can add folders to your search path to make Python's import mechanism search
-in these directories as well.  Use :envvar:`PYTHONPATH`, as described in
-:ref:`using-on-envvars`, to modify :data:`sys.path`.  On Windows, paths are
-separated by semicolons, though, to distinguish them from drive identifiers
-(:file:`C:\\` etc.).
+* An empty entry is added at the start, which corresponds to the current
+  directory.
 
-.. ``
+* If the environment variable :envvar:`PYTHONPATH` exists, as described in
+  :ref:`using-on-envvars`, its entries are added next.  Note that on Windows,
+  paths in this variable must be separated by semicolons, to distinguish them
+  from the colon used in drive identifiers (``C:\`` etc.).
 
-Modifying the module search path can also be done through the Windows registry
-under the key :file:`HKLM\\SOFTWARE\\Python\\PythonCore\\{version}\\PythonPath`.
-Subkeys which have semicolon-delimited path strings as their default value will
-cause each path to be searched.  Multiple subkeys can be created and are
-appended to the path in alphabetical order.  A convenient registry editor is
-:program:`regedit` (start it by typing "regedit" into :menuselection:`Start -->
-Run`).
+* Additional "application paths" can be added in the registry as subkeys of
+  :samp:`\\SOFTWARE\\Python\\PythonCore\\{version}\\PythonPath` under both the
+  ``HKEY_CURRENT_USER`` and ``HKEY_LOCAL_MACHINE`` hives.  Subkeys which have
+  semicolon-delimited path strings as their default value will cause each path
+  to be added to :data:`sys.path`.  (Note that all known installers only use
+  HKLM, so HKCU is typically empty.)
+
+* If the environment variable :envvar:`PYTHONHOME` is set, it is assumed as
+  "Python Home".  Otherwise, the path of the main Python executable is used to
+  locate a "landmark file" (``Lib\os.py``) to deduce the "Python Home".  If a
+  Python home is found, the relevant sub-directories added to :data:`sys.path`
+  (``Lib``, ``plat-win``, etc) are based on that folder.  Otherwise, the core
+  Python path is constructed from the PythonPath stored in the registry.
+
+* If the Python Home cannot be located, no :envvar:`PYTHONPATH` is specified in
+  the environment, and no registry entries can be found, a default path with
+  relative entries is used (e.g. ``.\Lib;.\plat-win``, etc).
+
+The end result of all this is:
+
+* When running :file:`python.exe`, or any other .exe in the main Python
+  directory (either an installed version, or directly from the PCbuild
+  directory), the core path is deduced, and the core paths in the registry are
+  ignored.  Other "application paths" in the registry are always read.
+
+* When Python is hosted in another .exe (different directory, embedded via COM,
+  etc), the "Python Home" will not be deduced, so the core path from the
+  registry is used.  Other "application paths" in the registry are always read.
+
+* If Python can't find its home and there is no registry (eg, frozen .exe, some
+  very strange installation setup) you get a path with some default, but
+  relative, paths.
 
 
 Executing scripts
@@ -216,19 +242,19 @@ The Windows-specific standard modules are documented in
 PyWin32
 -------
 
-The `PyWin32 <http://python.net/crew/mhammond/win32/>`_ module by Mark Hammond
+The `PyWin32 <https://pypi.python.org/pypi/pywin32>`_ module by Mark Hammond
 is a collection of modules for advanced Windows-specific support.  This includes
 utilities for:
 
-* `Component Object Model <http://www.microsoft.com/com/>`_ (COM)
+* `Component Object Model <https://www.microsoft.com/com/>`_ (COM)
 * Win32 API calls
 * Registry
 * Event log
-* `Microsoft Foundation Classes <http://msdn.microsoft.com/en-us/library/fe1cf721%28VS.80%29.aspx>`_ (MFC)
+* `Microsoft Foundation Classes <https://msdn.microsoft.com/en-us/library/fe1cf721%28VS.80%29.aspx>`_ (MFC)
   user interfaces
 
-`PythonWin <http://web.archive.org/web/20060524042422/
-http://www.python.org/windows/pythonwin/>`_ is a sample MFC application
+`PythonWin <https://web.archive.org/web/20060524042422/
+https://www.python.org/windows/pythonwin/>`_ is a sample MFC application
 shipped with PyWin32.  It is an embeddable IDE with a built-in debugger.
 
 .. seealso::
@@ -265,9 +291,9 @@ Compiling Python on Windows
 ===========================
 
 If you want to compile CPython yourself, first thing you should do is get the
-`source <http://python.org/download/source/>`_. You can download either the
+`source <https://www.python.org/downloads/source/>`_. You can download either the
 latest release's source or just grab a fresh `checkout
-<http://www.python.org/dev/faq/#how-do-i-get-a-checkout-of-the-repository-read-only-and-read-write>`_.
+<https://docs.python.org/devguide/setup.html#getting-the-source-code>`_.
 
 For Microsoft Visual C++, which is the compiler with which official Python
 releases are built, the source tree contains solutions/project files.  View the
@@ -310,7 +336,7 @@ Other resources
 
 .. seealso::
 
-   `Python Programming On Win32 <http://www.oreilly.com/catalog/pythonwin32/>`_
+   `Python Programming On Win32 <http://shop.oreilly.com/product/9781565926219.do>`_
       "Help for Windows Programmers"
       by Mark Hammond and Andy Robinson, O'Reilly Media, 2000,
       ISBN 1-56592-621-8

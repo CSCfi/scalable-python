@@ -1,4 +1,3 @@
-
 :mod:`sunau` --- Read and write Sun AU files
 ============================================
 
@@ -6,6 +5,9 @@
    :synopsis: Provide an interface to the Sun AU sound format.
 .. sectionauthor:: Moshe Zadka <moshez@zadka.site.co.il>
 
+**Source code:** :source:`Lib/sunau.py`
+
+--------------
 
 The :mod:`sunau` module provides a convenient interface to the Sun AU sound
 format.  Note that this module is interface-compatible with the modules
@@ -52,8 +54,8 @@ The :mod:`sunau` module defines the following functions:
 
    Note that it does not allow read/write files.
 
-   A *mode* of ``'r'`` returns a :class:`AU_read` object, while a *mode* of ``'w'``
-   or ``'wb'`` returns a :class:`AU_write` object.
+   A *mode* of ``'r'`` returns an :class:`AU_read` object, while a *mode* of ``'w'``
+   or ``'wb'`` returns an :class:`AU_write` object.
 
 
 .. function:: openfp(file, mode)

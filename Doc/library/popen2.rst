@@ -104,7 +104,7 @@ methods:
 
    Waits for and returns the status code of the child process.  The status code
    encodes both the return code of the process and information about whether it
-   exited using the :cfunc:`exit` system call or died due to a signal.  Functions
+   exited using the :c:func:`exit` system call or died due to a signal.  Functions
    to help interpret the status code are defined in the :mod:`os` module; see
    section :ref:`os-process` for the :func:`W\*` family of functions.
 
@@ -153,7 +153,7 @@ is reading from the first process, also in a blocking fashion.
 
 .. Example explanation and suggested work-arounds substantially stolen
    from Martin von Löwis:
-   http://mail.python.org/pipermail/python-dev/2000-September/009460.html
+   https://mail.python.org/pipermail/python-dev/2000-September/009460.html
 
 There are several ways to deal with this situation.
 

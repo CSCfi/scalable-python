@@ -2,15 +2,18 @@
 
 .. _install-index:
 
-*****************************
-  Installing Python Modules
-*****************************
+********************************************
+  Installing Python Modules (Legacy version)
+********************************************
 
 :Author: Greg Ward
-:Release: |version|
-:Date: |today|
 
 .. TODO: Fill in XXX comments
+
+.. seealso::
+
+   :ref:`installing-index`
+      The up to date module installation documentations
 
 .. The audience for this document includes people who don't know anything
    about Python and aren't about to learn the language just in order to
@@ -22,15 +25,23 @@
    Finally, it might be useful to include all the material from my "Care
    and Feeding of a Python Installation" talk in here somewhere.  Yow!
 
-.. topic:: Abstract
+This document describes the Python Distribution Utilities ("Distutils") from the
+end-user's point-of-view, describing how to extend the capabilities of a
+standard Python installation by building and installing third-party Python
+modules and extensions.
 
-   This document describes the Python Distribution Utilities ("Distutils") from the
-   end-user's point-of-view, describing how to extend the capabilities of a
-   standard Python installation by building and installing third-party Python
-   modules and extensions.
+
+.. note::
+
+   This guide only covers the basic tools for building and distributing
+   extensions that are provided as part of this version of Python. Third party
+   tools offer easier to use and more secure alternatives. Refer to the `quick
+   recommendations section <https://packaging.python.org/en/latest/current/>`__
+   in the Python Packaging User Guide for more information.
 
 
 .. _inst-intro:
+
 
 Introduction
 ============
@@ -52,7 +63,9 @@ new goodies to their toolbox.  You don't need to know Python to read this
 document; there will be some brief forays into using Python's interactive mode
 to explore your installation, but that's it.  If you're looking for information
 on how to distribute your own Python modules so that others may use them, see
-the :ref:`distutils-index` manual.
+the :ref:`distutils-index` manual.  :ref:`debug-setup-script` may also be of
+interest.
+
 
 
 .. _inst-trivial-install:
@@ -72,7 +85,7 @@ In that case, you would download the installer appropriate to your platform and
 do the obvious thing with it: run it if it's an executable installer, ``rpm
 --install`` it if it's an RPM, etc.  You don't need to run Python or a setup
 script, you don't need to compile anything---you might not even need to read any
-instructions (although it's always a good idea to do so anyways).
+instructions (although it's always a good idea to do so anyway).
 
 Of course, things will not always be that easy.  You might be interested in a
 module distribution that doesn't have an easy-to-use installer for your
@@ -96,9 +109,15 @@ in the name of the downloaded archive, e.g. :file:`foo-1.0.tar.gz` or
 directory: :file:`foo-1.0` or :file:`widget-0.9.7`.  Additionally, the
 distribution will contain a setup script :file:`setup.py`, and a file named
 :file:`README.txt` or possibly just :file:`README`, which should explain that
-building and installing the module distribution is a simple matter of running ::
+building and installing the module distribution is a simple matter of running
+one command from a terminal::
 
    python setup.py install
+
+For Windows, this command should be run from a command prompt window
+(:menuselection:`Start --> Accessories`)::
+
+   setup.py install
 
 If all these things are true, then you already know how to build and install the
 modules you've just downloaded:  Run the command above. Unless you need to
@@ -113,13 +132,10 @@ Standard Build and Install
 ==========================
 
 As described in section :ref:`inst-new-standard`, building and installing a module
-distribution using the Distutils is usually one simple command::
+distribution using the Distutils is usually one simple command to run from a
+terminal::
 
    python setup.py install
-
-On Unix, you'd run this command from a shell prompt; on Windows, you have to
-open a command prompt window ("DOS box") and do it there; on Mac OS X, you open
-a :command:`Terminal` window to get a shell prompt.
 
 
 .. _inst-platform-variations:
@@ -138,10 +154,10 @@ into.  For example, if you've just downloaded a module source distribution
 
 On Windows, you'd probably download :file:`foo-1.0.zip`.  If you downloaded the
 archive file to :file:`C:\\Temp`, then it would unpack into
-:file:`C:\\Temp\\foo-1.0`; you can use either a archive manipulator with a
+:file:`C:\\Temp\\foo-1.0`; you can use either an archive manipulator with a
 graphical user interface (such as WinZip) or a command-line tool (such as
 :program:`unzip` or :program:`pkunzip`) to unpack the archive.  Then, open a
-command prompt window ("DOS box"), and run::
+command prompt window and run::
 
    cd c:\Temp\foo-1.0
    python setup.py install
@@ -186,9 +202,9 @@ As implied above, the :command:`build` command is responsible for putting the
 files to install into a *build directory*.  By default, this is :file:`build`
 under the distribution root; if you're excessively concerned with speed, or want
 to keep the source tree pristine, you can change the build directory with the
-:option:`--build-base` option. For example::
+:option:`!--build-base` option. For example::
 
-   python setup.py build --build-base=/tmp/pybuild/foo-1.0
+   python setup.py build --build-base=/path/to/pybuild/foo-1.0
 
 (Or you could do this permanently with a directive in your system or personal
 Distutils configuration file; see section :ref:`inst-config-files`.)  Normally, this
@@ -234,6 +250,8 @@ by how you built/installed Python itself.  On Unix (and Mac OS X, which is also
 Unix-based), it also depends on whether the module distribution being installed
 is pure Python or contains extensions ("non-pure"):
 
+.. tabularcolumns:: |l|l|l|l|
+
 +-----------------+-----------------------------------------------------+--------------------------------------------------+-------+
 | Platform        | Standard installation location                      | Default value                                    | Notes |
 +=================+=====================================================+==================================================+=======+
@@ -241,7 +259,7 @@ is pure Python or contains extensions ("non-pure"):
 +-----------------+-----------------------------------------------------+--------------------------------------------------+-------+
 | Unix (non-pure) | :file:`{exec-prefix}/lib/python{X.Y}/site-packages` | :file:`/usr/local/lib/python{X.Y}/site-packages` | \(1)  |
 +-----------------+-----------------------------------------------------+--------------------------------------------------+-------+
-| Windows         | :file:`{prefix}`                                    | :file:`C:\\Python`                               | \(2)  |
+| Windows         | :file:`{prefix}\\Lib\\site-packages`                | :file:`C:\\Python{XY}\\Lib\\site-packages`       | \(2)  |
 +-----------------+-----------------------------------------------------+--------------------------------------------------+-------+
 
 Notes:
@@ -276,6 +294,12 @@ statements shown below, and get the output as shown, to find out my
    >>> sys.exec_prefix
    '/usr'
 
+A few other placeholders are used in this document: :file:`{X.Y}` stands for the
+version of Python, for example ``2.7``; :file:`{distname}` will be replaced by
+the name of the module distribution being installed.  Dots and capitalization
+are important in the paths; for example, a value that uses ``python2.7`` on UNIX
+will typically use ``Python27`` on Windows.
+
 If you don't want to install modules to the standard location, or if you don't
 have permission to write there, then you need to read about alternate
 installations in section :ref:`inst-alt-install`.  If you want to customize your
@@ -304,8 +328,61 @@ scheme*) under this base directory in which to install files.  The details
 differ across platforms, so read whichever of the following sections applies to
 you.
 
+Note that the various alternate installation schemes are mutually exclusive: you
+can pass ``--user``, or ``--home``, or ``--prefix`` and ``--exec-prefix``, or
+``--install-base`` and ``--install-platbase``, but you can't mix from these
+groups.
 
-.. _inst-alt-install-prefix:
+
+.. _inst-alt-install-user:
+
+Alternate installation: the user scheme
+---------------------------------------
+
+This scheme is designed to be the most convenient solution for users that don't
+have write permission to the global site-packages directory or don't want to
+install into it.  It is enabled with a simple option::
+
+   python setup.py install --user
+
+Files will be installed into subdirectories of :data:`site.USER_BASE` (written
+as :file:`{userbase}` hereafter).  This scheme installs pure Python modules and
+extension modules in the same location (also known as :data:`site.USER_SITE`).
+Here are the values for UNIX, including Mac OS X:
+
+=============== ===========================================================
+Type of file    Installation directory
+=============== ===========================================================
+modules         :file:`{userbase}/lib/python{X.Y}/site-packages`
+scripts         :file:`{userbase}/bin`
+data            :file:`{userbase}`
+C headers       :file:`{userbase}/include/python{X.Y}/{distname}`
+=============== ===========================================================
+
+And here are the values used on Windows:
+
+=============== ===========================================================
+Type of file    Installation directory
+=============== ===========================================================
+modules         :file:`{userbase}\\Python{XY}\\site-packages`
+scripts         :file:`{userbase}\\Scripts`
+data            :file:`{userbase}`
+C headers       :file:`{userbase}\\Python{XY}\\Include\\{distname}`
+=============== ===========================================================
+
+The advantage of using this scheme compared to the other ones described below is
+that the user site-packages directory is under normal conditions always included
+in :data:`sys.path` (see :mod:`site` for more information), which means that
+there is no additional step to perform after running the :file:`setup.py` script
+to finalize the installation.
+
+The :command:`build_ext` command also has a ``--user`` option to add
+:file:`{userbase}/include` to the compiler search path for header files and
+:file:`{userbase}/lib` to the compiler search path for libraries as well as to
+the runtime search path for shared C libraries (rpath).
+
+
+.. _inst-alt-install-home:
 
 Alternate installation: the home scheme
 ---------------------------------------
@@ -321,32 +398,36 @@ Installing a new module distribution is as simple as ::
 
    python setup.py install --home=<dir>
 
-where you can supply any directory you like for the :option:`--home` option.  On
+where you can supply any directory you like for the :option:`!--home` option.  On
 Unix, lazy typists can just type a tilde (``~``); the :command:`install` command
 will expand this to your home directory::
 
    python setup.py install --home=~
 
-The :option:`--home` option defines the installation base directory.  Files are
+To make Python find the distributions installed with this scheme, you may have
+to :ref:`modify Python's search path <inst-search-path>` or edit
+:mod:`sitecustomize` (see :mod:`site`) to call :func:`site.addsitedir` or edit
+:data:`sys.path`.
+
+The :option:`!--home` option defines the installation base directory.  Files are
 installed to the following directories under the installation base as follows:
 
-+------------------------------+---------------------------+-----------------------------+
-| Type of file                 | Installation Directory    | Override option             |
-+==============================+===========================+=============================+
-| pure module distribution     | :file:`{home}/lib/python` | :option:`--install-purelib` |
-+------------------------------+---------------------------+-----------------------------+
-| non-pure module distribution | :file:`{home}/lib/python` | :option:`--install-platlib` |
-+------------------------------+---------------------------+-----------------------------+
-| scripts                      | :file:`{home}/bin`        | :option:`--install-scripts` |
-+------------------------------+---------------------------+-----------------------------+
-| data                         | :file:`{home}/share`      | :option:`--install-data`    |
-+------------------------------+---------------------------+-----------------------------+
+=============== ===========================================================
+Type of file    Installation directory
+=============== ===========================================================
+modules         :file:`{home}/lib/python`
+scripts         :file:`{home}/bin`
+data            :file:`{home}`
+C headers       :file:`{home}/include/python/{distname}`
+=============== ===========================================================
+
+(Mentally replace slashes with backslashes if you're on Windows.)
 
 .. versionchanged:: 2.4
-   The :option:`--home` option used to be supported only on Unix.
+   The :option:`!--home` option used to be supported only on Unix.
 
 
-.. _inst-alt-install-home:
+.. _inst-alt-install-prefix-unix:
 
 Alternate installation: Unix (the prefix scheme)
 ------------------------------------------------
@@ -355,7 +436,7 @@ The "prefix scheme" is useful when you wish to use one Python installation to
 perform the build/install (i.e., to run the setup script), but install modules
 into the third-party module directory of a different Python installation (or
 something that looks like a different Python installation).  If this sounds a
-trifle unusual, it is---that's why the "home scheme" comes first.  However,
+trifle unusual, it is---that's why the user and home schemes come before.  However,
 there are at least two known cases where the prefix scheme will be useful.
 
 First, consider that many Linux distributions put Python in :file:`/usr`, rather
@@ -376,32 +457,30 @@ be done with ::
 
    /usr/local/bin/python setup.py install --prefix=/mnt/@server/export
 
-In either case, the :option:`--prefix` option defines the installation base, and
-the :option:`--exec-prefix` option defines the platform-specific installation
+In either case, the :option:`!--prefix` option defines the installation base, and
+the :option:`!--exec-prefix` option defines the platform-specific installation
 base, which is used for platform-specific files.  (Currently, this just means
 non-pure module distributions, but could be expanded to C libraries, binary
-executables, etc.)  If :option:`--exec-prefix` is not supplied, it defaults to
-:option:`--prefix`.  Files are installed as follows:
+executables, etc.)  If :option:`!--exec-prefix` is not supplied, it defaults to
+:option:`!--prefix`.  Files are installed as follows:
 
-+------------------------------+-----------------------------------------------------+-----------------------------+
-| Type of file                 | Installation Directory                              | Override option             |
-+==============================+=====================================================+=============================+
-| pure module distribution     | :file:`{prefix}/lib/python{X.Y}/site-packages`      | :option:`--install-purelib` |
-+------------------------------+-----------------------------------------------------+-----------------------------+
-| non-pure module distribution | :file:`{exec-prefix}/lib/python{X.Y}/site-packages` | :option:`--install-platlib` |
-+------------------------------+-----------------------------------------------------+-----------------------------+
-| scripts                      | :file:`{prefix}/bin`                                | :option:`--install-scripts` |
-+------------------------------+-----------------------------------------------------+-----------------------------+
-| data                         | :file:`{prefix}/share`                              | :option:`--install-data`    |
-+------------------------------+-----------------------------------------------------+-----------------------------+
+================= ==========================================================
+Type of file      Installation directory
+================= ==========================================================
+Python modules    :file:`{prefix}/lib/python{X.Y}/site-packages`
+extension modules :file:`{exec-prefix}/lib/python{X.Y}/site-packages`
+scripts           :file:`{prefix}/bin`
+data              :file:`{prefix}`
+C headers         :file:`{prefix}/include/python{X.Y}/{distname}`
+================= ==========================================================
 
-There is no requirement that :option:`--prefix` or :option:`--exec-prefix`
+There is no requirement that :option:`!--prefix` or :option:`!--exec-prefix`
 actually point to an alternate Python installation; if the directories listed
 above do not already exist, they are created at installation time.
 
 Incidentally, the real reason the prefix scheme is important is simply that a
-standard Unix installation uses the prefix scheme, but with :option:`--prefix`
-and :option:`--exec-prefix` supplied by Python itself as ``sys.prefix`` and
+standard Unix installation uses the prefix scheme, but with :option:`!--prefix`
+and :option:`!--exec-prefix` supplied by Python itself as ``sys.prefix`` and
 ``sys.exec_prefix``.  Thus, you might think you'll never use the prefix scheme,
 but every time you run ``python setup.py install`` without any other options,
 you're using it.
@@ -414,17 +493,17 @@ responsibility to ensure that the interpreter used to run extensions installed
 in this way is compatible with the interpreter used to build them.  The best way
 to do this is to ensure that the two interpreters are the same version of Python
 (possibly different builds, or possibly copies of the same build).  (Of course,
-if your :option:`--prefix` and :option:`--exec-prefix` don't even point to an
+if your :option:`!--prefix` and :option:`!--exec-prefix` don't even point to an
 alternate Python installation, this is immaterial.)
 
 
-.. _inst-alt-install-windows:
+.. _inst-alt-install-prefix-windows:
 
 Alternate installation: Windows (the prefix scheme)
 ---------------------------------------------------
 
 Windows has no concept of a user's home directory, and since the standard Python
-installation under Windows is simpler than under Unix, the :option:`--prefix`
+installation under Windows is simpler than under Unix, the :option:`!--prefix`
 option has traditionally been used to install additional packages in separate
 locations on Windows. ::
 
@@ -432,21 +511,19 @@ locations on Windows. ::
 
 to install modules to the :file:`\\Temp\\Python` directory on the current drive.
 
-The installation base is defined by the :option:`--prefix` option; the
-:option:`--exec-prefix` option is not supported under Windows. Files are
-installed as follows:
+The installation base is defined by the :option:`!--prefix` option; the
+:option:`!--exec-prefix` option is not supported under Windows, which means that
+pure Python modules and extension modules are installed into the same location.
+Files are installed as follows:
 
-+------------------------------+---------------------------+-----------------------------+
-| Type of file                 | Installation Directory    | Override option             |
-+==============================+===========================+=============================+
-| pure module distribution     | :file:`{prefix}`          | :option:`--install-purelib` |
-+------------------------------+---------------------------+-----------------------------+
-| non-pure module distribution | :file:`{prefix}`          | :option:`--install-platlib` |
-+------------------------------+---------------------------+-----------------------------+
-| scripts                      | :file:`{prefix}\\Scripts` | :option:`--install-scripts` |
-+------------------------------+---------------------------+-----------------------------+
-| data                         | :file:`{prefix}\\Data`    | :option:`--install-data`    |
-+------------------------------+---------------------------+-----------------------------+
+=============== ==========================================================
+Type of file    Installation directory
+=============== ==========================================================
+modules         :file:`{prefix}\\Lib\\site-packages`
+scripts         :file:`{prefix}\\Scripts`
+data            :file:`{prefix}`
+C headers       :file:`{prefix}\\Include\\{distname}`
+=============== ==========================================================
 
 
 .. _inst-custom-install:
@@ -460,18 +537,34 @@ one or two directories while keeping everything under the same base directory,
 or you might want to completely redefine the installation scheme.  In either
 case, you're creating a *custom installation scheme*.
 
-You probably noticed the column of "override options" in the tables describing
-the alternate installation schemes above.  Those options are how you define a
-custom installation scheme.  These override options can be relative, absolute,
+To create a custom installation scheme, you start with one of the alternate
+schemes and override some of the installation directories used for the various
+types of files, using these options:
+
+====================== =======================
+Type of file           Override option
+====================== =======================
+Python modules         ``--install-purelib``
+extension modules      ``--install-platlib``
+all modules            ``--install-lib``
+scripts                ``--install-scripts``
+data                   ``--install-data``
+C headers              ``--install-headers``
+====================== =======================
+
+These override options can be relative, absolute,
 or explicitly defined in terms of one of the installation base directories.
 (There are two installation base directories, and they are normally the same---
 they only differ when you use the Unix "prefix scheme" and supply different
-:option:`--prefix` and :option:`--exec-prefix` options.)
+``--prefix`` and ``--exec-prefix`` options; using ``--install-lib`` will
+override values computed or given for ``--install-purelib`` and
+``--install-platlib``, and is recommended for schemes that don't make a
+difference between Python and extension modules.)
 
 For example, say you're installing a module distribution to your home directory
 under Unix---but you want scripts to go in :file:`~/scripts` rather than
 :file:`~/bin`. As you might expect, you can override this directory with the
-:option:`--install-scripts` option; in this case, it makes most sense to supply
+:option:`!--install-scripts` option; in this case, it makes most sense to supply
 a relative path, which will be interpreted relative to the installation base
 directory (your home directory, in this case)::
 
@@ -481,7 +574,7 @@ Another Unix example: suppose your Python installation was built and installed
 with a prefix of :file:`/usr/local/python`, so under a standard  installation
 scripts will wind up in :file:`/usr/local/python/bin`.  If you want them in
 :file:`/usr/local/bin` instead, you would supply this absolute directory for the
-:option:`--install-scripts` option::
+:option:`!--install-scripts` option::
 
    python setup.py install --install-scripts=/usr/local/bin
 
@@ -493,15 +586,16 @@ If you maintain Python on Windows, you might want third-party modules to live in
 a subdirectory of :file:`{prefix}`, rather than right in :file:`{prefix}`
 itself.  This is almost as easy as customizing the script installation directory
 ---you just have to remember that there are two types of modules to worry about,
-pure modules and non-pure modules (i.e., modules from a non-pure distribution).
-For example::
+Python and extension modules, which can conveniently be both controlled by one
+option::
 
-   python setup.py install --install-purelib=Site --install-platlib=Site
+   python setup.py install --install-lib=Site
 
-The specified installation directories are relative to :file:`{prefix}`.  Of
-course, you also have to ensure that these directories are in Python's module
-search path, such as by putting a :file:`.pth` file in :file:`{prefix}`.  See
-section :ref:`inst-search-path` to find out how to modify Python's search path.
+The specified installation directory is relative to :file:`{prefix}`.  Of
+course, you also have to ensure that this directory is in Python's module
+search path, such as by putting a :file:`.pth` file in a site directory (see
+:mod:`site`).  See section :ref:`inst-search-path` to find out how to modify
+Python's search path.
 
 If you want to define an entire installation scheme, you just have to supply all
 of the installation directory options.  The recommended way to do this is to
@@ -553,8 +647,8 @@ base directory when you run the setup script.  For example, ::
 
    python setup.py install --install-base=/tmp
 
-would install pure modules to :file:`{/tmp/python/lib}` in the first case, and
-to :file:`{/tmp/lib}` in the second case.  (For the second case, you probably
+would install pure modules to :file:`/tmp/python/lib` in the first case, and
+to :file:`/tmp/lib` in the second case.  (For the second case, you probably
 want to supply an installation base of :file:`/tmp/python`.)
 
 You probably noticed the use of ``$HOME`` and ``$PLAT`` in the sample
@@ -571,7 +665,7 @@ for details.
    needed on those platforms?
 
 
-.. XXX I'm not sure where this section should go.
+.. XXX Move this to Doc/using
 
 .. _inst-search-path:
 
@@ -694,6 +788,9 @@ And on Windows, the configuration files are:
 | local        | :file:`setup.cfg`                               | \(3)  |
 +--------------+-------------------------------------------------+-------+
 
+On all platforms, the "personal" file can be temporarily disabled by
+passing the `--no-user-cfg` option.
+
 Notes:
 
 (1)
@@ -770,12 +867,12 @@ config file will apply.  (Or if other commands that derive values from it are
 run, they will use the values in the config file.)
 
 You can find out the complete list of options for any command using the
-:option:`--help` option, e.g.::
+:option:`!--help` option, e.g.::
 
    python setup.py build --help
 
 and you can find out the complete list of global options by using
-:option:`--help` without a command::
+:option:`!--help` without a command::
 
    python setup.py --help
 
@@ -832,10 +929,10 @@ Let's examine each of the fields in turn.
   to be in Objective C.
 
 * *cpparg* is an argument for the C preprocessor,  and is anything starting with
-  :option:`-I`, :option:`-D`, :option:`-U` or :option:`-C`.
+  :option:`!-I`, :option:`!-D`, :option:`!-U` or :option:`!-C`.
 
-* *library* is anything ending in :file:`.a` or beginning with :option:`-l` or
-  :option:`-L`.
+* *library* is anything ending in :file:`.a` or beginning with :option:`!-l` or
+  :option:`!-L`.
 
 If a particular platform requires a special library on your platform, you can
 add it by editing the :file:`Setup` file and running ``python setup.py build``.
@@ -844,20 +941,20 @@ For example, if the module defined by the line ::
    foo foomodule.c
 
 must be linked with the math library :file:`libm.a` on your platform, simply add
-:option:`-lm` to the line::
+:option:`!-lm` to the line::
 
    foo foomodule.c -lm
 
 Arbitrary switches intended for the compiler or the linker can be supplied with
-the :option:`-Xcompiler` *arg* and :option:`-Xlinker` *arg* options::
+the :option:`!-Xcompiler` *arg* and :option:`!-Xlinker` *arg* options::
 
    foo foomodule.c -Xcompiler -o32 -Xlinker -shared -lm
 
-The next option after :option:`-Xcompiler` and :option:`-Xlinker` will be
+The next option after :option:`!-Xcompiler` and :option:`!-Xlinker` will be
 appended to the proper command line, so in the above example the compiler will
-be passed the :option:`-o32` option, and the linker will be passed
-:option:`-shared`.  If a compiler option requires an argument, you'll have to
-supply multiple :option:`-Xcompiler` options; for example, to pass ``-x c++``
+be passed the :option:`!-o32` option, and the linker will be passed
+:option:`!-shared`.  If a compiler option requires an argument, you'll have to
+supply multiple :option:`!-Xcompiler` options; for example, to pass ``-x c++``
 the :file:`Setup` file would have to contain ``-Xcompiler -x -Xcompiler c++``.
 
 Compiler flags can also be supplied through setting the :envvar:`CFLAGS`
@@ -917,7 +1014,7 @@ section :ref:`inst-config-files`.)
 
 .. seealso::
 
-   `C++Builder Compiler <http://www.codegear.com/downloads/free/cppbuilder>`_
+   `C++Builder Compiler <https://www.embarcadero.com/products>`_
       Information about the free C++ compiler from Borland, including links to the
       download pages.
 
@@ -929,19 +1026,38 @@ section :ref:`inst-config-files`.)
 GNU C / Cygwin / MinGW
 ^^^^^^^^^^^^^^^^^^^^^^
 
-These instructions only apply if you're using a version of Python prior  to
-2.4.1 with a MinGW prior to 3.0.0 (with binutils-2.13.90-20030111-1).
-
 This section describes the necessary steps to use Distutils with the GNU C/C++
 compilers in their Cygwin and MinGW distributions. [#]_ For a Python interpreter
 that was built with Cygwin, everything should work without any of these
 following steps.
 
-These compilers require some special libraries. This task is more complex than
+Not all extensions can be built with MinGW or Cygwin, but many can.  Extensions
+most likely to not work are those that use C++ or depend on Microsoft Visual C
+extensions.
+
+To let Distutils compile your extension with Cygwin you have to type::
+
+   python setup.py build --compiler=cygwin
+
+and for Cygwin in no-cygwin mode [#]_ or for MinGW type::
+
+   python setup.py build --compiler=mingw32
+
+If you want to use any of these options/compilers as default, you should
+consider writing it in your personal or system-wide configuration file for
+Distutils (see section :ref:`inst-config-files`.)
+
+Older Versions of Python and MinGW
+""""""""""""""""""""""""""""""""""
+The following instructions only apply if you're using a version of Python
+inferior to 2.4.1 with a MinGW inferior to 3.0.0 (with
+binutils-2.13.90-20030111-1).
+
+These compilers require some special libraries.  This task is more complex than
 for Borland's C++, because there is no program to convert the library.  First
 you have to create a list of symbols which the Python DLL exports. (You can find
 a good program for this task at
-http://www.emmestech.com/software/pexports-0.43/download_pexports.html).
+https://sourceforge.net/projects/mingw/files/MinGW/Extension/pexports/).
 
 .. I don't understand what the next line means. --amk
 .. (inclusive the references on data structures.)
@@ -967,22 +1083,10 @@ If your extension uses other libraries (zlib,...) you might  have to convert
 them too. The converted files have to reside in the same directories as the
 normal libraries do.
 
-To let Distutils compile your extension with Cygwin you now have to type ::
-
-   python setup.py build --compiler=cygwin
-
-and for Cygwin in no-cygwin mode [#]_ or for MinGW type::
-
-   python setup.py build --compiler=mingw32
-
-If you want to use any of these options/compilers as default, you should
-consider to write it in your personal or system-wide configuration file for
-Distutils (see section :ref:`inst-config-files`.)
-
 
 .. seealso::
 
-   `Building Python modules on MS Windows platform with MinGW <http://www.zope.org/Members/als/tips/win32_mingw_modules>`_
+   `Building Python modules on MS Windows platform with MinGW <http://old.zope.org/Members/als/tips/win32_mingw_modules>`_
       Information about building the required libraries for the MinGW environment.
 
 
@@ -991,7 +1095,7 @@ Distutils (see section :ref:`inst-config-files`.)
 .. [#] This also means you could replace all existing COFF-libraries with OMF-libraries
    of the same name.
 
-.. [#] Check http://sources.redhat.com/cygwin/ and http://www.mingw.org/ for more
+.. [#] Check https://www.sourceware.org/cygwin/ and http://www.mingw.org/ for more
    information
 
 .. [#] Then you have no POSIX emulation available, but you also don't need

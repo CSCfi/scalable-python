@@ -6,11 +6,12 @@
 
 .. note::
     The :mod:`urllib` module has been split into parts and renamed in
-    Python 3.0 to :mod:`urllib.request`, :mod:`urllib.parse`,
+    Python 3 to :mod:`urllib.request`, :mod:`urllib.parse`,
     and :mod:`urllib.error`. The :term:`2to3` tool will automatically adapt
-    imports when converting your sources to 3.0.
-    Also note that the :func:`urllib.urlopen` function has been removed in
-    Python 3.0 in favor of :func:`urllib2.urlopen`.
+    imports when converting your sources to Python 3.
+    Also note that the :func:`urllib.request.urlopen` function in Python 3 is
+    equivalent to :func:`urllib2.urlopen` and that :func:`urllib.urlopen` has
+    been removed.
 
 .. index::
    single: WWW
@@ -23,21 +24,31 @@ built-in function :func:`open`, but accepts Universal Resource Locators (URLs)
 instead of filenames.  Some restrictions apply --- it can only open URLs for
 reading, and no seek operations are available.
 
+.. seealso::
+
+    The `Requests package <http://requests.readthedocs.org/>`_
+    is recommended for a higher-level HTTP client interface.
+
+.. warning:: When opening HTTPS URLs, it does not attempt to validate the
+   server certificate.  Use at your own risk!
+
+
 High-level interface
 --------------------
 
-.. function:: urlopen(url[, data[, proxies]])
+.. function:: urlopen(url[, data[, proxies[, context]]])
 
-   Open a network object denoted by a URL for reading.  If the URL does not have a
-   scheme identifier, or if it has :file:`file:` as its scheme identifier, this
-   opens a local file (without universal newlines); otherwise it opens a socket to
-   a server somewhere on the network.  If the connection cannot be made the
-   :exc:`IOError` exception is raised.  If all went well, a file-like object is
-   returned.  This supports the following methods: :meth:`read`, :meth:`readline`,
-   :meth:`readlines`, :meth:`fileno`, :meth:`close`, :meth:`info`, :meth:`getcode` and
-   :meth:`geturl`.  It also has proper support for the :term:`iterator` protocol. One
-   caveat: the :meth:`read` method, if the size argument is omitted or negative,
-   may not read until the end of the data stream; there is no good way to determine
+   Open a network object denoted by a URL for reading.  If the URL does not
+   have a scheme identifier, or if it has :file:`file:` as its scheme
+   identifier, this opens a local file (without :term:`universal newlines`);
+   otherwise it opens a socket to a server somewhere on the network.  If the
+   connection cannot be made the :exc:`IOError` exception is raised.  If all
+   went well, a file-like object is returned.  This supports the following
+   methods: :meth:`read`, :meth:`readline`, :meth:`readlines`, :meth:`fileno`,
+   :meth:`close`, :meth:`info`, :meth:`getcode` and :meth:`geturl`.  It also
+   has proper support for the :term:`iterator` protocol. One caveat: the
+   :meth:`read` method, if the size argument is omitted or negative, may not
+   read until the end of the data stream; there is no good way to determine
    that the entire stream from a socket has been read in the general case.
 
    Except for the :meth:`info`, :meth:`getcode` and :meth:`geturl` methods,
@@ -107,7 +118,7 @@ High-level interface
    causes environmental proxy settings to be used as discussed above.  For
    example::
 
-      # Use http://www.someproxy.com:3128 for http proxying
+      # Use http://www.someproxy.com:3128 for HTTP proxying
       proxies = {'http': 'http://www.someproxy.com:3128'}
       filehandle = urllib.urlopen(some_url, proxies=proxies)
       # Don't use any proxies
@@ -116,8 +127,12 @@ High-level interface
       filehandle = urllib.urlopen(some_url, proxies=None)
       filehandle = urllib.urlopen(some_url)
 
-   Proxies which require authentication for use are not currently supported; this
-   is considered an implementation limitation.
+   Proxies which require authentication for use are not currently supported;
+   this is considered an implementation limitation.
+
+   The *context* parameter may be set to a :class:`ssl.SSLContext` instance to
+   configure the SSL settings that are used if :func:`urlopen` makes a HTTPS
+   connection.
 
    .. versionchanged:: 2.3
       Added the *proxies* support.
@@ -126,8 +141,11 @@ High-level interface
       Added :meth:`getcode` to returned object and support for the
       :envvar:`no_proxy` environment variable.
 
+   .. versionchanged:: 2.7.9
+      The *context* parameter was added.
+
    .. deprecated:: 2.6
-      The :func:`urlopen` function has been removed in Python 3.0 in favor
+      The :func:`urlopen` function has been removed in Python 3 in favor
       of :func:`urllib2.urlopen`.
 
 
@@ -163,15 +181,15 @@ High-level interface
       the  download is interrupted.
 
       The *Content-Length* is treated as a lower bound: if there's more data  to read,
-      urlretrieve reads more data, but if less data is available,  it raises the
-      exception.
+      :func:`urlretrieve` reads more data, but if less data is available,  it raises
+      the exception.
 
       You can still retrieve the downloaded data in this case, it is stored  in the
       :attr:`content` attribute of the exception instance.
 
-      If no *Content-Length* header was supplied, urlretrieve can not check the size
-      of the data it has downloaded, and just returns it.  In this case you just have
-      to assume that the download was successful.
+      If no *Content-Length* header was supplied, :func:`urlretrieve` can not check
+      the size of the data it has downloaded, and just returns it.  In this case you
+      just have to assume that the download was successful.
 
 
 .. data:: _urlopener
@@ -206,7 +224,7 @@ Utility functions
 
    Replace special characters in *string* using the ``%xx`` escape. Letters,
    digits, and the characters ``'_.-'`` are never quoted. By default, this
-   function is intended for quoting the path section of the URL.The optional
+   function is intended for quoting the path section of the URL. The optional
    *safe* parameter specifies additional characters that should not be quoted
    --- its default value is ``'/'``.
 
@@ -236,8 +254,8 @@ Utility functions
 
 .. function:: urlencode(query[, doseq])
 
-   Convert a mapping object or a sequence of two-element tuples  to a
-   "url-encoded" string, suitable to pass to :func:`urlopen` above as the
+   Convert a mapping object or a sequence of two-element tuples to a
+   "percent-encoded" string, suitable to pass to :func:`urlopen` above as the
    optional *data* argument.  This is useful to pass a dictionary of form
    fields to a ``POST`` request.  The resulting string is a series of
    ``key=value`` pairs separated by ``'&'`` characters, where both *key* and
@@ -245,7 +263,7 @@ Utility functions
    two-element tuples is used as the *query* argument, the first element of
    each tuple is a key and the second is a value. The value element in itself
    can be a sequence and in that case, if the optional parameter *doseq* is
-   evaluates to *True*, individual ``key=value`` pairs separated by ``'&'`` are
+   evaluates to ``True``, individual ``key=value`` pairs separated by ``'&'`` are
    generated for each element of the value sequence for the key.  The order of
    parameters in the encoded string will match the order of parameter tuples in
    the sequence. The :mod:`urlparse` module provides the functions
@@ -262,7 +280,7 @@ Utility functions
 
 .. function:: url2pathname(path)
 
-   Convert the path component *path* from an encoded URL to the local syntax for a
+   Convert the path component *path* from a percent-encoded URL to the local syntax for a
    path.  This does not accept a complete URL.  This function uses :func:`unquote`
    to decode *path*.
 
@@ -270,16 +288,35 @@ Utility functions
 .. function:: getproxies()
 
    This helper function returns a dictionary of scheme to proxy server URL
-   mappings. It scans the environment for variables named ``<scheme>_proxy``
-   for all operating systems first, and when it cannot find it, looks for proxy
-   information from Mac OSX System Configuration for Mac OS X and Windows
-   Systems Registry for Windows.
+   mappings. It scans the environment for variables named ``<scheme>_proxy``,
+   in case insensitive way, for all operating systems first, and when it cannot
+   find it, looks for proxy information from Mac OSX System Configuration for
+   Mac OS X and Windows Systems Registry for Windows.
+   If both lowercase and uppercase environment variables exist (and disagree),
+   lowercase is preferred.
+
+    .. note::
+
+        If the environment variable ``REQUEST_METHOD`` is set, which usually
+        indicates your script is running in a CGI environment, the environment
+        variable ``HTTP_PROXY`` (uppercase ``_PROXY``) will be ignored. This is
+        because that variable can be injected by a client using the "Proxy:"
+        HTTP header. If you need to use an HTTP proxy in a CGI environment,
+        either use ``ProxyHandler`` explicitly, or make sure the variable name
+        is in lowercase (or at least the ``_proxy`` suffix).
+
+.. note::
+    urllib also exposes certain utility functions like splittype, splithost and
+    others parsing URL into various components. But it is recommended to use
+    :mod:`urlparse` for parsing URLs rather than using these functions directly.
+    Python 3 does not expose these helper functions from :mod:`urllib.parse`
+    module.
 
 
 URL Opener objects
 ------------------
 
-.. class:: URLopener([proxies[, **x509]])
+.. class:: URLopener([proxies[, context[, **x509]]])
 
    Base class for opening and reading URLs.  Unless you need to support opening
    objects using schemes other than :file:`http:`, :file:`ftp:`, or :file:`file:`,
@@ -295,6 +332,9 @@ URL Opener objects
    proxy URLs, where an empty dictionary turns proxies off completely.  Its default
    value is ``None``, in which case environmental proxy settings will be used if
    present, as discussed in the definition of :func:`urlopen`, above.
+
+   The *context* parameter may be a :class:`ssl.SSLContext` instance.  If given,
+   it defines the SSL settings the opener uses to make HTTPS connections.
 
    Additional keyword parameters, collected in *x509*, may be used for
    authentication of the client when using the :file:`https:` scheme.  The keywords
@@ -447,7 +487,7 @@ URL Opener objects
   you try to fetch a file whose read permissions make it inaccessible; the FTP
   code will try to read it, fail with a 550 error, and then perform a directory
   listing for the unreadable file. If fine-grained control is needed, consider
-  using the :mod:`ftplib` module, subclassing :class:`FancyURLOpener`, or changing
+  using the :mod:`ftplib` module, subclassing :class:`FancyURLopener`, or changing
   *_urlopener* to meet your needs.
 
 * This module does not support the use of proxies which require authentication.

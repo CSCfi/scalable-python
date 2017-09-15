@@ -1,7 +1,5 @@
-.. _ast:
-
-Abstract Syntax Trees
-=====================
+:mod:`ast` --- Abstract Syntax Trees
+====================================
 
 .. module:: ast
    :synopsis: Abstract Syntax Tree classes and manipulation.
@@ -15,6 +13,9 @@ Abstract Syntax Trees
 .. versionadded:: 2.6
    The high-level ``ast`` module containing all helpers.
 
+**Source code:** :source:`Lib/ast.py`
+
+--------------
 
 The :mod:`ast` module helps Python applications to process trees of the Python
 abstract syntax grammar.  The abstract syntax itself might change with each
@@ -112,6 +113,7 @@ Subversion revision number of the file shown below.
 The abstract grammar is currently defined as follows:
 
 .. literalinclude:: ../../Parser/Python.asdl
+   :language: none
 
 
 :mod:`ast` Helpers
@@ -122,21 +124,23 @@ The abstract grammar is currently defined as follows:
 Apart from the node classes, :mod:`ast` module defines these utility functions
 and classes for traversing abstract syntax trees:
 
-.. function:: parse(expr, filename='<unknown>', mode='exec')
+.. function:: parse(source, filename='<unknown>', mode='exec')
 
-   Parse an expression into an AST node.  Equivalent to ``compile(expr,
+   Parse the source into an AST node.  Equivalent to ``compile(source,
    filename, mode, ast.PyCF_ONLY_AST)``.
 
 
 .. function:: literal_eval(node_or_string)
 
-   Safely evaluate an expression node or a string containing a Python
-   expression.  The string or node provided may only consist of the following
-   Python literal structures: strings, numbers, tuples, lists, dicts, booleans,
-   and ``None``.
+   Safely evaluate an expression node or a Unicode or *Latin-1* encoded string
+   containing a Python literal or container display.  The string or node
+   provided may only consist of the following Python literal structures:
+   strings, numbers, tuples, lists, dicts, booleans, and ``None``.
 
-   This can be used for safely evaluating strings containing Python expressions
-   from untrusted sources without the need to parse the values oneself.
+   This can be used for safely evaluating strings containing Python values from
+   untrusted sources without the need to parse the values oneself.  It is not
+   capable of evaluating arbitrarily complex expressions, for example involving
+   operators or indexing.
 
 
 .. function:: get_docstring(node, clean=True)
@@ -182,9 +186,9 @@ and classes for traversing abstract syntax trees:
 
 .. function:: walk(node)
 
-   Recursively yield all child nodes of *node*, in no specified order.  This is
-   useful if you only want to modify nodes in place and don't care about the
-   context.
+   Recursively yield all descendant nodes in the tree starting at *node*
+   (including *node* itself), in no specified order.  This is useful if you only
+   want to modify nodes in place and don't care about the context.
 
 
 .. class:: NodeVisitor()
@@ -256,6 +260,6 @@ and classes for traversing abstract syntax trees:
    Return a formatted dump of the tree in *node*.  This is mainly useful for
    debugging purposes.  The returned string will show the names and the values
    for fields.  This makes the code impossible to evaluate, so if evaluation is
-   wanted *annotate_fields* must be set to False.  Attributes such as line
+   wanted *annotate_fields* must be set to ``False``.  Attributes such as line
    numbers and column offsets are not dumped by default.  If this is wanted,
    *include_attributes* can be set to ``True``.

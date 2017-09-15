@@ -5,9 +5,9 @@
    :synopsis: Portable implementation of the simple DBM interface.
 
 .. note::
-   The :mod:`dumbdbm` module has been renamed to :mod:`dbm.dumb` in Python 3.0.
+   The :mod:`dumbdbm` module has been renamed to :mod:`dbm.dumb` in Python 3.
    The :term:`2to3` tool will automatically adapt imports when converting your
-   sources to 3.0.
+   sources to Python 3.
 
 .. index:: single: databases
 
@@ -49,6 +49,14 @@ The module defines the following:
    .. versionchanged:: 2.2
       The *mode* argument was ignored in earlier versions.
 
+In addition to the dictionary-like methods, ``dumbdm`` objects
+provide the following method:
+
+
+.. function:: close()
+
+   Close the ``dumbdm`` database.
+
 
 .. seealso::
 
@@ -74,7 +82,7 @@ Dumbdbm Objects
 ---------------
 
 In addition to the methods provided by the :class:`UserDict.DictMixin` class,
-:class:`dumbdbm` objects provide the following methods.
+:class:`~dumbdbm.dumbdbm` objects provide the following methods.
 
 
 .. method:: dumbdbm.sync()

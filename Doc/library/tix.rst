@@ -24,9 +24,9 @@ special needs of your application and users.
 
 .. note::
 
-   :mod:`Tix` has been renamed to :mod:`tkinter.tix` in Python 3.0.  The
+   :mod:`Tix` has been renamed to :mod:`tkinter.tix` in Python 3.  The
    :term:`2to3` tool will automatically adapt imports when converting your
-   sources to 3.0.
+   sources to Python 3.
 
 .. seealso::
 
@@ -127,7 +127,7 @@ Basic Widgets
    The `ComboBox
    <http://tix.sourceforge.net/dist/current/man/html/TixCmd/tixComboBox.htm>`_
    widget is similar to the combo box control in MS Windows. The user can select a
-   choice by either typing in the entry subwdget or selecting from the listbox
+   choice by either typing in the entry subwidget or selecting from the listbox
    subwidget.
 
 .. Python Demo of:
@@ -151,7 +151,7 @@ Basic Widgets
 
    The `LabelEntry
    <http://tix.sourceforge.net/dist/current/man/html/TixCmd/tixLabelEntry.htm>`_
-   widget packages an entry widget and a label into one mega widget. It can be used
+   widget packages an entry widget and a label into one mega widget. It can
    be used to simplify the creation of "entry-form" type of interface.
 
 .. Python Demo of:
@@ -276,7 +276,7 @@ File Selectors
 
    The `ExFileSelectBox
    <http://tix.sourceforge.net/dist/current/man/html/TixCmd/tixExFileSelectBox.htm>`_
-   widget is usually embedded in a tixExFileSelectDialog widget. It provides an
+   widget is usually embedded in a tixExFileSelectDialog widget. It provides a
    convenient method for the user to select files. The style of the
    :class:`ExFileSelectBox` widget is very similar to the standard file dialog on
    MS Windows 3.1.
@@ -514,7 +514,7 @@ Tix Commands
       print root.tix_configure()
 
 
-.. method:: tixCommand.tix_configure([cnf,] **kw)
+.. method:: tixCommand.tix_configure(cnf=None **kw)
 
    Query or modify the configuration options of the Tix application context. If no
    option is specified, returns a dictionary all of the available options.  If

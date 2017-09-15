@@ -10,9 +10,9 @@
 
 /* Macro to test whether a weak-loaded CFM function exists */
 #define PyMac_PRECHECK(rtn) do { if ( &rtn == NULL )  {\
-    PyErr_SetString(PyExc_NotImplementedError, \
-    "Not available in this shared library/OS version"); \
-    return NULL; \
+        PyErr_SetString(PyExc_NotImplementedError, \
+            "Not available in this shared library/OS version"); \
+        return NULL; \
     }} while(0)
 
 
@@ -1150,7 +1150,9 @@ void init_Snd(void)
     SPB_Type.ob_type = &PyType_Type;
     if (PyType_Ready(&SPB_Type) < 0) return;
     Py_INCREF(&SPB_Type);
+#if 0
     PyModule_AddObject(m, "SPB", (PyObject *)&SPB_Type);
+#endif
     /* Backward-compatible name */
     Py_INCREF(&SPB_Type);
     PyModule_AddObject(m, "SPBType", (PyObject *)&SPB_Type);

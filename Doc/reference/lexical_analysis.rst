@@ -104,14 +104,14 @@ are ignored by the syntax; they are not tokens.
 Encoding declarations
 ---------------------
 
-.. index::
-   single: source character set
-   single: encodings
+.. index:: source character set, encoding declarations (source file)
 
 If a comment in the first or second line of the Python script matches the
 regular expression ``coding[=:]\s*([-\w.]+)``, this comment is processed as an
 encoding declaration; the first group of this expression names the encoding of
-the source code file. The recommended forms of this expression are ::
+the source code file. The encoding declaration must appear on a line of its
+own. If it is the second line, the first line must also be a comment-only line.
+The recommended forms of an encoding expression are ::
 
    # -*- coding: <encoding-name> -*-
 
@@ -128,8 +128,7 @@ If an encoding is declared, the encoding name must be recognized by Python. The
 encoding is used for all lexical analysis, in particular to find the end of a
 string, and to interpret the contents of Unicode literals. String literals are
 converted to Unicode for syntactical analysis, then converted back to their
-original encoding before interpretation starts. The encoding declaration must
-appear on a line of its own.
+original encoding before interpretation starts.
 
 .. XXX there should be a list of supported encodings.
 
@@ -357,11 +356,11 @@ exactly as written here:
    assign a different object to it.
 
 .. versionchanged:: 2.5
-   Both :keyword:`as` and :keyword:`with` are only recognized when the
-   ``with_statement`` future feature has been enabled. It will always be enabled in
-   Python 2.6.  See section :ref:`with` for details.  Note that using :keyword:`as`
-   and :keyword:`with` as identifiers will always issue a warning, even when the
-   ``with_statement`` future directive is not in effect.
+   Using :keyword:`as` and :keyword:`with` as identifiers triggers a warning.  To
+   use them as keywords, enable the ``with_statement`` future feature .
+
+.. versionchanged:: 2.6
+    :keyword:`as` and :keyword:`with` are full keywords.
 
 
 .. _id-classes:
@@ -426,6 +425,7 @@ String literals are described by the following lexical definitions:
 .. productionlist::
    stringliteral: [`stringprefix`](`shortstring` | `longstring`)
    stringprefix: "r" | "u" | "ur" | "R" | "U" | "UR" | "Ur" | "uR"
+               : | "b" | "B" | "br" | "Br" | "bR" | "BR"
    shortstring: "'" `shortstringitem`* "'" | '"' `shortstringitem`* '"'
    longstring: "'''" `longstringitem`* "'''"
              : | '"""' `longstringitem`* '"""'
@@ -458,8 +458,10 @@ different rules for interpreting backslash escape sequences.  A prefix of
 ``'u'`` or ``'U'`` makes the string a Unicode string.  Unicode strings use the
 Unicode character set as defined by the Unicode Consortium and ISO 10646.  Some
 additional escape sequences, described below, are available in Unicode strings.
-The two prefix characters may be combined; in this case, ``'u'`` must appear
-before ``'r'``.
+A prefix of ``'b'`` or ``'B'`` is ignored in Python 2; it indicates that the
+literal should become a bytes literal in Python 3 (e.g. when code is
+automatically converted with 2to3).  A ``'u'`` or ``'b'`` prefix may be followed
+by an ``'r'`` prefix.
 
 In triple-quoted strings, unescaped newlines and quotes are allowed (and are
 retained), except that three unescaped quotes in a row terminate the string.  (A
@@ -526,8 +528,7 @@ Notes:
 (2)
    Any Unicode character can be encoded this way, but characters outside the Basic
    Multilingual Plane (BMP) will be encoded using a surrogate pair if Python is
-   compiled to use 16-bit code units (the default).  Individual code units which
-   form parts of a surrogate pair can be encoded using this escape sequence.
+   compiled to use 16-bit code units (the default).
 
 (3)
    As in Standard C, up to three octal digits are accepted.
@@ -714,7 +715,10 @@ Operators
 
 .. index:: single: operators
 
-The following tokens are operators::
+The following tokens are operators:
+
+.. code-block:: none
+
 
    +       -       *       **      /       //      %
    <<      >>      &       |       ^       ~
@@ -731,7 +735,9 @@ Delimiters
 
 .. index:: single: delimiters
 
-The following tokens serve as delimiters in the grammar::
+The following tokens serve as delimiters in the grammar:
+
+.. code-block:: none
 
    (       )       [       ]       {       }      @
    ,       :       .       `       =       ;
@@ -744,14 +750,18 @@ of the list, the augmented assignment operators, serve lexically as delimiters,
 but also perform an operation.
 
 The following printing ASCII characters have special meaning as part of other
-tokens or are otherwise significant to the lexical analyzer::
+tokens or are otherwise significant to the lexical analyzer:
+
+.. code-block:: none
 
    '       "       #       \
 
 .. index:: single: ASCII@ASCII
 
 The following printing ASCII characters are not used in Python.  Their
-occurrence outside string literals and comments is an unconditional error::
+occurrence outside string literals and comments is an unconditional error:
+
+.. code-block:: none
 
    $       ?
 

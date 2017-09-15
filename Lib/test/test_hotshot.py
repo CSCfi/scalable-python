@@ -65,11 +65,11 @@ class HotShotTestCase(unittest.TestCase):
     def run_test(self, callable, events, profiler=None):
         if profiler is None:
             profiler = self.new_profiler()
-        self.failUnless(not profiler._prof.closed)
+        self.assertTrue(not profiler._prof.closed)
         profiler.runcall(callable)
-        self.failUnless(not profiler._prof.closed)
+        self.assertTrue(not profiler._prof.closed)
         profiler.close()
-        self.failUnless(profiler._prof.closed)
+        self.assertTrue(profiler._prof.closed)
         self.check_events(events)
 
     def test_addinfo(self):
@@ -81,7 +81,7 @@ class HotShotTestCase(unittest.TestCase):
         log = self.get_logreader()
         info = log._info
         list(log)
-        self.failUnless(info["test-key"] == ["test-value"])
+        self.assertTrue(info["test-key"] == ["test-value"])
 
     def test_line_numbers(self):
         def f():
@@ -148,6 +148,10 @@ class HotShotTestCase(unittest.TestCase):
         profiler.close()
         stats.load(self.logfn)
         os.unlink(self.logfn)
+
+    def test_large_info(self):
+        p = self.new_profiler()
+        self.assertRaises(ValueError, p.addinfo, "A", "A" * 0xfceb)
 
 
 def test_main():

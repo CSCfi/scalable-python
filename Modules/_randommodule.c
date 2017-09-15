@@ -6,7 +6,7 @@
 
    It was modified in 2002 by Raymond Hettinger as follows:
 
-    * the principal computational lines untouched except for tabbing.
+    * the principal computational lines untouched.
 
     * renamed genrand_res53() to random_random() and wrapped
       in python calling/return code.
@@ -363,6 +363,10 @@ random_setstate(RandomObject *self, PyObject *state)
     index = PyLong_AsLong(PyTuple_GET_ITEM(state, i));
     if (index == -1 && PyErr_Occurred())
         return NULL;
+    if (index < 0 || index > N) {
+        PyErr_SetString(PyExc_ValueError, "invalid state");
+        return NULL;
+    }
     self->index = (int)index;
 
     Py_INCREF(Py_None);
@@ -400,7 +404,7 @@ random_jumpahead(RandomObject *self, PyObject *n)
     long i, j;
     PyObject *iobj;
     PyObject *remobj;
-    unsigned long *mt, tmp;
+    unsigned long *mt, tmp, nonzero;
 
     if (!PyInt_Check(n) && !PyLong_Check(n)) {
         PyErr_Format(PyExc_TypeError, "jumpahead requires an "
@@ -427,8 +431,23 @@ random_jumpahead(RandomObject *self, PyObject *n)
         mt[j] = tmp;
     }
 
-    for (i = 0; i < N; i++)
+    nonzero = 0;
+    for (i = 1; i < N; i++) {
         mt[i] += i+1;
+        mt[i] &= 0xffffffffUL; /* for WORDSIZE > 32 machines */
+        nonzero |= mt[i];
+    }
+
+    /* Ensure the state is nonzero: in the unlikely event that mt[1] through
+       mt[N-1] are all zero, set the MSB of mt[0] (see issue #14591). In the
+       normal case, we fall back to the pre-issue 14591 behaviour for mt[0]. */
+    if (nonzero) {
+        mt[0] += 1;
+        mt[0] &= 0xffffffffUL; /* for WORDSIZE > 32 machines */
+    }
+    else {
+        mt[0] = 0x80000000UL;
+    }
 
     self->index = N;
     Py_INCREF(Py_None);

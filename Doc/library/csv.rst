@@ -40,7 +40,7 @@ using the :class:`DictReader` and :class:`DictWriter` classes.
    This version of the :mod:`csv` module doesn't support Unicode input.  Also,
    there are currently some issues regarding ASCII NUL characters.  Accordingly,
    all input should be UTF-8 or printable ASCII to be safe; see the examples in
-   section :ref:`csv-examples`. These restrictions will be removed in the future.
+   section :ref:`csv-examples`.
 
 
 .. seealso::
@@ -57,7 +57,7 @@ Module Contents
 The :mod:`csv` module defines the following functions:
 
 
-.. function:: reader(csvfile[, dialect='excel'][, fmtparam])
+.. function:: reader(csvfile, dialect='excel', **fmtparams)
 
    Return a reader object which will iterate over lines in the given *csvfile*.
    *csvfile* can be any object which supports the :term:`iterator` protocol and returns a
@@ -67,7 +67,7 @@ The :mod:`csv` module defines the following functions:
    *dialect* parameter can be given which is used to define a set of parameters
    specific to a particular CSV dialect.  It may be an instance of a subclass of
    the :class:`Dialect` class or one of the strings returned by the
-   :func:`list_dialects` function.  The other optional *fmtparam* keyword arguments
+   :func:`list_dialects` function.  The other optional *fmtparams* keyword arguments
    can be given to override individual formatting parameters in the current
    dialect.  For full details about the dialect and formatting parameters, see
    section :ref:`csv-fmt-params`.
@@ -78,9 +78,10 @@ The :mod:`csv` module defines the following functions:
    A short usage example::
 
       >>> import csv
-      >>> spamReader = csv.reader(open('eggs.csv', 'rb'), delimiter=' ', quotechar='|')
-      >>> for row in spamReader:
-      ...     print ', '.join(row)
+      >>> with open('eggs.csv', 'rb') as csvfile:
+      ...     spamreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
+      ...     for row in spamreader:
+      ...         print ', '.join(row)
       Spam, Spam, Spam, Spam, Spam, Baked Beans
       Spam, Lovely Spam, Wonderful Spam
 
@@ -94,7 +95,7 @@ The :mod:`csv` module defines the following functions:
       be split into lines in a manner which preserves the newline characters.
 
 
-.. function:: writer(csvfile[, dialect='excel'][, fmtparam])
+.. function:: writer(csvfile, dialect='excel', **fmtparams)
 
    Return a writer object responsible for converting the user's data into delimited
    strings on the given file-like object.  *csvfile* can be any object with a
@@ -103,7 +104,7 @@ The :mod:`csv` module defines the following functions:
    parameter can be given which is used to define a set of parameters specific to a
    particular CSV dialect.  It may be an instance of a subclass of the
    :class:`Dialect` class or one of the strings returned by the
-   :func:`list_dialects` function.  The other optional *fmtparam* keyword arguments
+   :func:`list_dialects` function.  The other optional *fmtparams* keyword arguments
    can be given to override individual formatting parameters in the current
    dialect.  For full details about the dialect and formatting parameters, see
    section :ref:`csv-fmt-params`. To make it
@@ -111,22 +112,24 @@ The :mod:`csv` module defines the following functions:
    value :const:`None` is written as the empty string.  While this isn't a
    reversible transformation, it makes it easier to dump SQL NULL data values to
    CSV files without preprocessing the data returned from a ``cursor.fetch*`` call.
+   Floats are stringified with :func:`repr` before being written.
    All other non-string data are stringified with :func:`str` before being written.
 
    A short usage example::
 
-      >>> import csv
-      >>> spamWriter = csv.writer(open('eggs.csv', 'wb'), delimiter=' ',
-      ...                         quotechar='|', quoting=csv.QUOTE_MINIMAL)
-      >>> spamWriter.writerow(['Spam'] * 5 + ['Baked Beans'])
-      >>> spamWriter.writerow(['Spam', 'Lovely Spam', 'Wonderful Spam'])
+      import csv
+      with open('eggs.csv', 'wb') as csvfile:
+          spamwriter = csv.writer(csvfile, delimiter=' ',
+                                  quotechar='|', quoting=csv.QUOTE_MINIMAL)
+          spamwriter.writerow(['Spam'] * 5 + ['Baked Beans'])
+          spamwriter.writerow(['Spam', 'Lovely Spam', 'Wonderful Spam'])
 
 
-.. function:: register_dialect(name[, dialect][, fmtparam])
+.. function:: register_dialect(name[, dialect], **fmtparams)
 
    Associate *dialect* with *name*.  *name* must be a string or Unicode object. The
    dialect can be specified either by passing a sub-class of :class:`Dialect`, or
-   by *fmtparam* keyword arguments, or both, with keyword arguments overriding
+   by *fmtparams* keyword arguments, or both, with keyword arguments overriding
    parameters of the dialect. For full details about the dialect and formatting
    parameters, see section :ref:`csv-fmt-params`.
 
@@ -162,36 +165,68 @@ The :mod:`csv` module defines the following functions:
 The :mod:`csv` module defines the following classes:
 
 
-.. class:: DictReader(csvfile[, fieldnames=None[, restkey=None[, restval=None[, dialect='excel'[, *args, **kwds]]]]])
+.. class:: DictReader(csvfile, fieldnames=None, restkey=None, restval=None, \
+                      dialect='excel', *args, **kwds)
 
-   Create an object which operates like a regular reader but maps the information
-   read into a dict whose keys are given by the optional  *fieldnames* parameter.
-   If the *fieldnames* parameter is omitted, the values in the first row of the
-   *csvfile* will be used as the fieldnames.  If the row read has more fields
-   than the fieldnames sequence, the remaining data is added as a sequence
-   keyed by the value of *restkey*.  If the row read has fewer fields than the
-   fieldnames sequence, the remaining keys take the value of the optional
-   *restval* parameter.  Any other optional or keyword arguments are passed to
-   the underlying :class:`reader` instance.
+   Create an object which operates like a regular reader but maps the
+   information read into a dict whose keys are given by the optional
+   *fieldnames* parameter.  The *fieldnames* parameter is a :ref:`sequence
+   <collections-abstract-base-classes>` whose elements are associated with the
+   fields of the input data in order. These elements become the keys of the
+   resulting dictionary.  If the *fieldnames* parameter is omitted, the values
+   in the first row of the *csvfile* will be used as the fieldnames.  If the
+   row read has more fields than the fieldnames sequence, the remaining data is
+   added as a sequence keyed by the value of *restkey*.  If the row read has
+   fewer fields than the fieldnames sequence, the remaining keys take the value
+   of the optional *restval* parameter.  Any other optional or keyword
+   arguments are passed to the underlying :class:`reader` instance.
+
+   A short usage example::
+
+       >>> import csv
+       >>> with open('names.csv') as csvfile:
+       ...     reader = csv.DictReader(csvfile)
+       ...     for row in reader:
+       ...         print(row['first_name'], row['last_name'])
+       ...
+       Baked Beans
+       Lovely Spam
+       Wonderful Spam
 
 
-.. class:: DictWriter(csvfile, fieldnames[, restval=''[, extrasaction='raise'[, dialect='excel'[, *args, **kwds]]]])
+.. class:: DictWriter(csvfile, fieldnames, restval='', extrasaction='raise', \
+                      dialect='excel', *args, **kwds)
 
-   Create an object which operates like a regular writer but maps dictionaries onto
-   output rows.  The *fieldnames* parameter identifies the order in which values in
-   the dictionary passed to the :meth:`writerow` method are written to the
-   *csvfile*.  The optional *restval* parameter specifies the value to be written
-   if the dictionary is missing a key in *fieldnames*.  If the dictionary passed to
-   the :meth:`writerow` method contains a key not found in *fieldnames*, the
-   optional *extrasaction* parameter indicates what action to take.  If it is set
-   to ``'raise'`` a :exc:`ValueError` is raised.  If it is set to ``'ignore'``,
-   extra values in the dictionary are ignored.  Any other optional or keyword
-   arguments are passed to the underlying :class:`writer` instance.
+   Create an object which operates like a regular writer but maps dictionaries
+   onto output rows.  The *fieldnames* parameter is a :ref:`sequence
+   <collections-abstract-base-classes>` of keys that identify the order in
+   which values in the dictionary passed to the :meth:`writerow` method are
+   written to the *csvfile*.  The optional *restval* parameter specifies the
+   value to be written if the dictionary is missing a key in *fieldnames*.  If
+   the dictionary passed to the :meth:`writerow` method contains a key not
+   found in *fieldnames*, the optional *extrasaction* parameter indicates what
+   action to take.  If it is set to ``'raise'`` a :exc:`ValueError` is raised.
+   If it is set to ``'ignore'``, extra values in the dictionary are ignored.
+   Any other optional or keyword arguments are passed to the underlying
+   :class:`writer` instance.
 
-   Note that unlike the :class:`DictReader` class, the *fieldnames* parameter of
-   the :class:`DictWriter` is not optional.  Since Python's :class:`dict` objects
-   are not ordered, there is not enough information available to deduce the order
-   in which the row should be written to the *csvfile*.
+   Note that unlike the :class:`DictReader` class, the *fieldnames* parameter
+   of the :class:`DictWriter` is not optional.  Since Python's :class:`dict`
+   objects are not ordered, there is not enough information available to deduce
+   the order in which the row should be written to the *csvfile*.
+
+   A short usage example::
+
+       import csv
+
+       with open('names.csv', 'w') as csvfile:
+           fieldnames = ['first_name', 'last_name']
+           writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+           writer.writeheader()
+           writer.writerow({'first_name': 'Baked', 'last_name': 'Beans'})
+           writer.writerow({'first_name': 'Lovely', 'last_name': 'Spam'})
+           writer.writerow({'first_name': 'Wonderful', 'last_name': 'Spam'})
 
 
 .. class:: Dialect
@@ -219,7 +254,7 @@ The :mod:`csv` module defines the following classes:
 
    The :class:`Sniffer` class provides two methods:
 
-   .. method:: sniff(sample[, delimiters=None])
+   .. method:: sniff(sample, delimiters=None)
 
       Analyze the given *sample* and return a :class:`Dialect` subclass
       reflecting the parameters found.  If the optional *delimiters* parameter
@@ -234,11 +269,11 @@ The :mod:`csv` module defines the following classes:
 
 An example for :class:`Sniffer` use::
 
-   csvfile = open("example.csv", "rb")
-   dialect = csv.Sniffer().sniff(csvfile.read(1024))
-   csvfile.seek(0)
-   reader = csv.reader(csvfile, dialect)
-   # ... process CSV file contents here ...
+   with open('example.csv', 'rb') as csvfile:
+       dialect = csv.Sniffer().sniff(csvfile.read(1024))
+       csvfile.seek(0)
+       reader = csv.reader(csvfile, dialect)
+       # ... process CSV file contents here ...
 
 
 The :mod:`csv` module defines the following constants:
@@ -304,7 +339,7 @@ Dialects support the following attributes:
 
 .. attribute:: Dialect.doublequote
 
-   Controls how instances of *quotechar* appearing inside a field should be
+   Controls how instances of *quotechar* appearing inside a field should
    themselves be quoted.  When :const:`True`, the character is doubled. When
    :const:`False`, the *escapechar* is used as a prefix to the *quotechar*.  It
    defaults to :const:`True`.
@@ -352,6 +387,11 @@ Dialects support the following attributes:
    When :const:`True`, whitespace immediately following the *delimiter* is ignored.
    The default is :const:`False`.
 
+
+.. attribute:: Dialect.strict
+
+   When ``True``, raise exception :exc:`Error` on bad CSV input.
+   The default is ``False``.
 
 Reader Objects
 --------------
@@ -424,6 +464,16 @@ Writer objects have the following public attribute:
    A read-only description of the dialect in use by the writer.
 
 
+DictWriter objects have the following public method:
+
+
+.. method:: DictWriter.writeheader()
+
+   Write a row with the field names (as specified in the constructor).
+
+   .. versionadded:: 2.7
+
+
 .. _csv-examples:
 
 Examples
@@ -432,41 +482,44 @@ Examples
 The simplest example of reading a CSV file::
 
    import csv
-   reader = csv.reader(open("some.csv", "rb"))
-   for row in reader:
-       print row
+   with open('some.csv', 'rb') as f:
+       reader = csv.reader(f)
+       for row in reader:
+           print row
 
 Reading a file with an alternate format::
 
    import csv
-   reader = csv.reader(open("passwd", "rb"), delimiter=':', quoting=csv.QUOTE_NONE)
-   for row in reader:
-       print row
+   with open('passwd', 'rb') as f:
+       reader = csv.reader(f, delimiter=':', quoting=csv.QUOTE_NONE)
+       for row in reader:
+           print row
 
 The corresponding simplest possible writing example is::
 
    import csv
-   writer = csv.writer(open("some.csv", "wb"))
-   writer.writerows(someiterable)
+   with open('some.csv', 'wb') as f:
+       writer = csv.writer(f)
+       writer.writerows(someiterable)
 
 Registering a new dialect::
 
    import csv
-
    csv.register_dialect('unixpwd', delimiter=':', quoting=csv.QUOTE_NONE)
-
-   reader = csv.reader(open("passwd", "rb"), 'unixpwd')
+   with open('passwd', 'rb') as f:
+       reader = csv.reader(f, 'unixpwd')
 
 A slightly more advanced use of the reader --- catching and reporting errors::
 
    import csv, sys
-   filename = "some.csv"
-   reader = csv.reader(open(filename, "rb"))
-   try:
-       for row in reader:
-           print row
-   except csv.Error, e:
-       sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
+   filename = 'some.csv'
+   with open(filename, 'rb') as f:
+       reader = csv.reader(f)
+       try:
+           for row in reader:
+               print row
+       except csv.Error as e:
+           sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
 
 And while the module doesn't directly support parsing strings, it can easily be
 done::

@@ -9,7 +9,7 @@
 import locale
 
 # Location of the alias file
-LOCALE_ALIAS = '/usr/lib/X11/locale/locale.alias'
+LOCALE_ALIAS = '/usr/share/X11/locale/locale.alias'
 
 def parse(filename):
 
@@ -23,6 +23,12 @@ def parse(filename):
         if line[:1] == '#':
             continue
         locale, alias = line.split()
+        # Fix non-standard locale names, e.g. ks_IN@devanagari.UTF-8
+        if '@' in alias:
+            alias_lang, _, alias_mod = alias.partition('@')
+            if '.' in alias_mod:
+                alias_mod, _, alias_enc = alias_mod.partition('.')
+                alias = alias_lang + '.' + alias_enc + '@' + alias_mod
         # Strip ':'
         if locale[-1] == ':':
             locale = locale[:-1]
