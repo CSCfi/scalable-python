@@ -662,7 +662,6 @@ BLDSHARED
 LDCXXSHARED
 LDSHARED
 SO
-RUNPYTHON
 ENABLE_MPI
 MPI_CPPFLAGS
 MPI_CPP
@@ -809,6 +808,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+with_external_python
 enable_universalsdk
 with_universal_archs
 with_framework_name
@@ -825,7 +825,6 @@ with_lto
 enable_toolbox_glue
 enable_mpi
 enable_debug_mpi
-with_external_python
 with_libs
 with_system_expat
 with_system_ffi
@@ -1507,6 +1506,8 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-external-python=/path/to/python
+                          use external python for installation
   --with-universal-archs=ARCH
                           select architectures for universal build ("32-bit",
                           "64-bit", "3-way", "intel" or "all")
@@ -1522,8 +1523,6 @@ Optional Packages:
   --with-pydebug          build with Py_DEBUG defined
   --with-lto              Enable Link Time Optimization in PGO builds.
                           Disabled by default.
-  --with-external-python=/path/to/python
-                          use external python for installation
   --with-libs='lib1 ...'  link against additional libs
   --with-system-expat     build pyexpat module using an installed expat
                           library
@@ -2949,7 +2948,28 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 # pybuilddir.txt will be created by --generate-posix-vars in the Makefile
 rm -f pybuilddir.txt
 
-if test "$cross_compiling" = yes; then
+# use external python for install?
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for an external python" >&5
+$as_echo_n "checking for an external python... " >&6; }
+
+# Check whether --with-external-python was given.
+if test "${with_external_python+set}" = set; then :
+  withval=$with_external_python; case $withval in
+				no)  external_python=no;;
+				yes) external_python=python;;
+				*)   external_python=$withval;;
+			esac
+else
+  external_python=no
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $external_python" >&5
+$as_echo "$external_python" >&6; }
+if test "x$external_python" != "xno"
+then
+	PYTHON_FOR_BUILD="$external_python -E"
+    GENERATED_COMMENT=''
+elif test "$cross_compiling" = yes; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for python interpreter for cross build" >&5
 $as_echo_n "checking for python interpreter for cross build... " >&6; }
     if test -z "$PYTHON_FOR_BUILD"; then
@@ -8777,31 +8797,6 @@ then
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MPI_CPPFLAGS" >&5
 $as_echo "$MPI_CPPFLAGS" >&6; }
-
-# use external python for install?
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for an external python" >&5
-$as_echo_n "checking for an external python... " >&6; }
-
-# Check whether --with-external-python was given.
-if test "${with_external_python+set}" = set; then :
-  withval=$with_external_python; case $withval in
-				no)  external_python=no;;
-				yes) external_python=python;;
-				*)   external_python=$withval;;
-			esac
-else
-  external_python=no
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $external_python" >&5
-$as_echo "$external_python" >&6; }
-
-if test "x$external_python" != "xno"
-then
-	RUNPYTHON="$external_python"
-else
-	RUNPYTHON="./\$(BUILDPYTHON)"
-fi
 
 # FIXME: add test for xlc
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for the compiler family of CC" >&5
