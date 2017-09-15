@@ -23,6 +23,6 @@ main(int argc, char **argv)
     int status = Py_Main(argc, argv);
 #ifdef ENABLE_MPI
     MPI_Finalize();
-    return status;
 #endif
+    return status;
 }
