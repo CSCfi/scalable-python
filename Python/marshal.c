@@ -525,27 +525,27 @@ r_short(RFILE *p)
 static long
 r_long(RFILE *p)
 {
-	register long x;
-	register FILE *fp = p->fp;
-	if (fp) {
+    register long x;
+    register FILE *fp = p->fp;
+    if (fp) {
 #ifdef ENABLE_MPI
-		x = fgetc(fp);
-		x |= (long)fgetc(fp) << 8;
-		x |= (long)fgetc(fp) << 16;
-		x |= (long)fgetc(fp) << 24;
+        x = fgetc(fp);
+        x |= (long)fgetc(fp) << 8;
+        x |= (long)fgetc(fp) << 16;
+        x |= (long)fgetc(fp) << 24;
 #else
-		x = fgetc(fp);
-		x |= (long)getc(fp) << 8;
-		x |= (long)getc(fp) << 16;
-		x |= (long)getc(fp) << 24;
+        x = getc(fp);
+        x |= (long)getc(fp) << 8;
+        x |= (long)getc(fp) << 16;
+        x |= (long)getc(fp) << 24;
 #endif
-	}
-	else {
-		x = rs_byte(p);
-		x |= (long)rs_byte(p) << 8;
-		x |= (long)rs_byte(p) << 16;
-		x |= (long)rs_byte(p) << 24;
-	}
+    }
+    else {
+        x = rs_byte(p);
+        x |= (long)rs_byte(p) << 8;
+        x |= (long)rs_byte(p) << 16;
+        x |= (long)rs_byte(p) << 24;
+    }
 #if SIZEOF_LONG > 4
     /* Sign extension for 64-bit machines */
     x |= -(x & 0x80000000L);
