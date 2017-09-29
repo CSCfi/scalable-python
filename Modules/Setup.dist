@@ -122,7 +122,7 @@ _weakref _weakref.c             # weak references
 
 # The zipimport module is always imported at startup. Having it as a
 # builtin module avoids some bootstrapping problems and reduces overhead.
-zipimport zipimport.c
+#zipimport zipimport.c
 
 # The rest of the modules listed in this file are all commented out by
 # default.  Usually they can be detected and built as dynamically

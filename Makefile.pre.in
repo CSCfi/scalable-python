@@ -379,7 +379,6 @@ PYTHON_OBJS=	\
 		Python/dtoa.o \
 		Python/formatter_unicode.o \
 		Python/formatter_string.o \
-		Python/$(DYNLOADFILE) \
 		$(LIBOBJS) \
 		$(MACHDEP_OBJS) \
 		$(THREADOBJ)
@@ -442,7 +441,7 @@ SERIAL_OBJS=	\
 		Python/pythonrun.o \
 		Python/sysmodule.o \
 		Modules/zipimport.o \
-		Python/dynload_shlib.o
+		Python/$(DYNLOADFILE)
 
 MPI_OBJS=	\
 		Modules/getpath_mpi.o \
