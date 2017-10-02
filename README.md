@@ -1,4 +1,4 @@
-# Scalable Python 1.x
+# Scalable Python 1.2
 
 > based on Python 2.7.13 (see original [README](README.orig))
 >
@@ -15,8 +15,8 @@ pressure on the filesystem with multiple processes accessing several small
 files during import statements. With thousands of processes the startup time
 of a Python application can be more than 30 minutes.
 
-**Scalable Python** performs the I/O operations used e.g. by import statements in
-a single process and uses MPI to transmit data to/from all other processes.
+**Scalable Python** performs the I/O operations used e.g. by import statements
+in a single process and uses MPI to transmit data to/from all other processes.
 Please see the [inherent limitation](#limitations) of this approach.
 
 ## Short build instructions
