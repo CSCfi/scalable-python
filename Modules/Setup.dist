@@ -174,7 +174,7 @@ math mathmodule.c _math.c # -lm # math library functions, e.g. sin()
 _struct _struct.c	# binary structure packing/unpacking
 time timemodule.c # -lm # time operations and variables
 operator operator.c	# operator.add() and similar goodies
-_testcapi _testcapimodule.c    # Python C API test module
+#_testcapi _testcapimodule.c    # Python C API test module
 _random _randommodule.c	# Random number generator
 _collections _collectionsmodule.c # Container types
 #_heapq _heapqmodule.c		# Heapq type
