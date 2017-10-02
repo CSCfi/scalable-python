@@ -1,10 +1,37 @@
-Scalable Python 1.1
+SCALABLE PYTHON
+===============
+
+Scalable Python is a derivative work of the standard Python interpreter
+(https://github.com/python/cpython/). All modifications made to Python are
+released under the MIT license (below).
+
 ---
-Modifications made to Python 2.6.7 are
+The MIT License (MIT)
 
-  Copyright (c) 2011-2016  CSC - IT Center for Science Ltd.
+Copyright (c) 2011-2017 CSC - IT Center for Science
 
-The license for the original Python is included below.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+---
+
+Please note that the original Python is licensed under a separate Python
+Software Foundation license (see below).
+
 
 ---- Start of the original Python LICENSE ----
 A. HISTORY OF THE SOFTWARE
